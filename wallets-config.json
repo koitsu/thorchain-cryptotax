@@ -1,0 +1,20 @@
+{
+    "cacheDataSources": false,
+    "wallets": [
+        {
+            "name": "Sample",
+            "address": "thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "blockchain": "THOR"
+        },
+        {
+            "name": "Sample",
+            "address": "0x0000000000000000000000000000000000000000",
+            "blockchain": "ETH"
+        },
+        {
+            "name": "Sample",
+            "address": "bc1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "blockchain": "BTC"
+        }
+    ]
+}
