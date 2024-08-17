@@ -15,22 +15,24 @@ export class TaxEvent {
     input?: ViewblockTx | Action;
     output: CryptoTaxTransaction[] = [];
     wallet: IWallet;
+    addReferencePrices: boolean;
 
     constructor(datetime: Date, source: TaxEventSource, wallet: IWallet) {
         this.datetime = datetime;
         this.source = source;
         this.wallet = wallet;
+        this.addReferencePrices = wallet.addReferencePrices || false;
     }
 
     convert() {
         if (this.source === 'viewblock') {
-            this.convertViewblock();
+            this.convertViewblock(this.addReferencePrices);
         } else if (this.source === 'midgard') {
-            this.convertMidgardAction();
+            this.convertMidgardAction(this.addReferencePrices);
         }
     }
 
-    convertViewblock() {
+    convertViewblock(addReferencePrices: boolean) {
         const tx = this.input as ViewblockTx;
 
         // const labels = tx.extra.thorLabels;
@@ -54,7 +56,7 @@ export class TaxEvent {
         this.output = mapper.toCtc();
     }
 
-    convertMidgardAction() {
-        this.output = actionToCryptoTax(this.input as Action);
+    convertMidgardAction(addReferencePrices: boolean) {
+        this.output = actionToCryptoTax(this.input as Action, addReferencePrices);
     }
 }

@@ -18,7 +18,7 @@ import {
 import { Mapper } from './Mapper';
 
 export class RefundMapper implements Mapper {
-    toCryptoTax(action: Action): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = toCryptoTaxTimestamp(date);
         const idPrefix: string = date.toISOString();

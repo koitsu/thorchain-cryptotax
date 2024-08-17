@@ -4,17 +4,20 @@
         {
             "name": "Sample",
             "address": "thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-            "blockchain": "THOR"
+            "blockchain": "THOR",
+            "addReferencePrices": false
         },
         {
             "name": "Sample",
             "address": "0x0000000000000000000000000000000000000000",
-            "blockchain": "ETH"
+            "blockchain": "ETH",
+            "addReferencePrices": false
         },
         {
             "name": "Sample",
             "address": "bc1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-            "blockchain": "BTC"
+            "blockchain": "BTC",
+            "addReferencePrices": false
         }
     ]
 }

@@ -155,12 +155,16 @@ export class Exporter {
         const walletExchanges: any = {};
 
         txs.map((tx) => {
+            if (!tx.walletExchange) {
+                console.warn(tx);
+            }
+
             walletExchanges[tx.walletExchange ?? ''] = true;
         });
 
-        if (walletExchanges['']) {
-            throw new Error('IWallet/exchange not provided');
-        }
+        // if (walletExchanges['']) {
+        //     throw new Error('IWallet/exchange not provided');
+        // }
 
         return Object.keys(walletExchanges);
     }

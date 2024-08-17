@@ -14,7 +14,7 @@ import {
 import { Mapper } from './Mapper';
 
 export class AddLiquidityMapper implements Mapper {
-    toCryptoTax(action: Action): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
         const numAssetsIn: number = action.in.length;
 
         if (numAssetsIn === 0 || numAssetsIn > 2) {
@@ -48,7 +48,7 @@ export class AddLiquidityMapper implements Mapper {
         const transactions: CryptoTaxTransaction[] = [];
 
         // Deposit asset(s)
-        // Deposits are associated with the input addresses (ie. walletExchange)
+        // Deposits are associated with the input addresses (i.e. walletExchange)
         // and exported to separate CSVs
 
         for (let i = 0; i < numAssetsIn; i++) {
@@ -93,8 +93,21 @@ export class AddLiquidityMapper implements Mapper {
             parseFloat(transactions[0].baseAmount) * numAssetsIn
         ).toString();
 
-        const totalValue = getPrice(quoteCurrency, date) * parseFloat(quoteAmount);
-        const referencePricePerUnit = (totalValue / parseFloat(liquidityUnits)).toString();
+        let referencePrice = {};
+
+        if (addReferencePrices) {
+            const totalValue = getPrice(quoteCurrency, date) * parseFloat(quoteAmount);
+            const referencePricePerUnit = (totalValue / parseFloat(liquidityUnits)).toString();
+
+            referencePrice = {
+                referencePriceCurrency: 'USD',
+                referencePricePerUnit
+            };
+        }
+
+        if (!action.in[0].address) {
+            console.warn('Missing deposit address');
+        }
 
         // Receive liquidity units
 
@@ -109,8 +122,7 @@ export class AddLiquidityMapper implements Mapper {
             blockchain: 'THOR',
             id: `${idPrefix}.receive-lp-token`,
             description: `${currentTxNum}/${totalTxs} - Receive LP token from ${poolName} (${symmDesc})`,
-            referencePriceCurrency: 'USD',
-            referencePricePerUnit
+            ...referencePrice
         });
 
         currentTxNum++;

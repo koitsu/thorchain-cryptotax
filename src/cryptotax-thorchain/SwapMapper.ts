@@ -32,7 +32,7 @@ function isSynth(tx: Transaction): boolean {
 // * receive currency B from thorchain
 
 export class SwapMapper implements Mapper {
-    toCryptoTax(action: Action): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = toCryptoTaxTimestamp(date);
 

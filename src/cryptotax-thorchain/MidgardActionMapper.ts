@@ -25,10 +25,10 @@ export function getActionDate(action: Action): Date {
     return parseMidgardDate(action.date);
 }
 
-export function actionToCryptoTax(action: Action): CryptoTaxTransaction[] {
+export function actionToCryptoTax(action: Action, addReferencePrices: boolean = false): CryptoTaxTransaction[] {
     const date: string = toCryptoTaxTimestamp(getActionDate(action));
     const mapper: Mapper | null = actionMappers[action.type];
-    const transactions: CryptoTaxTransaction[] = mapper?.toCryptoTax(action) ?? [];
+    const transactions: CryptoTaxTransaction[] = mapper?.toCryptoTax(action, addReferencePrices) ?? [];
 
     if (mapper) {
         console.log(`${date} ${action.type}: ${transactions.length}`);

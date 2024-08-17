@@ -15,7 +15,7 @@ import { Mapper } from './Mapper';
 import {NetworkFees} from "@xchainjs/xchain-midgard/lib/generated/midgardApi/api";
 
 export class WithdrawMapper implements Mapper {
-    toCryptoTax(action: Action): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
         const numAssetsOut: number = action.out.length;
 
         if (numAssetsOut === 0 || numAssetsOut > 2) {
@@ -106,8 +106,17 @@ export class WithdrawMapper implements Mapper {
             parseFloat(transactions[0].baseAmount) * numAssetsOut
         ).toString();
 
-        const totalValue = getPrice(quoteCurrency, date) * parseFloat(quoteAmount);
-        const referencePricePerUnit = (totalValue / parseFloat(liquidityUnits)).toString();
+        let referencePrice = {};
+
+        if (addReferencePrices) {
+            const totalValue = getPrice(quoteCurrency, date) * parseFloat(quoteAmount);
+            const referencePricePerUnit = (totalValue / parseFloat(liquidityUnits)).toString();
+
+            referencePrice = {
+                referencePriceCurrency: 'USD',
+                referencePricePerUnit
+            };
+        }
 
         // Market price for LP units
 
@@ -139,8 +148,7 @@ export class WithdrawMapper implements Mapper {
             blockchain: 'THOR',
             id: `${idPrefix}.return-lp-token`,
             description: `${currentTxNum}/${totalTxs} - Return LP token to ${poolName} (${symmDesc})`,
-            referencePriceCurrency: 'USD',
-            referencePricePerUnit
+            ...referencePrice
         });
 
         return transactions.reverse();

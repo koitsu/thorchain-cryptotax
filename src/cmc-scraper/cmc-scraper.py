@@ -1,6 +1,7 @@
 import json
 from cryptocmd import CmcScraper
 
+
 # pip3 install -r requirements.txt
 
 def dump_all(coin, path):
@@ -16,10 +17,12 @@ def dump_all(coin, path):
 
     save(js, path + '/' + coin + '.ts')
 
+
 def save(text, file):
     text_file = open(file, "w")
     text_file.write(text)
     text_file.close()
+
 
 coins = [
     'BTC',
@@ -32,5 +35,6 @@ coins = [
     'BNB'
 ]
 
-for coin in coins:
-    dump_all(coin, 'data')
+if __name__ == '__main__':
+    for coin in coins:
+        dump_all(coin, 'data')
