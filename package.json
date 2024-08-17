@@ -4,7 +4,7 @@
   "main": "index.ts",
   "type": "commonjs",
   "scripts": {
-    "export": "ts-node src/full-export.ts wallets-config.json",
+    "export": "ts-node src/full-export.ts wallets-config.json"
   },
   "dependencies": {
     "@types/fs-extra": "^9.0.13",
