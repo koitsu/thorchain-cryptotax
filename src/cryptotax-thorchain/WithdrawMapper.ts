@@ -26,7 +26,6 @@ export class WithdrawMapper implements Mapper {
         const withdrawals = [];
 
         // Order withdrawals so RUNE is first
-        console.log(JSON.stringify(action.out, null, 4));
 
         if (action.out[0].address.startsWith('thor')) {
             withdrawals.push(action.out[0]);

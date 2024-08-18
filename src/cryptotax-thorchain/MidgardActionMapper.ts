@@ -39,7 +39,12 @@ export function actionToCryptoTax(action: Action, addReferencePrices: boolean = 
     if (mapper) {
         console.log(`${date} ${action.type}: ${transactions.length}`);
     } else {
-        console.error(`${date} ${action.type}: no mapper found`);
+        // TODO: currently using viewblock/runescan for sends, but looks like midgard supports it so could try switching
+        // TODO: could also support thorname, runePoolDeposit txs
+        if (!['send', 'thorname', 'runePoolDeposit'].includes(action.type as string)) {
+            console.log(action);
+            console.error(`${date} ${action.type}: no mapper found`);
+        }
     }
 
     return transactions;
