@@ -7,6 +7,8 @@ import { SwapMapper } from "./SwapMapper";
 import { SwitchMapper } from "./SwitchMapper";
 import { WithdrawMapper } from "./WithdrawMapper";
 import { RefundMapper } from "./RefundMapper";
+import {LoanOpenMapper} from "./LoanOpenMapper";
+import {LoanRepaymentMapper} from "./LoanRepaymentMapper";
 
 type ActionMappers = {
     [index in ActionType]: Mapper | null;
@@ -21,13 +23,17 @@ const actionMappers: ActionMappers = {
     [ActionType.Withdraw]: new WithdrawMapper()
 }
 
+const loanOpenMapper = new LoanOpenMapper();
+const loanRepaymentMapper = new LoanRepaymentMapper();
+
 export function getActionDate(action: Action): Date {
     return parseMidgardDate(action.date);
 }
 
 export function actionToCryptoTax(action: Action, addReferencePrices: boolean = false): CryptoTaxTransaction[] {
     const date: string = toCryptoTaxTimestamp(getActionDate(action));
-    const mapper: Mapper | null = actionMappers[action.type];
+    const mapper = getMapper(action);
+
     const transactions: CryptoTaxTransaction[] = mapper?.toCryptoTax(action, addReferencePrices) ?? [];
 
     if (mapper) {
@@ -41,4 +47,20 @@ export function actionToCryptoTax(action: Action, addReferencePrices: boolean = 
 
 export function actionsToCryptoTax(actions: Action[]): CryptoTaxTransaction[] {
     return actions.map(action => actionToCryptoTax(action)).flat();
+}
+
+function getMapper(action: Action): Mapper | null {
+    let mapper: Mapper | null = actionMappers[action.type];
+
+    if (action.type === 'swap') {
+        const txType = (action.metadata.swap as any)?.txType;
+
+        if (txType === 'loanOpen') {
+            mapper = loanOpenMapper;
+        } else if (txType === 'loanRepayment') {
+            mapper = loanRepaymentMapper;
+        }
+    }
+
+    return mapper;
 }

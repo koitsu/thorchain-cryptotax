@@ -21,7 +21,7 @@ export class TaxEvent {
         this.datetime = datetime;
         this.source = source;
         this.wallet = wallet;
-        this.addReferencePrices = wallet.addReferencePrices || false;
+        this.addReferencePrices = wallet.addReferencePrices ?? false;
     }
 
     convert() {

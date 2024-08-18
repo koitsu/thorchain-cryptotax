@@ -26,8 +26,12 @@ function createHeader(): string {
 
 export function txToCsv(tx: CryptoTaxTransaction): string {
     return csvMapping
-        .map((column) => (tx as any)[column.field] ?? '')
+        .map((column) => replaceNewline((tx as any)[column.field] ?? ''))
         .join(',');
+}
+
+function replaceNewline(value: string): string {
+    return value.replaceAll('\n', '; ');
 }
 
 function toCsv(txs: CryptoTaxTransaction[]): string {

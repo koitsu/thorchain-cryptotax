@@ -12,7 +12,6 @@ import {
     parseMidgardPool,
 } from './MidgardUtils';
 import { Mapper } from './Mapper';
-import {NetworkFees} from "@xchainjs/xchain-midgard/lib/generated/midgardApi/api";
 
 export class WithdrawMapper implements Mapper {
     toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
