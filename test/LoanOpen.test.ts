@@ -22,7 +22,7 @@ describe('LoanOpen', () => {
             to: 'thorchain',
             blockchain: 'BTC',
             id: '2020-12-31T13:00:00.000Z.collateral-deposit',
-            description: '1/2 LoanOpen deposit BTC to borrow RUNE; ' +
+            description: '1/2 - LoanOpen deposit BTC to borrow RUNE; ' +
                 '0000000000000000000000000000000000000000000000000000000000000000'
         });
 
@@ -38,7 +38,7 @@ describe('LoanOpen', () => {
             to: 'thor1-user-wallet-11111',
             blockchain: 'THOR',
             id: '2020-12-31T13:00:00.000Z.loan',
-            description: '2/2 LoanOpen deposit BTC to borrow RUNE; ' +
+            description: '2/2 - LoanOpen deposit BTC to borrow RUNE; ' +
                 '0000000000000000000000000000000000000000000000000000000000000000'
         });
     });
@@ -61,7 +61,7 @@ describe('LoanOpen', () => {
             to: 'thorchain',
             blockchain: 'BTC',
             id: '2020-12-31T13:00:00.000Z.collateral-deposit',
-            description: '1/2 LoanOpen deposit BTC to borrow RUNE; ' +
+            description: '1/2 - LoanOpen deposit BTC to borrow RUNE; ' +
                 '0000000000000000000000000000000000000000000000000000000000000000'
         });
 
@@ -77,7 +77,7 @@ describe('LoanOpen', () => {
             to: 'thor1-user-wallet-11111',
             blockchain: 'THOR',
             id: '2020-12-31T13:00:00.000Z.loan',
-            description: '2/2 LoanOpen deposit BTC to borrow RUNE; ' +
+            description: '2/2 - LoanOpen deposit BTC to borrow RUNE; ' +
                 '0000000000000000000000000000000000000000000000000000000000000000'
         });
     });

@@ -76,7 +76,7 @@ export class LoanOpenMapper implements Mapper {
             to: 'thorchain',
             blockchain: inputBlockchain,
             id: `${idPrefix}.collateral-deposit`,
-            description: `1/2 LoanOpen deposit ${inputCurrency} to borrow ${outputCurrency}; ${txId}`,
+            description: `1/2 - LoanOpen deposit ${inputCurrency} to borrow ${outputCurrency}; ${txId}`,
         });
 
         // Wallet B1 - [loan] receive currency B from thorchain --------------------------------------------------------
@@ -93,7 +93,7 @@ export class LoanOpenMapper implements Mapper {
             to: output.address,
             blockchain: outputBlockchain,
             id: `${idPrefix}.loan`,
-            description: `2/2 LoanOpen deposit ${inputCurrency} to borrow ${outputCurrency}; ${txId}`,
+            description: `2/2 - LoanOpen deposit ${inputCurrency} to borrow ${outputCurrency}; ${txId}`,
         });
 
         return transactions;
