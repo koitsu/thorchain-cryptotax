@@ -52,7 +52,8 @@ export class LoanOpenMapper implements Mapper {
         }
 
         // TODO: could probably add liquidity/affiliate/network fees together and put it all on the 'loan' tx, as the
-        // 'collateral' tx won't be imported anyway since it will come from the BTC/ETH wallet
+        // 'collateral' tx won't be imported anyway since it will come from the BTC/ETH wallet.
+        // assumes the loan tx is to rune though
 
         const liquidityFee = {
             feeCurrency: 'RUNE',

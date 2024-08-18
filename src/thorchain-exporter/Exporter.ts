@@ -43,6 +43,7 @@ export class Exporter {
 
         // Get Midgard actions
         let actions: Action[] = await this.midgard.getActions(wallet.address);
+
         actions = this.excludeNonSuccess(actions);
 
         for (const action of actions) {
@@ -53,8 +54,11 @@ export class Exporter {
     }
 
     excludeNonSuccess(actions: Action[]): Action[] {
+        // loan repayments will show as 'pending' if the loan is not closed
         return actions.filter(
-            (action: Action) => action.status === ActionStatusEnum.Success
+            (action: Action) => {
+                return action.status === ActionStatusEnum.Success || (action.metadata.swap as any)?.txType === 'loanRepayment'
+            }
         );
     }
 

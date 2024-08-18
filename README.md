@@ -13,11 +13,12 @@ Currently supported transactions
 - upgrade BEP Rune to native Rune
 - swaps
 - LPs (add/remove liquidity)
+- lending
 - savers (supported as LPing but needs more review)
 
 Not currently supported
-
-- lending
+- THORNames
+- RUNEPool
 - aggregated swaps (i.e. where the swap is routed through more than just THORChain)
 
 ## Usage
@@ -79,5 +80,6 @@ e.g.
 - Reference prices are pulled from CoinMarketCap using a script [cmc-scraper.py](./src/cmc-scraper/cmc-scraper.py)
   and saved into [src/cmc-scraper/data](./src/cmc-scraper/data).
   It requires Python to run the script to update the price history files.
+  Reference prices are currently disabled.
 - Sends and receives are pulled using the viewblock.io API.
   This is not a public API, so may change without warning which breaks the tool.

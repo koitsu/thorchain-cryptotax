@@ -3,9 +3,9 @@ import fs from 'fs-extra';
 import {describe, expect, test} from '@jest/globals';
 const mapper = new LoanOpenMapper();
 
-describe('LoanOpen', () => {
+describe('LoanOpenMapper', () => {
     test('Deposit BTC, borrow RUNE. No affiliate fee', () => {
-        const action = fs.readJSONSync('test/testdata/loan-open-btc-to-rune.json');
+        const action = fs.readJSONSync('test/testdata/LoanOpen_Deposit_BTC_borrow_RUNE.json');
         const txs = mapper.toCryptoTax(action, false);
 
         expect(txs.length).toBe(2);
@@ -44,7 +44,7 @@ describe('LoanOpen', () => {
     });
 
     test('Deposit BTC, borrow RUNE. With affiliate fee', () => {
-        const action = fs.readJSONSync('test/testdata/loan-open-btc-to-rune-affiliate-fee.json');
+        const action = fs.readJSONSync('test/testdata/LoanOpen_Deposit_BTC_borrow_RUNE_Affiliate_Fee.json');
         const txs = mapper.toCryptoTax(action, false);
 
         expect(txs.length).toBe(2);
