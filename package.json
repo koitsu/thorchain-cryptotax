@@ -14,6 +14,7 @@
     "@types/node-fetch": "^2.6.2",
     "@xchainjs/xchain-midgard": "^0.5.9",
     "@xchainjs/xchain-thornode": "^0.3.19",
+    "@xchainjs/xchain-util": "^1.0.1",
     "axios-request-throttle": "^1.0.0",
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.1",
