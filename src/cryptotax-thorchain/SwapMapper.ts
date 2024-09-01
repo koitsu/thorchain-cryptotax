@@ -62,13 +62,13 @@ export class SwapMapper implements Mapper {
         if (!inputCurrency) {
             console.log('action:', JSON.stringify(action, null, 4));
             console.error('in:', JSON.stringify(input, null, 4));
-            throw new Error('No input currency');
+            throw this.error('No input currency', action);
         }
 
         if (!inputAmount) {
             console.log('action:', JSON.stringify(action, null, 4));
             console.error('in:', JSON.stringify(input, null, 4));
-            throw new Error('No input amount');
+            throw this.error('No input amount', action);
         }
 
         console.log(
@@ -83,6 +83,10 @@ export class SwapMapper implements Mapper {
         if (inputIsSynth && !input.address.startsWith('thor1')) {
             console.log('SWAP IGNORED')
             return [];
+        }
+
+        if (inputCoin.asset === 'THOR.TOR' || outputCoin.asset === 'THOR.TOR') {
+            throw this.error('Invalid swap - THOR.TOR', action);
         }
 
         const { blockchain: feeBlockchain, currency: feeCurrency } =
@@ -204,5 +208,10 @@ export class SwapMapper implements Mapper {
         });
 
         return transactions;
+    }
+
+    error(message: string, action: Action) {
+        console.log('action:', JSON.stringify(action, null, 4));
+        return new Error(`SwapMapper: ${message}`);
     }
 }
