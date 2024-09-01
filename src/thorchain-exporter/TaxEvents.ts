@@ -7,6 +7,7 @@ import {SendMapper} from "./SendMapper";
 import {Action} from "@xchainjs/xchain-midgard";
 import {getActionDate} from "../cryptotax-thorchain/MidgardActionMapper";
 import {deepEqual} from "../utils/DeepEqual";
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 export class TaxEvents {
 
@@ -22,10 +23,11 @@ export class TaxEvents {
         this.events.push(event);
     }
 
-    addMidgard(action: Action, wallet: IWallet) {
+    addMidgard(action: Action, wallet: IWallet, thornodeTxs: TxStatusResponse[] = []) {
 
         const event = new TaxEvent(getActionDate(action), 'midgard', wallet);
         event.input = action;
+        event.thornodeTxs = thornodeTxs;
         event.convert();
 
         this.events.push(event);

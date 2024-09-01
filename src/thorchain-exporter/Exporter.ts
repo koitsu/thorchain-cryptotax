@@ -2,6 +2,7 @@ import {Viewblock} from "../viewblock";
 import fs from "fs-extra";
 import {CryptoTaxTransaction, CryptoTaxTransactionType, writeCsv} from "../cryptotax";
 import {MidgardService} from "../cryptotax-thorchain/MidgardService";
+import {ThornodeService} from "../cryptotax-thorchain/ThornodeService";
 import {Action, ActionStatusEnum} from "@xchainjs/xchain-midgard";
 import {ITaxConfig} from "./ITaxConfig";
 import {Reporter} from "./Reporter";
@@ -14,12 +15,14 @@ export class Exporter {
     config: ITaxConfig;
     viewblock: Viewblock;
     midgard: MidgardService;
+    thornode: ThornodeService;
     report: Reporter;
 
     constructor(filename: string) {
         this.config = this.loadConfig(filename);
         this.viewblock = new Viewblock();
         this.midgard = new MidgardService();
+        this.thornode = new ThornodeService();
         this.report = new Reporter();
     }
 
@@ -47,7 +50,16 @@ export class Exporter {
         actions = this.excludeNonSuccess(actions);
 
         for (const action of actions) {
-            events.addMidgard(action, wallet);
+            const thornodeTxs = [];
+
+            // Get related noOp tx
+            if (action.metadata.swap?.txType === 'noOp') {
+                const noopTxId = action.in[0].txID;
+                const tx = await this.thornode.getTxStatus(noopTxId);
+                thornodeTxs.push(tx);
+            }
+
+            events.addMidgard(action, wallet, thornodeTxs);
         }
 
         return events;

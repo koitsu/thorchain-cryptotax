@@ -16,9 +16,10 @@ import {
     parseMidgardPool,
 } from './MidgardUtils';
 import { Mapper } from './Mapper';
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 export class RefundMapper implements Mapper {
-    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = toCryptoTaxTimestamp(date);
         const idPrefix: string = date.toISOString();

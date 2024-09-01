@@ -5,6 +5,7 @@ import {IThorchainMapper} from "./BaseMapper";
 import {SendMapper} from "./SendMapper";
 import {IWallet} from "./IWallet";
 import {actionToCryptoTax} from "../cryptotax-thorchain/MidgardActionMapper";
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 type TaxEventSource = 'viewblock' | 'midgard';
 
@@ -13,6 +14,7 @@ export class TaxEvent {
     datetime: Date;
     source: TaxEventSource;
     input?: ViewblockTx | Action;
+    thornodeTxs: TxStatusResponse[] = [];  // Related txs from THORNode API
     output: CryptoTaxTransaction[] = [];
     wallet: IWallet;
     addReferencePrices: boolean;
@@ -57,6 +59,6 @@ export class TaxEvent {
     }
 
     convertMidgardAction(addReferencePrices: boolean) {
-        this.output = actionToCryptoTax(this.input as Action, addReferencePrices);
+        this.output = actionToCryptoTax(this.input as Action, this.thornodeTxs, addReferencePrices);
     }
 }

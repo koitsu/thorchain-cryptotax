@@ -12,9 +12,10 @@ import {
     parseMidgardPool,
 } from './MidgardUtils';
 import { Mapper } from './Mapper';
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 export class WithdrawMapper implements Mapper {
-    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const numAssetsOut: number = action.out.length;
 
         if (numAssetsOut === 0 || numAssetsOut > 2) {

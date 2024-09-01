@@ -2,6 +2,7 @@ import {Mapper} from "./Mapper";
 import {Action, Coin, Transaction} from "@xchainjs/xchain-midgard";
 import {CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp} from "../cryptotax";
 import {parseMidgardAmount, parseMidgardAsset, parseMidgardDate} from "./MidgardUtils";
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 // https://dev.thorchain.org/concepts/memos.html#repay-loan
 const REPAYLOAN_ASSET = 1;
@@ -15,7 +16,7 @@ const REPAYLOAN_DESTADDR = 2;
 // * [collateral-withdrawal] receive currency B from thorchain
 
 export class LoanRepaymentMapper implements Mapper {
-    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
 
         const numAssetsIn: number = action.in.length;
         const numAssetsOut: number = action.out.length;

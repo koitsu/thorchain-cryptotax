@@ -12,6 +12,7 @@ import {
     toCryptoTaxCurrencyTicker,
 } from './MidgardUtils';
 import { Mapper } from './Mapper';
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 function isSynth(tx: Transaction): boolean {
     return (
@@ -32,7 +33,7 @@ function isSynth(tx: Transaction): boolean {
 // * receive currency B from thorchain
 
 export class SwapMapper implements Mapper {
-    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = toCryptoTaxTimestamp(date);
 

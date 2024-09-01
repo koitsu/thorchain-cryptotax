@@ -3,6 +3,7 @@ import {Action, Coin, Transaction} from "@xchainjs/xchain-midgard";
 import {CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp} from "../cryptotax";
 import {parseMidgardAmount, parseMidgardAsset, parseMidgardDate} from "./MidgardUtils";
 import {isEmpty} from "lodash";
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 // https://dev.thorchain.org/concepts/memos.html#open-loan
 const LOANOPEN_DESTADDR = 2;
@@ -15,7 +16,7 @@ const AFFILIATE = 4;
 // * [loan] receive currency B from thorchain
 
 export class LoanOpenMapper implements Mapper {
-    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
 
         const numAssetsIn: number = action.in.length;
 
@@ -30,14 +31,17 @@ export class LoanOpenMapper implements Mapper {
 
         const transactions: CryptoTaxTransaction[] = [];
 
-        const input: Transaction = action.in[0];
-        const inputCoin: Coin = input.coins[0];
-        const {blockchain: inputBlockchain, currency: inputCurrency} =
-            parseMidgardAsset(inputCoin.asset);
-        const inputAmount: string = parseMidgardAmount(inputCoin.amount);
-        const txId = input.txID;
+        const {
+            input,
+            inputAddress,
+            inputBlockchain,
+            inputCurrency,
+            inputAmount,
+            memo,
+            txId
+        } = this.getInput(action, thornodeTxs);
 
-        const output = this.getOutput(action);
+        const output = this.getOutput(action, memo);
         const outputCoin: Coin = output.coins[0];
         const {blockchain: outputBlockchain, currency: outputCurrency} =
             parseMidgardAsset(outputCoin.asset);
@@ -67,13 +71,13 @@ export class LoanOpenMapper implements Mapper {
         // Wallet A1 - [collateral-deposit] send currency A to thorchain -----------------------------------------------
 
         transactions.push({
-            walletExchange: input.address,
+            walletExchange: inputAddress,
             timestamp,
             type: CryptoTaxTransactionType.CollateralDeposit,
             baseCurrency: inputCurrency,
             baseAmount: inputAmount,
             ...liquidityFee,
-            from: input.address,
+            from: inputAddress,
             to: 'thorchain',
             blockchain: inputBlockchain,
             id: `${idPrefix}.collateral-deposit`,
@@ -100,10 +104,42 @@ export class LoanOpenMapper implements Mapper {
         return transactions;
     }
 
-    // Find which output is for the user
-    getOutput(action: Action): Transaction {
-        const memo = action.metadata.swap?.memo;
+    private getInput(action: Action, thornodeTxs: TxStatusResponse[]) {
 
+        if (action.in[0].coins[0].asset === 'THOR.TOR') {
+            const tx = thornodeTxs[0];
+            const input = tx.tx;
+            const inputCoin = input?.coins[0];
+
+            if (!inputCoin) {
+                console.log(thornodeTxs[0]);
+                throw this.error('Missing input coin', action);
+            }
+
+            const {blockchain: inputBlockchain, currency: inputCurrency} =
+                parseMidgardAsset(inputCoin.asset);
+            const inputAmount: string = parseMidgardAmount(inputCoin.amount);
+            const txId = input?.id;
+            const memo = input?.memo;
+            const inputAddress = input?.from_address;
+
+            return {input, inputAddress, inputBlockchain, inputCurrency, inputAmount, memo, txId};
+        }
+
+        const input: Transaction = action.in[0];
+        const inputCoin: Coin = input.coins[0];
+        const {blockchain: inputBlockchain, currency: inputCurrency} =
+            parseMidgardAsset(inputCoin.asset);
+        const inputAmount: string = parseMidgardAmount(inputCoin.amount);
+        const txId = input.txID;
+        const memo = action.metadata.swap?.memo;
+        const inputAddress = input.address;
+
+        return {input, inputAddress, inputBlockchain, inputCurrency, inputAmount, memo, txId};
+    }
+
+    // Find which output is for the user
+    getOutput(action: Action, memo: string | undefined): Transaction {
         if (!memo) {
             throw this.error('No memo', action);
         }

@@ -10,6 +10,7 @@ import {
     parseMidgardDate,
 } from './MidgardUtils';
 import { Mapper } from './Mapper';
+import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 // Switch is an upgrade of BNB.RUNE to THOR.RUNE
 //
@@ -19,7 +20,7 @@ import { Mapper } from './Mapper';
 // Both transactions are created here as we have the details from both chains from the Midgard API.
 // The Binance transaction also holds the details as well, as it will contain a memo which says, "SWITCH:{to_thorchain_address}".
 export class SwitchMapper implements Mapper {
-    toCryptoTax(action: Action, addReferencePrices: boolean): CryptoTaxTransaction[] {
+    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = toCryptoTaxTimestamp(date);
         const idPrefix: string = date.toISOString();
