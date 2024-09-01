@@ -67,8 +67,7 @@ function getMapper(action: Action): Mapper | null {
         } else if (txType === 'noOp' && action.in[0].coins[0].asset === 'THOR.TOR') {
             // Some loan open shows as a noOp swap from midgard
             // With the swap output being the loan
-            // mapper = loanOpenMapper;
-            mapper = null;
+            mapper = loanOpenMapper;
         }
     }
 
