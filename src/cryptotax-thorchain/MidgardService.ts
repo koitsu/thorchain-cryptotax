@@ -1,10 +1,13 @@
 import {Cache} from "../cache/Cache";
 import path from "path";
-import {Action, Configuration, MIDGARD_API_9R_URL, MIDGARD_API_TC_URL, MIDGARD_API_TS_URL, MidgardApi} from '@xchainjs/xchain-midgard';
+import {Action, Configuration, MIDGARD_API_9R_URL, MidgardApi} from '@xchainjs/xchain-midgard';
 import assert from "assert";
 // import {register9Rheader} from '@xchainjs/xchain-util'; // need to update version of xchainjs for this
 import {register9Rheader} from "./ninerealms";
 import axios from "axios";
+import axiosThrottle from 'axios-request-throttle';
+
+axiosThrottle.use(axios, { requestsPerSecond: 1 });
 
 // https://github.com/xchainjs/xchainjs-lib/tree/master/packages/xchain-midgard
 // midgard api: https://midgard.thorswap.net/v2/doc
@@ -40,8 +43,8 @@ export class MidgardService {
         let count: number = 0;
 
         for (let page = 0; page <= 100; page++) {
-            const response = await this.api.getActions(address, undefined, undefined, undefined, undefined, 50, page * 50);
-            count = parseInt(response.data.count);
+            const response = await this.api.getActions(address, undefined, undefined, undefined, undefined, undefined, 50, page * 50);
+            count = parseInt(response.data.count || '0');
 
             console.log(`[Midgard] Total actions: ${count}`);
             console.log('page:', page)
