@@ -14,6 +14,9 @@ import {
 import { Mapper } from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
+// https://dev.thorchain.org/concepts/memos.html#swap
+const SWAP_DESTADDR = 2;
+
 function isSynth(tx: Transaction): boolean {
     return (
         // tx.address.startsWith('thor1') && !tx.coins[0].asset.startsWith('THOR.')
@@ -46,6 +49,12 @@ export class SwapMapper implements Mapper {
 
         const transactions: CryptoTaxTransaction[] = [];
 
+        const numAssetsIn: number = action.in.length;
+
+        if (numAssetsIn !== 1) {
+            throw this.error(`Expected numAssetsIn to be 1 but was ${numAssetsIn}`, action);
+        }
+
         const input: Transaction = action.in[0];
         const inputCoin: Coin = input.coins[0];
         const { blockchain: inputBlockchain, currency: inputCurrency } =
@@ -53,7 +62,9 @@ export class SwapMapper implements Mapper {
         const inputAmount: string = parseMidgardAmount(inputCoin.amount);
         const inputIsSynth: boolean = isSynth(input);
 
-        const output: Transaction = action.out[0];
+        const memo = action.metadata.swap?.memo;
+
+        const output: Transaction = this.getOutput(action, memo);
         const outputCoin: Coin = output.coins[0];
         const { blockchain: outputBlockchain, currency: outputCurrency } =
             parseMidgardAsset(outputCoin.asset);
@@ -209,6 +220,26 @@ export class SwapMapper implements Mapper {
         });
 
         return transactions;
+    }
+
+    // Find which output is for the user
+    getOutput(action: Action, memo: string | undefined): Transaction {
+        if (!memo) {
+            throw this.error('No memo', action);
+        }
+
+        const destAddress = this.getDestAddress(memo);
+        const out = action.out.find(out => out.address.toLowerCase() === destAddress.toLowerCase());
+
+        if (!out) {
+            throw this.error('No matching out tx', action);
+        }
+
+        return out;
+    }
+
+    getDestAddress(memo: string): string {
+        return memo.split(':')[SWAP_DESTADDR];
     }
 
     error(message: string, action: Action) {

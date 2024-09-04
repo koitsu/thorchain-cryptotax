@@ -115,7 +115,7 @@ export class LoanRepaymentMapper implements Mapper {
     getOutput(action: Action): Transaction {
         const memo = this.getMemo(action);
         const destAddress = this.getDestAddress(memo);
-        const out = action.out.find(out => out.address == destAddress);
+        const out = action.out.find(out => out.address.toLowerCase() === destAddress.toLowerCase());
 
         if (!out) {
             throw this.error('No matching out tx', action);
