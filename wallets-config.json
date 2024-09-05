@@ -1,4 +1,7 @@
 {
+    "fromDate": "2020-01-01",
+    "toDate": "2024-12-31",
+    "frequency": "yearly",
     "cacheDataSources": false,
     "wallets": [
         {

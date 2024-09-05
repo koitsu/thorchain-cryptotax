@@ -8,6 +8,7 @@ import {ITaxConfig} from "./ITaxConfig";
 import {Reporter} from "./Reporter";
 import {IWallet} from "./IWallet";
 import {TaxEvents} from "./TaxEvents";
+import {DateRange, generateDateRanges} from "../utils/DateRange";
 
 const info = console.info;
 
@@ -76,88 +77,81 @@ export class Exporter {
 
     saveToCsv(txs: CryptoTaxTransaction[], outputPath: string) {
 
+        const totalTxs = txs.length;
+        let count = 0;
         const walletExchanges = this.getAllWalletExchanges(txs);
 
-        const allYearsFromTxs = txs.map((tx) => {
-            return (tx.timestamp as string).split(' ')[0].split('/')[2];
-        });
+        writeCsv(`${outputPath}/all.csv`, txs);
 
-        const years = [...new Set(allYearsFromTxs)].sort();
-        const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+        const ranges = generateDateRanges(this.config.fromDate, this.config.toDate, this.config.frequency);
 
-        for (const year of years) {
-            for (const month of months) {
-                const monthTxs = this.getTxsForMonth(txs, year, month);
+        for (const range of ranges) {
+            const periodTxs = this.getTxsInRange(txs, range);
+            console.log(`${range.from} to ${range.to}`);
+            console.log(periodTxs.length);
 
-                if (monthTxs.length === 0) {
-                    continue;
-                }
+            if (periodTxs.length === 0) {
+                continue;
+            }
 
-                console.log(`${year}-${month}`);
-                console.log(monthTxs.length);
+            for (const walletExchange of walletExchanges) {
+                console.log(walletExchange);
+                const walletTxs = this.getTxsForWallet(periodTxs, walletExchange);
 
-                for (const walletExchange of walletExchanges) {
-                    const walletTxs = this.getTxsForWallet(monthTxs, walletExchange);
+                if (walletTxs.length) {
+                    console.log(`${range.from} to ${range.to}`);
+                    console.log(walletTxs.length);
 
-                    if (walletTxs.length) {
-                        console.log(`${year}-${month}`);
-                        console.log(walletTxs.length);
-
-                        if (walletExchange === 'thorchain') {
-                            // validate txs
-                            const badTxs = walletTxs.filter(tx => tx.from !== 'thorchain' && tx.to !== 'thorchain');
-                            if (badTxs.length > 0) {
-                                console.error(badTxs);
-                                throw new Error('bad txs');
-                            }
-
-                            writeCsv(
-                                `${outputPath}/${year}-${month}_Thorchain_swaps.ctc.csv`,
-                                walletTxs
-                            );
-                        } else {
-                            const sends = this.getSends(walletTxs);
-                            const notSends = this.getNotSends(walletTxs);
-
-                            if (sends.length + notSends.length !== walletTxs.length) {
-                                throw new Error('what!');
-                            }
-
-                            writeCsv(
-                                `${outputPath}/${this.makeFilename(walletExchange, year, month)}_sends.ctc.csv`,
-                                sends
-                            );
-
-                            writeCsv(
-                                `${outputPath}/${this.makeFilename(walletExchange, year, month)}_actions.ctc.csv`,
-                                notSends
-                            );
+                    if (walletExchange === 'thorchain') {
+                        // validate txs
+                        const badTxs = walletTxs.filter(tx => tx.from !== 'thorchain' && tx.to !== 'thorchain');
+                        if (badTxs.length > 0) {
+                            console.error(badTxs);
+                            throw new Error('bad txs');
                         }
+
+                        writeCsv(
+                            `${outputPath}/${range.from}_${range.to}_THOR_thorchain_swaps.csv`,
+                            walletTxs
+                        );
+
+                        count += walletTxs.length;
+
+                    } else {
+                        writeCsv(
+                            `${outputPath}/${this.makeFilename(walletExchange, range)}.csv`,
+                            walletTxs
+                        );
+
+                        count += walletTxs.length;
                     }
                 }
             }
         }
 
-        // if (walletExchange === 'thorchain') {
-        //     writeCsv(
-        //         `${outputPath}/thorchain_swaps.ctc.csv`,
-        //         txs.filter((tx) => tx.walletExchange === walletExchange)
-        //     );
-        // } else {
-        //     writeCsv(
-        //         `${outputPath}/${this.makeFilename(walletExchange)}_sends.ctc.csv`,
-        //         this.getSends(txs).filter((tx) => tx.walletExchange === walletExchange)
-        //     );
-        //
-        //     writeCsv(
-        //         `${outputPath}/${this.makeFilename(walletExchange)}_actions.ctc.csv`,
-        //         this.getNotSends(txs).filter((tx) => tx.walletExchange === walletExchange)
-        //     );
-        // }
+        console.log(`Total expected: ${totalTxs}`);
+        console.log(`Total exported: ${count}`);
+
+        if (count !== totalTxs) {
+            throw new Error('failed to export all txs');
+        }
     }
 
     private getTxsForWallet(monthTxs: CryptoTaxTransaction[], walletExchange: string) {
         return monthTxs.filter(tx => tx.walletExchange === walletExchange);
+    }
+
+    private getTxsInRange(txs: CryptoTaxTransaction[], range: DateRange) {
+        return txs.filter((tx) => {
+            const txDate = new Date((tx.timestamp as string).split(' ')[0].split('/').reverse().join('-'));
+
+            if (isNaN((txDate as any))) {
+                console.log(tx);
+                throw new Error('invalid date');
+            }
+
+            return txDate >= new Date(range.from) && txDate <= new Date(range.to);
+        });
     }
 
     private getTxsForMonth(txs: CryptoTaxTransaction[], year: string, month: string) {
@@ -204,7 +198,7 @@ export class Exporter {
         return this.config.wallets.find(wallet => wallet.address.toLowerCase() === address.toLowerCase());
     }
 
-    private makeFilename(walletExchange: string, year: string, month: string) {
+    private makeFilename(walletExchange: string, range: DateRange) {
         const wallet = this.findWalletByAddress(walletExchange);
 
         if (!wallet) {
@@ -212,7 +206,7 @@ export class Exporter {
             return walletExchange;
         }
 
-        return `${year}-${month}_${wallet.blockchain}_${this.shortenAddress(wallet.address)}_${wallet.name}`;
+        return `${range.from}_${range.to}_${wallet.blockchain}_${this.shortenAddress(wallet.address)}_${wallet.name}`;
     }
 
     private shortenAddress(address: string): string {

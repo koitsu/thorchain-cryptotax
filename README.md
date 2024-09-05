@@ -40,6 +40,8 @@ Edit [wallets-config.json](wallets-config.json)
 
 Add your wallet addresses, they can be given names which are used when generating the CSV files.
 
+Set `fromDate`, `toDate`, and `frequency` ("monthly", "yearly", "none") for how to split up the CSV files.
+
 Supported blockchains in wallet config
 
 - THOR
@@ -71,9 +73,8 @@ Import the CSV files.
 You only need to import the THORChain specific files.
 
 e.g.
-- `YYYY-MM_THOR_xxxxx_Sample_actions.ctc.csv`
-- `YYYY-MM_THOR_xxxxx_Sample_sends.ctc.csv`
-- `YYYY-MM_Thorchain_swaps.ctc.csv`
+- `YYYY-MM-DD_YYYY-MM-DD_THOR_xxxxx_Sample.csv`
+- `YYYY-MM-DD_YYYY-MM-DD_THOR_thorchain_swaps.csv`
 
 ## Other notes
 
