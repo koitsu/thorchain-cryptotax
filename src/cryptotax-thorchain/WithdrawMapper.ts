@@ -53,6 +53,8 @@ export class WithdrawMapper implements Mapper {
         const isSavers: boolean = action.pools[0].includes('/');
         const symmDesc = isSavers ? 'savers' : (numAssetsOut === 2 ? 'symmetric' : 'asymmetric');
 
+        const txId = action.in[0].txID ?? '';
+
         // For savers the LP units are denominated in the asset used for saving, so we need to ensure it
         // uses a different token name. eg. ThorLP.BTC/BTC
         const lpToken: string = isSavers ? `ThorLP.${action.pools[0]}` : `ThorLP.${pool}`;
@@ -93,7 +95,7 @@ export class WithdrawMapper implements Mapper {
                 to: withdraw.address,
                 blockchain,
                 id: `${idPrefix}.remove-liquidity.${currency}`,
-                description: `${currentTxNum}/${totalTxs} - Remove liquidity ${currency} from ${poolName} (${symmDesc})`,
+                description: `${currentTxNum}/${totalTxs} - Remove liquidity ${currency} from ${poolName} (${symmDesc}); ${txId}`,
             });
 
             currentTxNum--;
@@ -129,7 +131,7 @@ export class WithdrawMapper implements Mapper {
             to: 'thorchain',
             id: `${idPrefix}.spam`,
             description:
-                `${currentTxNum}/${totalTxs} - Dummy transaction to get market price to then manually apply to the return LP token transaction ${poolName} (${symmDesc})`,
+                `${currentTxNum}/${totalTxs} - Dummy transaction to get market price to then manually apply to the return LP token transaction ${poolName} (${symmDesc}); ${txId}`,
         });
 
         currentTxNum--;
@@ -146,7 +148,7 @@ export class WithdrawMapper implements Mapper {
             to: 'thorchain',
             blockchain: 'THOR',
             id: `${idPrefix}.return-lp-token`,
-            description: `${currentTxNum}/${totalTxs} - Return LP token to ${poolName} (${symmDesc})`,
+            description: `${currentTxNum}/${totalTxs} - Return LP token to ${poolName} (${symmDesc}); ${txId}`,
             ...referencePrice
         });
 

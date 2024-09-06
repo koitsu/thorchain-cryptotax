@@ -37,7 +37,7 @@ export class RefundMapper implements Mapper {
         const feeAmount = parseMidgardAmount(
             refundMetadata.networkFees[0].amount ?? '0'
         );
-        const txID = input.txID ?? '';
+        const txId = input.txID ?? '';
         const reason = (refundMetadata.reason ?? '').replace(/[\n\t]/g, ' ').trim();
 
         transactions.push({
@@ -51,7 +51,7 @@ export class RefundMapper implements Mapper {
             from: input.address,
             blockchain: inputBlockchain,
             id: `${idPrefix}.refund`,
-            description: `refund (${txID}): ${reason}`,
+            description: `refund (${txId}): ${reason}`,
         });
 
         return transactions;

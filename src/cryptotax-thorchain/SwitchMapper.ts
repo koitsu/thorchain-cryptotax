@@ -35,6 +35,8 @@ export class SwitchMapper implements Mapper {
         const { blockchain: inputBlockchain, currency: inputCurrency } =
             parseMidgardAsset(inputCoin.asset);
 
+        const txId = input.txID ?? '';
+
         const output: Transaction = action.out[0];
         const outputCoin: Coin = output.coins[0];
         const { blockchain: outputBlockchain, currency: outputCurrency } =
@@ -52,7 +54,7 @@ export class SwitchMapper implements Mapper {
             to: output.address,
             blockchain: inputBlockchain,
             id: `${idPrefix}.bridge-out`,
-            description: '1/2 - Upgrade BNB.RUNE to THOR.RUNE (send BNB.RUNE)',
+            description: `1/2 - Upgrade BNB.RUNE to THOR.RUNE (send BNB.RUNE); ${txId}`,
         });
 
         // Receive THOR.RUNE
@@ -67,7 +69,7 @@ export class SwitchMapper implements Mapper {
             to: output.address,
             blockchain: outputBlockchain,
             id: `${idPrefix}.bridge-in`,
-            description: '2/2 - Upgrade BNB.RUNE to THOR.RUNE (receive THOR.RUNE)',
+            description: `2/2 - Upgrade BNB.RUNE to THOR.RUNE (receive THOR.RUNE); ${txId}`,
         });
 
         return transactions;

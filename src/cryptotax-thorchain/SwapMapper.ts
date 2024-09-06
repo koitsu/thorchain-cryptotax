@@ -62,6 +62,7 @@ export class SwapMapper implements Mapper {
         const inputAmount: string = parseMidgardAmount(inputCoin.amount);
         const inputIsSynth: boolean = isSynth(input);
 
+        const txId = action.in[0].txID ?? '';
         const memo = action.metadata.swap?.memo;
 
         const output: Transaction = this.getOutput(action, memo);
@@ -120,7 +121,7 @@ export class SwapMapper implements Mapper {
                 inputIsSynth ? 'Synth ' : ''
             }${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (send X to thorchain)`,
+            }${outputCurrency} (send X to thorchain); ${txId}`,
         });
 
         // ----------------------------------------------------------------------------------------
@@ -138,7 +139,7 @@ export class SwapMapper implements Mapper {
                 inputIsSynth ? 'Synth ' : ''
             }${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (receive X on thorchain)`,
+            }${outputCurrency} (receive X on thorchain); ${txId}`,
         });
 
         // Seems that only a Sell or Buy is required for CTC to add it as a Trade.
@@ -163,7 +164,7 @@ export class SwapMapper implements Mapper {
                 inputIsSynth ? 'Synth ' : ''
             }${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (swap X for Y on thorchain)`,
+            }${outputCurrency} (swap X for Y on thorchain); ${txId}`,
         });
 
         // transactions.push({
@@ -197,7 +198,7 @@ export class SwapMapper implements Mapper {
                 inputIsSynth ? 'Synth ' : ''
             }${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (send Y from thorchain)`,
+            }${outputCurrency} (send Y from thorchain); ${txId}`,
         });
 
         // Wallet B1 - Receive asset B from thorchain ---------------------------------------------
@@ -216,7 +217,7 @@ export class SwapMapper implements Mapper {
                 inputIsSynth ? 'Synth ' : ''
             }${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (receive Y from thorchain)`,
+            }${outputCurrency} (receive Y from thorchain); ${txId}`,
         });
 
         return transactions;

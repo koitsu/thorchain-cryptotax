@@ -129,11 +129,10 @@ export class Exporter {
             }
         }
 
-        console.log(`Total expected: ${totalTxs}`);
         console.log(`Total exported: ${count}`);
 
         if (count !== totalTxs) {
-            throw new Error('failed to export all txs');
+            throw new Error(`failed to export all txs. expected ${totalTxs}`);
         }
     }
 

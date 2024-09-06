@@ -34,6 +34,7 @@ export class AddLiquidityMapper implements Mapper {
         );
         const isSavers: boolean = action.pools[0].includes('/');
         const symmDesc = isSavers ? 'savers' : (numAssetsIn === 2 ? 'symmetric' : 'asymmetric');
+        const txId = action.in[0].txID ?? '';
 
         // For savers the LP units are denominated in the asset used for saving, so we need to ensure it
         // uses a different token name. eg. ThorLP.BTC/BTC
@@ -67,7 +68,7 @@ export class AddLiquidityMapper implements Mapper {
                 to: 'thorchain',
                 blockchain,
                 id: `${idPrefix}.add-liquidity.${currency}`,
-                description: `${currentTxNum}/${totalTxs} - Add liquidity ${currency} to ${poolName} (${symmDesc})`,
+                description: `${currentTxNum}/${totalTxs} - Add liquidity ${currency} to ${poolName} (${symmDesc}); ${txId}`,
             });
 
             currentTxNum++;
@@ -122,7 +123,7 @@ export class AddLiquidityMapper implements Mapper {
             to: action.in[0].address,
             blockchain: 'THOR',
             id: `${idPrefix}.receive-lp-token`,
-            description: `${currentTxNum}/${totalTxs} - Receive LP token from ${poolName} (${symmDesc})`,
+            description: `${currentTxNum}/${totalTxs} - Receive LP token from ${poolName} (${symmDesc}); ${txId}`,
             ...referencePrice
         });
 
@@ -138,7 +139,7 @@ export class AddLiquidityMapper implements Mapper {
             to: action.in[0].address,
             id: `${idPrefix}.spam`,
             description:
-                `${currentTxNum}/${totalTxs} - Dummy transaction to get market price to then manually apply to the receive LP token transaction ${poolName} (${symmDesc})`,
+                `${currentTxNum}/${totalTxs} - Dummy transaction to get market price to then manually apply to the receive LP token transaction ${poolName} (${symmDesc}); ${txId}`,
         });
 
         return transactions.reverse();
