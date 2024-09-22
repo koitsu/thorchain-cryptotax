@@ -14,7 +14,7 @@ Currently supported transactions
 - swaps
 - LPs (add/remove liquidity)
 - lending
-- savers (supported as LPing but needs more review)
+- savers
 
 Not currently supported
 - THORNames
@@ -38,20 +38,13 @@ Install the node packages
 
 Edit [wallets-config.json](wallets-config.json)
 
-Add your wallet addresses, they can be given names which are used when generating the CSV files.
+Add your wallet addresses, they can be given names using the `name` property.
+Which is helpful to identify the wallets when looking at the generated CSV filenames.
 
 Set `fromDate`, `toDate`, and `frequency` ("monthly", "yearly", "none") for how to split up the CSV files.
 
-Supported blockchains in wallet config
-
-- THOR
-- BTC
-- ETH
-- BNB
-- TERRA
-- DOGE
-- LTC
-- COSMOS
+The `blockchain` property for each wallet is only used in creating the CSV filenames, so it can be anything.
+e.g. "THOR", "BTC", "ETH"
 
 ### Run the tool
 
@@ -75,6 +68,23 @@ You only need to import the THORChain specific files.
 e.g.
 - `YYYY-MM-DD_YYYY-MM-DD_THOR_xxxxx_Sample.csv`
 - `YYYY-MM-DD_YYYY-MM-DD_THOR_thorchain_swaps.csv`
+
+## Liquidity Pools
+
+- LP actions are converted to Add/Remove Liquidity transactions for Crypto Tax Calculator
+- As well as Receive/Return LP Token
+- LP Token is set to the `liquidityUnits` amount provided by Midgard
+- LP token is given the name ThorLP.{asset}
+  - e.g. ThorLP.BTC.BTC
+
+## Savers
+
+- Savers are converted to Add/Remove Liquidity transactions for Crypto Tax Calculator
+- As well as Receive/Return LP Token
+- LP Token is set to the `liquidityUnits` amount provided by Midgard
+  - For Savers, this is equal to the asset amount being added
+- LP token is given the name ThorLP.{savers asset}
+  - e.g. ThorLP.BTC/BTC (savers assets have a slash)
 
 ## Other notes
 
