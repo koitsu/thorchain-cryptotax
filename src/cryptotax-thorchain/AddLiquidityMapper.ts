@@ -19,9 +19,7 @@ export class AddLiquidityMapper implements Mapper {
         const numAssetsIn: number = action.in.length;
 
         if (numAssetsIn === 0 || numAssetsIn > 2) {
-            throw new Error(
-                `AddLiquidityMapper: numAssetsIn must either be 1 or 2 but was ${numAssetsIn}`
-            );
+            throw this.error(`numAssetsIn must either be 1 or 2 but was ${numAssetsIn}`, action);
         }
 
         const date: Date = parseMidgardDate(action.date);
@@ -58,13 +56,21 @@ export class AddLiquidityMapper implements Mapper {
             const coin: Coin = deposit.coins[0];
             const { blockchain, currency } = parseMidgardAsset(coin.asset);
 
+            let from = deposit.address;
+
+            // Some older transactions for BNB LP seem to be missing the deposit address on the RUNE side.
+            // They also have a txId of genesisTx
+            if (!from) {
+                from = 'missing-deposit-address';
+            }
+
             transactions.push({
-                walletExchange: deposit.address,
+                walletExchange: from,
                 timestamp,
                 type: CryptoTaxTransactionType.AddLiquidity,
                 baseCurrency: currency,
                 baseAmount: parseMidgardAmount(coin.amount),
-                from: deposit.address,
+                from: from,
                 to: 'thorchain',
                 blockchain,
                 id: `${idPrefix}.add-liquidity.${currency}`,
@@ -89,8 +95,8 @@ export class AddLiquidityMapper implements Mapper {
         // This is used by CryptoTaxCalculator to determine the market price of the liquidity units received.
         const quoteCurrency: string = transactions[0].baseCurrency;
 
-        // If 2 assets are added then it should be 50/50 so we double the amount when determining the total amount of value added to the pool.
-        // eg. if depositing 100 RUNE + 0.01 BTC then the deposit is equal to 200 RUNE in total value added (or 0.02 BTC)
+        // If 2 assets are added then it should be 50/50, so we double the amount when determining the total amount of value added to the pool.
+        // e.g. if depositing 100 RUNE + 0.01 BTC then the deposit is equal to 200 RUNE in total value added (or 0.02 BTC)
         const quoteAmount: string = (
             parseFloat(transactions[0].baseAmount) * numAssetsIn
         ).toString();
@@ -111,16 +117,28 @@ export class AddLiquidityMapper implements Mapper {
             console.warn('Missing deposit address');
         }
 
+        // Check if RUNE is not the first asset in the deposit
+        if (numAssetsIn === 2 && action.in[0].coins[0].asset !== 'THOR.RUNE') {
+            // TODO: search inputs for RUNE side (if available)
+            throw this.error(`Expected RUNE as first asset in LP deposit`, action);
+        }
+
+        let lpTokenReceivingAddress = action.in[0].address;
+
+        if (!lpTokenReceivingAddress) {
+            lpTokenReceivingAddress = 'missing-deposit-address';
+        }
+
         // Receive liquidity units
 
         transactions.push({
-            walletExchange: action.in[0].address,
+            walletExchange: lpTokenReceivingAddress,
             timestamp: timestamp_plus_10,
             type: CryptoTaxTransactionType.ReceiveLpToken,
             baseCurrency: lpToken,
             baseAmount: liquidityUnits,
             from: 'thorchain',
-            to: action.in[0].address,
+            to: lpTokenReceivingAddress,
             blockchain: 'THOR',
             id: `${idPrefix}.receive-lp-token`,
             description: `${currentTxNum}/${totalTxs} - Receive LP token from ${poolName} (${symmDesc}); ${txId}`,
@@ -130,18 +148,23 @@ export class AddLiquidityMapper implements Mapper {
         currentTxNum++;
 
         transactions.push({
-            walletExchange: action.in[0].address,
+            walletExchange: lpTokenReceivingAddress,
             timestamp: timestamp_plus_20,
             type: CryptoTaxTransactionType.Spam,
             baseCurrency: quoteCurrency,
             baseAmount: quoteAmount,
             from: 'thorchain',
-            to: action.in[0].address,
+            to: lpTokenReceivingAddress,
             id: `${idPrefix}.spam`,
             description:
                 `${currentTxNum}/${totalTxs} - Dummy transaction to get market price to then manually apply to the receive LP token transaction ${poolName} (${symmDesc}); ${txId}`,
         });
 
         return transactions.reverse();
+    }
+
+    error(message: string, action: Action) {
+        console.log('action:', JSON.stringify(action, null, 4));
+        return new Error(`AddLiquidityMapper: ${message}`);
     }
 }
