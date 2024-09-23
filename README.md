@@ -94,3 +94,10 @@ e.g.
   Reference prices are currently disabled.
 - Sends and receives are pulled using the viewblock.io API.
   This is not a public API, so may change without warning which breaks the tool.
+
+## Useful References
+
+- [THORChain Dev Docs - Asset Notation](https://dev.thorchain.org/concepts/asset-notation.html)
+- [THORChain Dev Docs - Transaction Memos](https://dev.thorchain.org/concepts/memos.html)
+- [Thornode API docs](https://thornode.ninerealms.com/thorchain/doc)
+- [XChainJS docs](https://docs.xchainjs.org)
