@@ -110,7 +110,7 @@ ${body}
     }
 }
 
-export function generateReport(allEvents: TaxEvents, wallet: IWallet) {
+export function generateReport(allEvents: TaxEvents, wallet: IWallet, outputPath: string) {
 
     const report = new Reporter();
 
@@ -191,5 +191,5 @@ export function generateReport(allEvents: TaxEvents, wallet: IWallet) {
         i++;
     }
 
-    report.output(`output/report/${wallet.address}.html`);
+    report.output(`${outputPath}/${wallet.address}.html`);
 }

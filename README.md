@@ -52,8 +52,8 @@ e.g. "THOR", "BTC", "ETH"
 
 This will get all the transactions for the wallets and create reports and CSV files in the following paths:
 
-- `./output/report`
-- `./output/csv`
+- `./output/{current_datetime}/report`
+- `./output/{current_datetime}/csv`
 
 ### Import into Crypto Tax Calculator
 
@@ -72,18 +72,23 @@ e.g.
 ## Liquidity Pools
 
 - LP actions are converted to Add/Remove Liquidity transactions for Crypto Tax Calculator
-- As well as Receive/Return LP Token
+- Also creates Receive/Return LP Token transactions
 - LP Token is set to the `liquidityUnits` amount provided by Midgard
-- LP token is given the name ThorLP.{asset}
+  - **Note:** This may not be 100% accurate way of accounting for the LP
+- LP token is given the name `ThorLP.{asset}`
   - e.g. ThorLP.BTC.BTC
 
 ## Savers
 
 - Savers are converted to Add/Remove Liquidity transactions for Crypto Tax Calculator
-- As well as Receive/Return LP Token
+  - **Note:** In THORChain when doing a Savers deposit, it goes into the liquidity pool
+    and the other side of the LP is provided by the protocol.
+    Assumption here is that Savers should be considered as LP rather than staking when
+    converting to Crypto Tax Calculator.
+- Also creates Receive/Return LP Token transactions
 - LP Token is set to the `liquidityUnits` amount provided by Midgard
   - For Savers, this is equal to the asset amount being added
-- LP token is given the name ThorLP.{savers asset}
+- LP token is given the name `ThorLP.{savers_asset}`
   - e.g. ThorLP.BTC/BTC (savers assets have a slash)
 
 ## Other notes
