@@ -61,7 +61,7 @@ export class AddLiquidityMapper implements Mapper {
             // Some older transactions for BNB LP seem to be missing the deposit address on the RUNE side.
             // They also have a txId of genesisTx
             if (!from) {
-                from = 'missing-deposit-address';
+                from = 'MISSING-DEPOSIT-ADDRESS';
             }
 
             transactions.push({
@@ -126,7 +126,7 @@ export class AddLiquidityMapper implements Mapper {
         let lpTokenReceivingAddress = action.in[0].address;
 
         if (!lpTokenReceivingAddress) {
-            lpTokenReceivingAddress = 'missing-deposit-address';
+            lpTokenReceivingAddress = 'MISSING-DEPOSIT-ADDRESS';
         }
 
         // Receive liquidity units

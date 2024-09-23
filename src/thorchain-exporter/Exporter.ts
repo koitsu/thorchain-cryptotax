@@ -79,29 +79,23 @@ export class Exporter {
 
         const totalTxs = txs.length;
         let count = 0;
-        const walletExchanges = this.getAllWalletExchanges(txs);
+        const walletExchanges = this.getUniqueWalletExchanges(txs);
 
         writeCsv(`${outputPath}/all.csv`, txs);
 
         const ranges = generateDateRanges(this.config.fromDate, this.config.toDate, this.config.frequency);
 
         for (const range of ranges) {
-            const periodTxs = this.getTxsInRange(txs, range);
-            console.log(`${range.from} to ${range.to}`);
-            console.log(periodTxs.length);
+            const rangeTxs = this.getTxsInRange(txs, range);
 
-            if (periodTxs.length === 0) {
+            if (rangeTxs.length === 0) {
                 continue;
             }
 
             for (const walletExchange of walletExchanges) {
-                console.log(walletExchange);
-                const walletTxs = this.getTxsForWallet(periodTxs, walletExchange);
+                const walletTxs = this.getTxsForWallet(rangeTxs, walletExchange);
 
                 if (walletTxs.length) {
-                    console.log(`${range.from} to ${range.to}`);
-                    console.log(walletTxs.length);
-
                     if (walletExchange === 'thorchain') {
                         // validate txs
                         const badTxs = walletTxs.filter(tx => tx.from !== 'thorchain' && tx.to !== 'thorchain');
@@ -110,18 +104,12 @@ export class Exporter {
                             throw new Error('bad txs');
                         }
 
-                        writeCsv(
-                            `${outputPath}/${range.from}_${range.to}_THOR_thorchain_swaps.csv`,
-                            walletTxs
-                        );
+                        writeCsv(`${outputPath}/${range.from}_${range.to}_THOR_thorchain_swaps.csv`, walletTxs);
 
                         count += walletTxs.length;
 
                     } else {
-                        writeCsv(
-                            `${outputPath}/${this.makeFilename(walletExchange, range)}.csv`,
-                            walletTxs
-                        );
+                        writeCsv(`${outputPath}/${this.makeFilename(walletExchange, range)}.csv`, walletTxs);
 
                         count += walletTxs.length;
                     }
@@ -160,37 +148,16 @@ export class Exporter {
         });
     }
 
-    private getAllWalletExchanges(txs: CryptoTaxTransaction[]): string[] {
-        const walletExchanges: any = {};
-
-        txs.map((tx) => {
+    private getUniqueWalletExchanges(txs: CryptoTaxTransaction[]): Set<string> {
+        return new Set(txs.map((tx) => {
             if (!tx.walletExchange) {
-                console.warn(tx);
+                console.warn(`WARN: missing walletExchange`);
+                console.log(tx);
+                return 'MISSING-ADDRESS';
             }
 
-            walletExchanges[tx.walletExchange ?? ''] = true;
-        });
-
-        // if (walletExchanges['']) {
-        //     throw new Error('IWallet/exchange not provided');
-        // }
-
-        return Object.keys(walletExchanges);
-    }
-
-    txIsSendOrReceive(tx: CryptoTaxTransaction): boolean {
-        return [
-            CryptoTaxTransactionType.Send,
-            CryptoTaxTransactionType.Receive
-        ].includes(tx.type);
-    }
-
-    getSends(txs: CryptoTaxTransaction[]): CryptoTaxTransaction[] {
-        return txs.filter(tx => this.txIsSendOrReceive(tx));
-    }
-
-    getNotSends(txs: CryptoTaxTransaction[]): CryptoTaxTransaction[] {
-        return txs.filter(tx => !this.txIsSendOrReceive(tx));
+            return tx.walletExchange;
+        }));
     }
 
     private findWalletByAddress(address: string) {
@@ -202,12 +169,13 @@ export class Exporter {
 
         if (!wallet) {
             console.warn(`wallet not found in config: ${walletExchange}`);
-            return walletExchange;
+            return `${range.from}_${range.to}_${walletExchange}`;
         }
 
         return `${range.from}_${range.to}_${wallet.blockchain}_${this.shortenAddress(wallet.address)}_${wallet.name}`;
     }
 
+    // Returns last 5 characters of address
     private shortenAddress(address: string): string {
         return address.slice(-5);
     }
