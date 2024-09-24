@@ -85,10 +85,10 @@ export class SwapMapper implements Mapper {
         }
 
         console.log(
-            `${timestamp} swap ${inputBlockchain}.${inputCurrency} ${
-                inputIsSynth ? '*synth*' : ''
-            } to ${outputBlockchain}.${outputCurrency} ${
-                outputIsSynth ? '*synth*' : ''
+            `${timestamp} swap ${inputBlockchain}.${inputCurrency}${
+                inputIsSynth ? ' *synth*' : ''
+            } to ${outputBlockchain}.${outputCurrency}${
+                outputIsSynth ? ' *synth*' : ''
             } - ${input.txID ?? output.txID}`
         );
 

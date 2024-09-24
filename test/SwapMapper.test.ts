@@ -1,0 +1,169 @@
+import { SwapMapper } from '../src/cryptotax-thorchain/SwapMapper';
+import { Action, Transaction, Coin } from '@xchainjs/xchain-midgard';
+import { describe, expect, test, beforeEach } from '@jest/globals';
+import { CryptoTaxTransactionType } from '../src/cryptotax';
+import { toMidgardNanoTimestamp } from '../src/cryptotax-thorchain/MidgardUtils';
+
+describe('SwapMapper', () => {
+    let swapMapper: SwapMapper;
+
+    beforeEach(() => {
+        swapMapper = new SwapMapper();
+    });
+
+    const createMockAction = ({
+        inputAsset,
+        inputAmount,
+        outputAsset,
+        outputAmount,
+        inputAddress,
+        outputAddress,
+        txID,
+    }: {
+        inputAsset: string;
+        inputAmount: number;
+        outputAsset: string;
+        outputAmount: number;
+        inputAddress: string;
+        outputAddress: string;
+        txID: string;
+    }): Action => ({
+        date: toMidgardNanoTimestamp(new Date('2023-04-01T12:00:00Z')),
+        height: '1000000',
+        in: [
+            {
+                address: inputAddress,
+                coins: [
+                    {
+                        asset: inputAsset,
+                        amount: '' + inputAmount * Math.pow(10, 8),
+                    },
+                ],
+                txID,
+            } as Transaction,
+        ],
+        out: [
+            {
+                address: outputAddress,
+                coins: [
+                    {
+                        asset: outputAsset,
+                        amount: '' + outputAmount * Math.pow(10, 8),
+                    },
+                ],
+                txID,
+            } as Transaction,
+        ],
+        metadata: {
+            swap: {
+                memo: `=:${outputAsset}:${outputAddress}`,
+                networkFees: [{ asset: 'THOR.RUNE', amount: '1000000' }],
+                affiliateAddress: '',
+                affiliateFee: '0',
+                isStreamingSwap: false,
+                liquidityFee: '0',
+                swapTarget: '0',
+                swapSlip: '0',
+                txType: 'swap',
+            },
+        },
+        pools: [],
+        status: 'success',
+        type: 'swap',
+    });
+
+    test('should correctly map a simple swap', () => {
+        const action = createMockAction({
+            inputAsset: 'BTC.BTC',
+            inputAmount: 1,
+            outputAsset: 'ETH.ETH',
+            outputAmount: 20,
+            inputAddress: 'btc1address',
+            outputAddress: 'eth1address',
+            txID: 'tx123',
+        });
+
+        const result = swapMapper.toCryptoTax(action, false);
+
+        expect(result).toHaveLength(5);
+        expect(result[0].type).toBe(CryptoTaxTransactionType.Send);
+        expect(result[1].type).toBe(CryptoTaxTransactionType.Receive);
+        expect(result[2].type).toBe(CryptoTaxTransactionType.Sell);
+        expect(result[3].type).toBe(CryptoTaxTransactionType.Send);
+        expect(result[4].type).toBe(CryptoTaxTransactionType.Receive);
+
+        expect(result[0].baseCurrency).toBe('BTC');
+        expect(result[0].baseAmount).toBe('1');
+        expect(result[4].baseCurrency).toBe('ETH');
+        expect(result[4].baseAmount).toBe('20');
+    });
+
+    test('should handle synth swaps', () => {
+        const action = createMockAction({
+            inputAsset: 'BTC/BTC',
+            inputAmount: 1,
+            outputAsset: 'ETH/ETH',
+            outputAmount: 20,
+            inputAddress: 'thor1address',
+            outputAddress: 'thor1address',
+            txID: 'tx456',
+        });
+
+        const result = swapMapper.toCryptoTax(action, false);
+
+        expect(result).toHaveLength(5);
+        expect(result[0].description).toContain('Synth BTC');
+        expect(result[4].description).toContain('Synth ETH');
+    });
+
+    test('should throw an error for invalid input', () => {
+        const invalidAction: Action = {
+            ...createMockAction({
+                inputAsset: 'BTC.BTC',
+                inputAmount: 1,
+                outputAsset: 'ETH.ETH',
+                outputAmount: 20,
+                inputAddress: 'btc1address',
+                outputAddress: 'eth1address',
+                txID: 'tx789',
+            }),
+            in: [],
+        };
+
+        expect(() => swapMapper.toCryptoTax(invalidAction, false)).toThrow(
+            'Expected numAssetsIn to be 1 but was 0'
+        );
+    });
+
+    test('should ignore synth swaps from non-thor addresses', () => {
+        const action = createMockAction({
+            inputAsset: 'BTC/BTC',
+            inputAmount: 1,
+            outputAsset: 'ETH/ETH',
+            outputAmount: 20,
+            inputAddress: 'btc1address',
+            outputAddress: 'eth1address',
+            txID: 'tx101112',
+        });
+
+        const result = swapMapper.toCryptoTax(action, false);
+
+        expect(result).toHaveLength(0);
+    });
+
+    test('should throw an error for THOR.TOR swaps', () => {
+        const action = createMockAction({
+            inputAsset: 'BTC.BTC',
+            inputAmount: 1,
+            outputAsset: 'THOR.TOR',
+            outputAmount: 20,
+            inputAddress: 'btc1address',
+            outputAddress: 'thor1address',
+            txID: 'tx131415',
+        });
+
+        expect(() => swapMapper.toCryptoTax(action, false)).toThrow(
+            'Invalid swap - THOR.TOR'
+        );
+    });
+});
