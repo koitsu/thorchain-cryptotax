@@ -7,10 +7,6 @@ import { toMidgardNanoTimestamp } from '../src/cryptotax-thorchain/MidgardUtils'
 describe('SwapMapper', () => {
     let swapMapper: SwapMapper;
 
-    beforeEach(() => {
-        swapMapper = new SwapMapper();
-    });
-
     const createMockAction = ({
         inputAsset,
         inputAmount,
@@ -83,6 +79,7 @@ describe('SwapMapper', () => {
             txID: 'tx123',
         });
 
+        swapMapper = new SwapMapper(action, false, []);
         const result = swapMapper.toCryptoTax(action, false);
 
         expect(result).toHaveLength(5);
@@ -109,6 +106,7 @@ describe('SwapMapper', () => {
             txID: 'tx456',
         });
 
+        swapMapper = new SwapMapper(action, false, []);
         const result = swapMapper.toCryptoTax(action, false);
 
         expect(result).toHaveLength(5);
@@ -130,6 +128,7 @@ describe('SwapMapper', () => {
             in: [],
         };
 
+        swapMapper = new SwapMapper(invalidAction, false, []);
         expect(() => swapMapper.toCryptoTax(invalidAction, false)).toThrow(
             'Expected numAssetsIn to be 1 but was 0'
         );
@@ -146,6 +145,7 @@ describe('SwapMapper', () => {
             txID: 'tx101112',
         });
 
+        swapMapper = new SwapMapper(action, false, []);
         const result = swapMapper.toCryptoTax(action, false);
 
         expect(result).toHaveLength(0);
@@ -162,6 +162,7 @@ describe('SwapMapper', () => {
             txID: 'tx131415',
         });
 
+        swapMapper = new SwapMapper(action, false, []);
         expect(() => swapMapper.toCryptoTax(action, false)).toThrow(
             'Invalid swap - THOR.TOR'
         );

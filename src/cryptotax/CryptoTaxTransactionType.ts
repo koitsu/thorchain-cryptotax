@@ -1,4 +1,10 @@
 export enum CryptoTaxTransactionType {
+    /**
+     * Unspecified transaction type.
+     * This is used when the transaction type is not specified or cannot be determined.
+     */
+    Unspecified = 'unspecified',
+
     /** Purchase of cryptocurrency, which increases the balance remaining and effects cost basis. */
     Buy = 'buy',
 

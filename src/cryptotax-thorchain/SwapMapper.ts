@@ -1,18 +1,9 @@
 import { Action, Coin, Transaction } from '@xchainjs/xchain-midgard';
-import {
-    CryptoTaxTransaction,
-    CryptoTaxTransactionType,
-    toCryptoTaxTimestamp,
-} from '../cryptotax';
-import {
-    parseMidgardAmount,
-    parseMidgardAsset,
-    parseMidgardDate,
-    parseMidgardPool,
-    toCryptoTaxCurrencyTicker,
-} from './MidgardUtils';
+import { CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp } from '../cryptotax';
+import { parseMidgardAmount, parseMidgardAsset, parseMidgardDate, parseMidgardPool, toCryptoTaxCurrencyTicker } from './MidgardUtils';
 import { Mapper } from './Mapper';
-import {TxStatusResponse} from "@xchainjs/xchain-thornode";
+import { TxStatusResponse } from '@xchainjs/xchain-thornode';
+import { BaseMapper } from './BaseMapper';
 
 // https://dev.thorchain.org/concepts/memos.html#swap
 const SWAP_DESTADDR = 2;
@@ -35,30 +26,30 @@ function isSynth(tx: Transaction): boolean {
 // Wallet B1 CSV
 // * receive currency B from thorchain
 
-export class SwapMapper implements Mapper {
-    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
-        const date: Date = parseMidgardDate(action.date);
-        const timestamp: string = toCryptoTaxTimestamp(date);
+export class SwapMapper extends BaseMapper {
+    protected mapperName: string = 'SwapMapper';
 
-        const date_plus_10 = new Date(date.getTime() + (10 * 1000));
-        const date_plus_20 = new Date(date.getTime() + (20 * 1000));
+    toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
+        super.action = action;
+        super.addReferencePrices = addReferencePrices;
+        super.thornodeTxs = thornodeTxs;
+
+        const date_plus_10 = new Date(this.datetime.getTime() + 10 * 1000);
+        const date_plus_20 = new Date(this.datetime.getTime() + 20 * 1000);
         const timestamp_plus_10: string = toCryptoTaxTimestamp(date_plus_10);
         const timestamp_plus_20: string = toCryptoTaxTimestamp(date_plus_20);
-
-        const idPrefix: string = date.toISOString();
 
         const transactions: CryptoTaxTransaction[] = [];
 
         const numAssetsIn: number = action.in.length;
 
         if (numAssetsIn !== 1) {
-            throw this.error(`Expected numAssetsIn to be 1 but was ${numAssetsIn}`, action);
+            throw this.error(`Expected numAssetsIn to be 1 but was ${numAssetsIn}`);
         }
 
         const input: Transaction = action.in[0];
         const inputCoin: Coin = input.coins[0];
-        const { blockchain: inputBlockchain, currency: inputCurrency } =
-            parseMidgardAsset(inputCoin.asset);
+        const { blockchain: inputBlockchain, currency: inputCurrency } = parseMidgardAsset(inputCoin.asset);
         const inputAmount: string = parseMidgardAmount(inputCoin.amount);
         const inputIsSynth: boolean = isSynth(input);
 
@@ -67,59 +58,53 @@ export class SwapMapper implements Mapper {
 
         const output: Transaction = this.getOutput(action, memo);
         const outputCoin: Coin = output.coins[0];
-        const { blockchain: outputBlockchain, currency: outputCurrency } =
-            parseMidgardAsset(outputCoin.asset);
+        const { blockchain: outputBlockchain, currency: outputCurrency } = parseMidgardAsset(outputCoin.asset);
         const outputAmount: string = parseMidgardAmount(outputCoin.amount);
         const outputIsSynth: boolean = isSynth(output);
 
         if (!inputCurrency) {
             console.log('action:', JSON.stringify(action, null, 4));
             console.error('in:', JSON.stringify(input, null, 4));
-            throw this.error('No input currency', action);
+            throw this.error('No input currency');
         }
 
         if (!inputAmount) {
             console.log('action:', JSON.stringify(action, null, 4));
             console.error('in:', JSON.stringify(input, null, 4));
-            throw this.error('No input amount', action);
+            throw this.error('No input amount');
         }
 
         console.log(
-            `${timestamp} swap ${inputBlockchain}.${inputCurrency}${
+            `${this.timestamp} swap ${inputBlockchain}.${inputCurrency}${
                 inputIsSynth ? ' *synth*' : ''
-            } to ${outputBlockchain}.${outputCurrency}${
-                outputIsSynth ? ' *synth*' : ''
-            } - ${input.txID ?? output.txID}`
+            } to ${outputBlockchain}.${outputCurrency}${outputIsSynth ? ' *synth*' : ''} - ${input.txID ?? output.txID}`
         );
 
         // If synth (eg. BTC/BTC) but address is not thor, then ignore. Likely a savers withdrawal.
         if (inputIsSynth && !input.address.startsWith('thor1')) {
-            console.log('SWAP IGNORED')
+            console.log('SWAP IGNORED');
             return [];
         }
 
         if (inputCoin.asset === 'THOR.TOR' || outputCoin.asset === 'THOR.TOR') {
-            throw this.error('Invalid swap - THOR.TOR', action);
+            throw this.error('Invalid swap - THOR.TOR');
         }
 
-        const { blockchain: feeBlockchain, currency: feeCurrency } =
-            parseMidgardAsset(action.metadata.swap?.networkFees[0].asset ?? '');
+        const { blockchain: feeBlockchain, currency: feeCurrency } = parseMidgardAsset(action.metadata.swap?.networkFees[0].asset ?? '');
 
         // Wallet A1 - Send asset A to thorchain --------------------------------------------------
 
         transactions.push({
             walletExchange: input.address,
-            timestamp,
+            timestamp: this.timestamp,
             type: CryptoTaxTransactionType.Send,
             baseCurrency: inputCurrency,
             baseAmount: inputAmount,
             from: input.address,
             to: 'thorchain',
             blockchain: inputBlockchain,
-            id: `${idPrefix}.send-to-thorchain`,
-            description: `1/5 Swap ${
-                inputIsSynth ? 'Synth ' : ''
-            }${inputCurrency} to ${
+            id: `${this.idPrefix}.send-to-thorchain`,
+            description: `1/5 Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
             }${outputCurrency} (send X to thorchain); ${txId}`,
         });
@@ -128,16 +113,14 @@ export class SwapMapper implements Mapper {
 
         transactions.push({
             walletExchange: 'thorchain',
-            timestamp,
+            timestamp: this.timestamp,
             type: CryptoTaxTransactionType.Receive,
             baseCurrency: inputCurrency,
             baseAmount: inputAmount,
             from: input.address,
             to: 'thorchain',
-            id: `${idPrefix}.thorchain.receive`,
-            description: `2/5 - Swap ${
-                inputIsSynth ? 'Synth ' : ''
-            }${inputCurrency} to ${
+            id: `${this.idPrefix}.thorchain.receive`,
+            description: `2/5 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
             }${outputCurrency} (receive X on thorchain); ${txId}`,
         });
@@ -154,15 +137,11 @@ export class SwapMapper implements Mapper {
             quoteCurrency: outputCurrency,
             quoteAmount: parseMidgardAmount(outputCoin.amount),
             feeCurrency,
-            feeAmount: parseMidgardAmount(
-                action.metadata.swap?.networkFees[0].amount ?? ''
-            ),
+            feeAmount: parseMidgardAmount(action.metadata.swap?.networkFees[0].amount ?? ''),
             from: 'thorchain',
             to: 'thorchain',
-            id: `${idPrefix}.thorchain.swap`,
-            description: `3/5 - Swap ${
-                inputIsSynth ? 'Synth ' : ''
-            }${inputCurrency} to ${
+            id: `${this.idPrefix}.thorchain.swap`,
+            description: `3/5 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
             }${outputCurrency} (swap X for Y on thorchain); ${txId}`,
         });
@@ -193,10 +172,8 @@ export class SwapMapper implements Mapper {
             from: 'thorchain',
             to: output.address,
             blockchain: outputBlockchain,
-            id: `${idPrefix}.thorchain.send`,
-            description: `4/5 - Swap ${
-                inputIsSynth ? 'Synth ' : ''
-            }${inputCurrency} to ${
+            id: `${this.idPrefix}.thorchain.send`,
+            description: `4/5 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
             }${outputCurrency} (send Y from thorchain); ${txId}`,
         });
@@ -212,10 +189,8 @@ export class SwapMapper implements Mapper {
             from: 'thorchain',
             to: output.address,
             blockchain: outputBlockchain,
-            id: `${idPrefix}.receive-from-thorchain`,
-            description: `5/5 Swap ${
-                inputIsSynth ? 'Synth ' : ''
-            }${inputCurrency} to ${
+            id: `${this.idPrefix}.receive-from-thorchain`,
+            description: `5/5 Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
             }${outputCurrency} (receive Y from thorchain); ${txId}`,
         });
@@ -226,14 +201,14 @@ export class SwapMapper implements Mapper {
     // Find which output is for the user
     getOutput(action: Action, memo: string | undefined): Transaction {
         if (!memo) {
-            throw this.error('No memo', action);
+            throw this.error('No memo');
         }
 
         const destAddress = this.getDestAddress(memo);
-        const out = action.out.find(out => out.address.toLowerCase() === destAddress.toLowerCase());
+        const out = action.out.find((out) => out.address.toLowerCase() === destAddress.toLowerCase());
 
         if (!out) {
-            throw this.error('No matching out tx', action);
+            throw this.error('No matching out tx');
         }
 
         return out;
@@ -241,10 +216,5 @@ export class SwapMapper implements Mapper {
 
     getDestAddress(memo: string): string {
         return memo.split(':')[SWAP_DESTADDR];
-    }
-
-    error(message: string, action: Action) {
-        console.log('action:', JSON.stringify(action, null, 4));
-        return new Error(`SwapMapper: ${message}`);
     }
 }

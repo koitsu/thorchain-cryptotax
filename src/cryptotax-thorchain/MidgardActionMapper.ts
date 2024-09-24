@@ -10,16 +10,17 @@ import { RefundMapper } from "./RefundMapper";
 import {LoanOpenMapper} from "./LoanOpenMapper";
 import {LoanRepaymentMapper} from "./LoanRepaymentMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
+import {map} from "lodash";
 
 type ActionMappers = {
-    [index in ActionType]: Mapper | null;
+    [index in ActionType]: Mapper | null | any;
 }
 
 const actionMappers: ActionMappers = {
     [ActionType.AddLiquidity]: new AddLiquidityMapper(),
     [ActionType.Donate]: null,
     [ActionType.Refund]: new RefundMapper(),
-    [ActionType.Swap]: new SwapMapper(),
+    [ActionType.Swap]: SwapMapper,
     [ActionType.Switch]: new SwitchMapper(),
     [ActionType.Withdraw]: new WithdrawMapper()
 }
@@ -33,7 +34,11 @@ export function getActionDate(action: Action): Date {
 
 export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[], addReferencePrices: boolean = false): CryptoTaxTransaction[] {
     const date: string = toCryptoTaxTimestamp(getActionDate(action));
-    const mapper = getMapper(action);
+    let mapper = getMapper(action);
+
+    if (typeof mapper === 'function') {
+        mapper = new (mapper as any)(action, addReferencePrices, thornodeTxs);
+    }
 
     const transactions: CryptoTaxTransaction[] = mapper?.toCryptoTax(action, addReferencePrices, thornodeTxs) ?? [];
 
