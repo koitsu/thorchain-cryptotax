@@ -49,8 +49,7 @@ export class SwapMapper extends BaseMapper {
 
         const input: Transaction = action.in[0];
         const inputCoin: Coin = input.coins[0];
-        const { blockchain: inputBlockchain, currency: inputCurrency } = parseMidgardAsset(inputCoin.asset);
-        const inputAmount: string = parseMidgardAmount(inputCoin.amount);
+        const { blockchain: inputBlockchain, currency: inputCurrency, amountParsed: inputAmount } = this.parseCoin(inputCoin.asset, inputCoin.amount);
         const inputIsSynth: boolean = isSynth(input);
 
         const txId = action.in[0].txID ?? '';
@@ -58,8 +57,7 @@ export class SwapMapper extends BaseMapper {
 
         const output: Transaction = this.getOutput(action, memo);
         const outputCoin: Coin = output.coins[0];
-        const { blockchain: outputBlockchain, currency: outputCurrency } = parseMidgardAsset(outputCoin.asset);
-        const outputAmount: string = parseMidgardAmount(outputCoin.amount);
+        const { blockchain: outputBlockchain, currency: outputCurrency, amountParsed: outputAmount } = this.parseCoin(outputCoin.asset, outputCoin.amount);
         const outputIsSynth: boolean = isSynth(output);
 
         if (!inputCurrency) {
