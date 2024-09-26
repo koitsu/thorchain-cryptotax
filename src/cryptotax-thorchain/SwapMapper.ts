@@ -1,7 +1,6 @@
 import { Action, Coin, Transaction } from '@xchainjs/xchain-midgard';
 import { CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp } from '../cryptotax';
-import { parseMidgardAmount, parseMidgardAsset, parseMidgardDate, parseMidgardPool, toCryptoTaxCurrencyTicker } from './MidgardUtils';
-import { Mapper } from './Mapper';
+import { parseMidgardAmount, parseMidgardAsset } from './MidgardUtils';
 import { TxStatusResponse } from '@xchainjs/xchain-thornode';
 import { BaseMapper } from './BaseMapper';
 
@@ -9,19 +8,11 @@ import { BaseMapper } from './BaseMapper';
 const SWAP_DESTADDR = 2;
 
 function isSynth(tx: Transaction): boolean {
-    return (
-        // tx.address.startsWith('thor1') && !tx.coins[0].asset.startsWith('THOR.')
-        tx.coins[0].asset.includes('/')
-    );
+    return tx.coins[0].asset.includes('/');
 }
 
 // Wallet-A1 CSV
 // * send currency A to thorchain
-
-// Thorchain CSV
-// * receive currency A
-// * sell currency A for currency B
-// * send currency B to wallet-B1
 
 // Wallet B1 CSV
 // * receive currency B from thorchain
@@ -35,9 +26,7 @@ export class SwapMapper extends BaseMapper {
         super.thornodeTxs = thornodeTxs;
 
         const date_plus_10 = new Date(this.datetime.getTime() + 10 * 1000);
-        const date_plus_20 = new Date(this.datetime.getTime() + 20 * 1000);
         const timestamp_plus_10: string = toCryptoTaxTimestamp(date_plus_10);
-        const timestamp_plus_20: string = toCryptoTaxTimestamp(date_plus_20);
 
         const transactions: CryptoTaxTransaction[] = [];
 
@@ -61,14 +50,10 @@ export class SwapMapper extends BaseMapper {
         const outputIsSynth: boolean = isSynth(output);
 
         if (!inputCurrency) {
-            console.log('action:', JSON.stringify(action, null, 4));
-            console.error('in:', JSON.stringify(input, null, 4));
             throw this.error('No input currency');
         }
 
         if (!inputAmount) {
-            console.log('action:', JSON.stringify(action, null, 4));
-            console.error('in:', JSON.stringify(input, null, 4));
             throw this.error('No input amount');
         }
 
@@ -84,6 +69,7 @@ export class SwapMapper extends BaseMapper {
             return [];
         }
 
+        // Can appear with lending transactions
         if (inputCoin.asset === 'THOR.TOR' || outputCoin.asset === 'THOR.TOR') {
             throw this.error('Invalid swap - THOR.TOR');
         }
@@ -95,108 +81,43 @@ export class SwapMapper extends BaseMapper {
         transactions.push({
             walletExchange: input.address,
             timestamp: this.timestamp,
-            type: CryptoTaxTransactionType.Send,
-            baseCurrency: inputCurrency,
-            baseAmount: inputAmount,
-            from: input.address,
-            to: 'thorchain',
-            blockchain: inputBlockchain,
-            id: `${this.idPrefix}.send-to-thorchain`,
-            description: `1/5 Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
-                outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (send X to thorchain); ${txId}`,
-        });
-
-        // ----------------------------------------------------------------------------------------
-
-        transactions.push({
-            walletExchange: 'thorchain',
-            timestamp: this.timestamp,
-            type: CryptoTaxTransactionType.Receive,
-            baseCurrency: inputCurrency,
-            baseAmount: inputAmount,
-            from: input.address,
-            to: 'thorchain',
-            id: `${this.idPrefix}.thorchain.receive`,
-            description: `2/5 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
-                outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (receive X on thorchain); ${txId}`,
-        });
-
-        // Seems that only a Sell or Buy is required for CTC to add it as a Trade.
-        // If you add both Sell and Buy then it creates duplicates.
-
-        transactions.push({
-            walletExchange: 'thorchain',
-            timestamp: timestamp_plus_10,
-            type: CryptoTaxTransactionType.Sell,
+            type: CryptoTaxTransactionType.BridgeTradeOut,
             baseCurrency: inputCurrency,
             baseAmount: inputAmount,
             quoteCurrency: outputCurrency,
             quoteAmount: parseMidgardAmount(outputCoin.amount),
             feeCurrency,
             feeAmount: parseMidgardAmount(action.metadata.swap?.networkFees[0].amount ?? ''),
-            from: 'thorchain',
+            from: input.address,
             to: 'thorchain',
-            id: `${this.idPrefix}.thorchain.swap`,
-            description: `3/5 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
+            blockchain: inputBlockchain,
+            id: `${this.idPrefix}.thorchain.bridge-trade-out`,
+            description: `1/2 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (swap X for Y on thorchain); ${txId}`,
-        });
-
-        // transactions.push({
-        //     walletExchange: 'thorchain',
-        //     timestamp,
-        //     type: CryptoTaxTransactionType.Buy,
-        //     baseCurrency: outputCurrency,
-        //     baseAmount: outputAmount,
-        //     quoteCurrency: inputCurrency,
-        //     quoteAmount: parseMidgardAmount(inputCoin.amount),
-        //     feeCurrency,
-        //     feeAmount: parseMidgardAmount(action.metadata.swap?.networkFees[0].amount ?? ''),
-        //     from: output.address,
-        //     to: input.address,
-        //     blockchain: outputBlockchain,
-        //     id: `${idPrefix}.buy`,
-        //     description: `Swap ${inputCurrency} to ${outputCurrency}`
-        // });
-
-        transactions.push({
-            walletExchange: 'thorchain',
-            timestamp: timestamp_plus_20,
-            type: CryptoTaxTransactionType.Send,
-            baseCurrency: outputCurrency,
-            baseAmount: outputAmount,
-            from: 'thorchain',
-            to: output.address,
-            blockchain: outputBlockchain,
-            id: `${this.idPrefix}.thorchain.send`,
-            description: `4/5 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
-                outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (send Y from thorchain); ${txId}`,
+            }${outputCurrency}; ${txId}`,
         });
 
         // Wallet B1 - Receive asset B from thorchain ---------------------------------------------
 
         transactions.push({
             walletExchange: output.address,
-            timestamp: timestamp_plus_20,
-            type: CryptoTaxTransactionType.Receive,
+            timestamp: this.timestamp,
+            type: CryptoTaxTransactionType.BridgeTradeIn,
             baseCurrency: outputCurrency,
             baseAmount: outputAmount,
             from: 'thorchain',
             to: output.address,
             blockchain: outputBlockchain,
-            id: `${this.idPrefix}.receive-from-thorchain`,
-            description: `5/5 Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
+            id: `${this.idPrefix}.thorchain.bridge-trade-in`,
+            description: `2/2 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
                 outputIsSynth ? 'Synth ' : ''
-            }${outputCurrency} (receive Y from thorchain); ${txId}`,
+            }${outputCurrency}; ${txId}`,
         });
 
         return transactions;
     }
 
-    // Find which output is for the user
+    // Find which output is for the user. As there may also be an output for an affiliate.
     getOutput(action: Action, memo: string | undefined): Transaction {
         if (!memo) {
             throw this.error('No memo');

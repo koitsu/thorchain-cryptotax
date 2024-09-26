@@ -67,7 +67,9 @@ You only need to import the THORChain specific files.
 
 e.g.
 - `YYYY-MM-DD_YYYY-MM-DD_THOR_xxxxx_Sample.csv`
-- `YYYY-MM-DD_YYYY-MM-DD_THOR_thorchain_swaps.csv`
+
+Swaps should be updated in CTC as Cross Chain Sell (outgoing from wallet to THORChain) and Cross Chain Buy (incoming into wallet from THORChain).<br>
+They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`.
 
 ## Liquidity Pools
 

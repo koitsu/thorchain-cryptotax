@@ -82,17 +82,14 @@ describe('SwapMapper', () => {
         swapMapper = new SwapMapper(action, false, []);
         const result = swapMapper.toCryptoTax(action, false);
 
-        expect(result).toHaveLength(5);
-        expect(result[0].type).toBe(CryptoTaxTransactionType.Send);
-        expect(result[1].type).toBe(CryptoTaxTransactionType.Receive);
-        expect(result[2].type).toBe(CryptoTaxTransactionType.Sell);
-        expect(result[3].type).toBe(CryptoTaxTransactionType.Send);
-        expect(result[4].type).toBe(CryptoTaxTransactionType.Receive);
+        expect(result).toHaveLength(2);
+        expect(result[0].type).toBe(CryptoTaxTransactionType.BridgeTradeOut);
+        expect(result[1].type).toBe(CryptoTaxTransactionType.BridgeTradeIn);
 
         expect(result[0].baseCurrency).toBe('BTC');
         expect(result[0].baseAmount).toBe('1');
-        expect(result[4].baseCurrency).toBe('ETH');
-        expect(result[4].baseAmount).toBe('20');
+        expect(result[1].baseCurrency).toBe('ETH');
+        expect(result[1].baseAmount).toBe('20');
     });
 
     test('should handle synth swaps', () => {
@@ -109,9 +106,9 @@ describe('SwapMapper', () => {
         swapMapper = new SwapMapper(action, false, []);
         const result = swapMapper.toCryptoTax(action, false);
 
-        expect(result).toHaveLength(5);
+        expect(result).toHaveLength(2);
         expect(result[0].description).toContain('Synth BTC');
-        expect(result[4].description).toContain('Synth ETH');
+        expect(result[1].description).toContain('Synth ETH');
     });
 
     test('should throw an error for invalid input', () => {
