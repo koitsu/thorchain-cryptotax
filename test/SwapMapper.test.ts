@@ -86,8 +86,10 @@ describe('SwapMapper', () => {
         expect(result[0].type).toBe(CryptoTaxTransactionType.BridgeTradeOut);
         expect(result[1].type).toBe(CryptoTaxTransactionType.BridgeTradeIn);
 
+        expect(result[0].description).toBe('1/2 - Swap 1 BTC to 20 ETH; tx123');
         expect(result[0].baseCurrency).toBe('BTC');
         expect(result[0].baseAmount).toBe('1');
+        expect(result[1].description).toBe('2/2 - Swap 1 BTC to 20 ETH; tx123');
         expect(result[1].baseCurrency).toBe('ETH');
         expect(result[1].baseAmount).toBe('20');
     });

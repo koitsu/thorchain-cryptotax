@@ -92,7 +92,7 @@ export class SwapMapper extends BaseMapper {
             to: 'thorchain',
             blockchain: inputBlockchain,
             id: `${this.idPrefix}.thorchain.bridge-trade-out`,
-            description: `1/2 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
+            description: `1/2 - Swap ${inputAmount} ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${outputAmount} ${
                 outputIsSynth ? 'Synth ' : ''
             }${outputCurrency}; ${txId}`,
         });
@@ -109,7 +109,7 @@ export class SwapMapper extends BaseMapper {
             to: output.address,
             blockchain: outputBlockchain,
             id: `${this.idPrefix}.thorchain.bridge-trade-in`,
-            description: `2/2 - Swap ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${
+            description: `2/2 - Swap ${inputAmount} ${inputIsSynth ? 'Synth ' : ''}${inputCurrency} to ${outputAmount} ${
                 outputIsSynth ? 'Synth ' : ''
             }${outputCurrency}; ${txId}`,
         });
