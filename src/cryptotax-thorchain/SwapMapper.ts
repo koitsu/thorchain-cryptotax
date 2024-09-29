@@ -101,7 +101,7 @@ export class SwapMapper extends BaseMapper {
 
         transactions.push({
             walletExchange: output.address,
-            timestamp: this.timestamp,
+            timestamp: timestamp_plus_10,
             type: CryptoTaxTransactionType.BridgeTradeIn,
             baseCurrency: outputCurrency,
             baseAmount: outputAmount,
