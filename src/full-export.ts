@@ -25,7 +25,8 @@ async function main() {
 
     if (!exporter.config.cacheDataSources) {
         // Delete all cached data sources
-        fs.removeSync(path.resolve(__dirname, cachePath));
+        console.log(`Removing cache: ${path.resolve(cachePath)}`);
+        fs.removeSync(cachePath);
     }
 
     const wallets = exporter.config.wallets;
