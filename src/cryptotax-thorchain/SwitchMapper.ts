@@ -2,7 +2,6 @@ import { Action, Coin, Transaction } from '@xchainjs/xchain-midgard';
 import {
     CryptoTaxTransaction,
     CryptoTaxTransactionType,
-    toCryptoTaxTimestamp,
 } from '../cryptotax';
 import {
     parseMidgardAmount,
@@ -22,11 +21,11 @@ import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 export class SwitchMapper implements Mapper {
     toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
-        const timestamp: string = toCryptoTaxTimestamp(date);
+        const timestamp: string = date.toISOString();
         const idPrefix: string = date.toISOString();
 
         const date_plus_10 = new Date(date.getTime() + (10 * 1000));
-        const timestamp_plus_10: string = toCryptoTaxTimestamp(date_plus_10);
+        const timestamp_plus_10: string = date_plus_10.toISOString();
 
         const transactions: CryptoTaxTransaction[] = [];
 

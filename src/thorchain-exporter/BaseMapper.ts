@@ -1,5 +1,5 @@
 import {ViewblockEvent, ViewblockEventSend, ViewblockTx} from "../viewblock";
-import {CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp} from "../cryptotax";
+import {CryptoTaxTransaction, CryptoTaxTransactionType} from "../cryptotax";
 import assert from "assert";
 import {TypeMsgSend, ViewblockMsg, ViewblockTxV2} from "../viewblock";
 
@@ -21,7 +21,7 @@ export class BaseMapper implements IThorchainMapper {
         this.tx = tx;
 
         this.datetime = new Date(tx.timestamp);
-        this.timestamp = toCryptoTaxTimestamp(this.datetime);
+        this.timestamp = this.datetime.toISOString();
         this.idPrefix = this.datetime.toISOString();
     }
 

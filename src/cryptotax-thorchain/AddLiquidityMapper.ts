@@ -2,7 +2,6 @@ import { Action, Coin, Transaction } from '@xchainjs/xchain-midgard';
 import {
     CryptoTaxTransaction,
     CryptoTaxTransactionType,
-    toCryptoTaxTimestamp,
 } from '../cryptotax';
 import { getPrice } from "../cmc-scraper";
 import {
@@ -23,7 +22,7 @@ export class AddLiquidityMapper implements Mapper {
         }
 
         const date: Date = parseMidgardDate(action.date);
-        const timestamp: string = toCryptoTaxTimestamp(date);
+        const timestamp: string = date.toISOString();
         const idPrefix: string = date.toISOString();
         const pool: string = parseMidgardPool(action.pools[0]);
         const poolName: string = `ThorLP.${pool}`;
@@ -40,8 +39,8 @@ export class AddLiquidityMapper implements Mapper {
 
         const date_plus_10 = new Date(date.getTime() + (10 * 1000));
         const date_plus_20 = new Date(date.getTime() + (20 * 1000));
-        const timestamp_plus_10: string = toCryptoTaxTimestamp(date_plus_10);
-        const timestamp_plus_20: string = toCryptoTaxTimestamp(date_plus_20);
+        const timestamp_plus_10: string = date_plus_10.toISOString();
+        const timestamp_plus_20: string = date_plus_20.toISOString();
 
         const totalTxs = numAssetsIn + 2;
         let currentTxNum = 1;

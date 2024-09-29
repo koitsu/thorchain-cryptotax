@@ -12,7 +12,7 @@ describe('LoanRepaymentMapper', () => {
 
         expect(txs[0]).toStrictEqual({
             walletExchange: 'bc1-user-wallet-aaaaa',
-            timestamp: '31/12/2020 13:00:00',
+            timestamp: '2020-12-31T13:00:00.000Z',
             type: 'loan-repayment',
             baseCurrency: 'BTC',
             baseAmount: '0.05',
@@ -35,7 +35,7 @@ describe('LoanRepaymentMapper', () => {
 
         expect(txs[0]).toStrictEqual({
             walletExchange: 'thor1-user-wallet-11111',
-            timestamp: '31/12/2020 13:00:00',
+            timestamp: '2020-12-31T13:00:00.000Z',
             type: 'loan-repayment',
             baseCurrency: 'RUNE',
             baseAmount: '2',
@@ -51,7 +51,7 @@ describe('LoanRepaymentMapper', () => {
 
         expect(txs[1]).toStrictEqual({
             walletExchange: 'bc1-user-wallet-aaaaa',
-            timestamp: '31/12/2020 13:00:00',
+            timestamp: '2020-12-31T13:00:00.000Z',
             type: 'collateral-withdrawal',
             baseCurrency: 'BTC',
             baseAmount: '1.23',

@@ -1,5 +1,5 @@
 import { Action } from '@xchainjs/xchain-midgard';
-import { CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp } from '../cryptotax';
+import { CryptoTaxTransaction, CryptoTaxTransactionType } from '../cryptotax';
 import { parseMidgardAmount, parseMidgardAsset, parseMidgardDate } from './MidgardUtils';
 import { TxStatusResponse } from '@xchainjs/xchain-thornode';
 import { Mapper } from './Mapper';
@@ -14,7 +14,7 @@ export abstract class BaseMapper implements Mapper {
 
     constructor(protected action: Action, protected addReferencePrices: boolean, protected thornodeTxs: TxStatusResponse[] = []) {
         this.datetime = parseMidgardDate(action.date);
-        this.timestamp = toCryptoTaxTimestamp(this.datetime);
+        this.timestamp = this.datetime.toISOString();
         this.idPrefix = this.datetime.toISOString();
     }
 

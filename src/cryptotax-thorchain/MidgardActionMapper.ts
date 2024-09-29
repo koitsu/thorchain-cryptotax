@@ -1,5 +1,5 @@
 import { Action, ActionTypeEnum as ActionType } from "@xchainjs/xchain-midgard";
-import { CryptoTaxTransaction, toCryptoTaxTimestamp } from "../cryptotax";
+import { CryptoTaxTransaction } from "../cryptotax";
 import { parseMidgardDate } from "./MidgardUtils";
 import { AddLiquidityMapper } from "./AddLiquidityMapper";
 import { Mapper } from "./Mapper";
@@ -32,7 +32,7 @@ export function getActionDate(action: Action): Date {
 }
 
 export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[], addReferencePrices: boolean = false): CryptoTaxTransaction[] {
-    const date: string = toCryptoTaxTimestamp(getActionDate(action));
+    const date: string = getActionDate(action).toISOString();
     let mapper = getMapper(action);
 
     if (typeof mapper === 'function') {

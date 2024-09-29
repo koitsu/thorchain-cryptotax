@@ -7,7 +7,6 @@ import {
 import {
     CryptoTaxTransaction,
     CryptoTaxTransactionType,
-    toCryptoTaxTimestamp,
 } from '../cryptotax';
 import {
     parseMidgardAmount,
@@ -20,7 +19,7 @@ import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 export class RefundMapper implements Mapper {
     toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
-        const timestamp: string = toCryptoTaxTimestamp(date);
+        const timestamp: string = date.toISOString();
         const idPrefix: string = date.toISOString();
 
         const refundMetadata: RefundMetadata = action.metadata.refund as any;

@@ -1,6 +1,6 @@
 import {Mapper} from "./Mapper";
 import {Action, Coin, Transaction} from "@xchainjs/xchain-midgard";
-import {CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp} from "../cryptotax";
+import {CryptoTaxTransaction, CryptoTaxTransactionType} from "../cryptotax";
 import {parseMidgardAmount, parseMidgardAsset, parseMidgardDate} from "./MidgardUtils";
 import {isEmpty} from "lodash";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
@@ -25,7 +25,7 @@ export class LoanOpenMapper implements Mapper {
         }
 
         const date: Date = parseMidgardDate(action.date);
-        const timestamp: string = toCryptoTaxTimestamp(date);
+        const timestamp: string = date.toISOString();
 
         const idPrefix: string = date.toISOString();
 

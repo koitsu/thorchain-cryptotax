@@ -1,5 +1,5 @@
 import { Action, Coin, Transaction } from '@xchainjs/xchain-midgard';
-import { CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp } from '../cryptotax';
+import { CryptoTaxTransaction, CryptoTaxTransactionType } from '../cryptotax';
 import { parseMidgardAmount, parseMidgardAsset } from './MidgardUtils';
 import { TxStatusResponse } from '@xchainjs/xchain-thornode';
 import { BaseMapper } from './BaseMapper';
@@ -26,7 +26,7 @@ export class SwapMapper extends BaseMapper {
         super.thornodeTxs = thornodeTxs;
 
         const date_plus_10 = new Date(this.datetime.getTime() + 10 * 1000);
-        const timestamp_plus_10: string = toCryptoTaxTimestamp(date_plus_10);
+        const timestamp_plus_10: string = date_plus_10.toISOString();
 
         const transactions: CryptoTaxTransaction[] = [];
 
