@@ -25,7 +25,7 @@ async function main() {
 
     if (!exporter.config.cacheDataSources) {
         // Delete all cached data sources
-        console.log(`Removing cache: ${path.resolve(cachePath)}`);
+        console.log(`Removing cache: ${path.resolve(cachePath)}\n`);
         fs.removeSync(cachePath);
     }
 
