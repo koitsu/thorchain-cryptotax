@@ -1,4 +1,4 @@
-import { Action, Coin, Transaction } from '@xchainjs/xchain-midgard';
+import { Action } from '@xchainjs/xchain-midgard';
 import { CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp } from '../cryptotax';
 import { parseMidgardAmount, parseMidgardAsset, parseMidgardDate } from './MidgardUtils';
 import { TxStatusResponse } from '@xchainjs/xchain-thornode';

@@ -10,7 +10,6 @@ import { RefundMapper } from "./RefundMapper";
 import {LoanOpenMapper} from "./LoanOpenMapper";
 import {LoanRepaymentMapper} from "./LoanRepaymentMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
-import {map} from "lodash";
 
 type ActionMappers = {
     [index in ActionType]: Mapper | null | any;

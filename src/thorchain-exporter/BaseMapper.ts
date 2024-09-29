@@ -1,8 +1,7 @@
-import {ViewblockCoin, ViewblockEvent, ViewblockEventSend, ViewblockTx} from "../viewblock";
+import {ViewblockEvent, ViewblockEventSend, ViewblockTx} from "../viewblock";
 import {CryptoTaxTransaction, CryptoTaxTransactionType, toCryptoTaxTimestamp} from "../cryptotax";
 import assert from "assert";
-import {TypeMsgSend, ViewblockMsg, ViewblockTxV2} from "../viewblock/ViewblockTxV2";
-import {ms} from "date-fns/locale";
+import {TypeMsgSend, ViewblockMsg, ViewblockTxV2} from "../viewblock";
 
 export interface IThorchainMapper {
     toCtc(): CryptoTaxTransaction[];

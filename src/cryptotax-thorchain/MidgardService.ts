@@ -1,9 +1,7 @@
 import {Cache} from "../cache/Cache";
-import path from "path";
 import {Action, Configuration, MIDGARD_API_9R_URL, MidgardApi} from '@xchainjs/xchain-midgard';
 import assert from "assert";
-// import {register9Rheader} from '@xchainjs/xchain-util'; // need to update version of xchainjs for this
-import {register9Rheader} from "./ninerealms";
+import {register9Rheader} from '@xchainjs/xchain-util';
 import axios from "axios";
 import axiosThrottle from 'axios-request-throttle';
 
@@ -24,11 +22,9 @@ export class MidgardService {
     cache: Cache;
     api: MidgardApi;
 
-    constructor() {
-        this.cache = new Cache(path.resolve(__dirname, '_cache'));
+    constructor(cachePath: string = '_cache') {
+        this.cache = new Cache(cachePath);
         const apiConfig = new Configuration({ basePath: MIDGARD_API_9R_URL });
-        // const apiConfig = new Configuration({ basePath: MIDGARD_API_TC_URL });
-        // const apiConfig = new Configuration({ basePath: MIDGARD_API_TS_URL });
         this.api = new MidgardApi(apiConfig);
     }
 

@@ -1,6 +1,6 @@
 import {Viewblock} from "../viewblock";
 import fs from "fs-extra";
-import {CryptoTaxTransaction, CryptoTaxTransactionType, writeCsv} from "../cryptotax";
+import {CryptoTaxTransaction, writeCsv} from "../cryptotax";
 import {MidgardService} from "../cryptotax-thorchain/MidgardService";
 import {ThornodeService} from "../cryptotax-thorchain/ThornodeService";
 import {Action, ActionStatusEnum} from "@xchainjs/xchain-midgard";
@@ -9,6 +9,7 @@ import {Reporter} from "./Reporter";
 import {IWallet} from "./IWallet";
 import {TaxEvents} from "./TaxEvents";
 import {DateRange, generateDateRanges} from "../utils/DateRange";
+import path from "path";
 
 const info = console.info;
 
@@ -19,11 +20,11 @@ export class Exporter {
     thornode: ThornodeService;
     report: Reporter;
 
-    constructor(filename: string) {
+    constructor(filename: string, cachePath: string) {
         this.config = this.loadConfig(filename);
-        this.viewblock = new Viewblock();
-        this.midgard = new MidgardService();
-        this.thornode = new ThornodeService();
+        this.viewblock = new Viewblock(path.join(cachePath, 'viewblock'));
+        this.midgard = new MidgardService(path.join(cachePath, 'midgard'));
+        this.thornode = new ThornodeService(path.join(cachePath, 'thornode'));
         this.report = new Reporter();
     }
 
@@ -138,13 +139,6 @@ export class Exporter {
             }
 
             return txDate >= new Date(range.from) && txDate <= new Date(range.to);
-        });
-    }
-
-    private getTxsForMonth(txs: CryptoTaxTransaction[], year: string, month: string) {
-        return txs.filter((tx) => {
-            const dateParts = (tx.timestamp as string).split(' ')[0].split('/').reverse();
-            return dateParts[0] === year && dateParts[1] === month;
         });
     }
 

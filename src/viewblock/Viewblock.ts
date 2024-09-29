@@ -2,7 +2,6 @@ import fetch from 'node-fetch';
 import { range } from '../utils/Range';
 import { ViewblockTx } from './ViewblockTx';
 import {Cache} from "../cache/Cache";
-import * as path from "path";
 
 export const BASE_URL = 'https://api.viewblock.io';
 export const ORIGIN = 'https://viewblock.io';
@@ -38,8 +37,8 @@ export class Viewblock {
     cache: Cache;
     apiKey?: string;
 
-    constructor() {
-        this.cache = new Cache(path.resolve(__dirname, '_cache'));
+    constructor(cachePath: string = '_cache') {
+        this.cache = new Cache(cachePath);
     }
 
     async query(path: any, { apiKey, query = {}, network, agent = null }: any) {

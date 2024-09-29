@@ -13,7 +13,6 @@ import {
     parseMidgardAmount,
     parseMidgardAsset,
     parseMidgardDate,
-    parseMidgardPool,
 } from './MidgardUtils';
 import { Mapper } from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";

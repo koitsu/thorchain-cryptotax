@@ -4,6 +4,9 @@ out/
 # output for CSV and report files
 output/
 
+# cache data sources
+cache/
+
 # NodeJS
 node_modules/
 

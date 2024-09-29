@@ -1,9 +1,8 @@
 import {TaxEvent} from "./TaxEvent";
 import {ViewblockTx} from "../viewblock";
-import {BaseMapper, IThorchainMapper} from "./BaseMapper";
+import {BaseMapper} from "./BaseMapper";
 import {IWallet} from "./IWallet";
 import {CryptoTaxTransaction} from "../cryptotax";
-import {SendMapper} from "./SendMapper";
 import {Action} from "@xchainjs/xchain-midgard";
 import {getActionDate} from "../cryptotax-thorchain/MidgardActionMapper";
 import {deepEqual} from "../utils/DeepEqual";

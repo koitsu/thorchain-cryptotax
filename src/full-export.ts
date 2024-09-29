@@ -15,18 +15,16 @@ async function main() {
 
     const timestamp = format(new Date(), 'yyyy-MM-dd_hh-mm-ss');
     const outputPath = `output/${timestamp}`;
+    const cachePath = 'cache';
+
+    console.log(path.resolve(cachePath))
 
     // Read config
-    const exporter = new Exporter(path.resolve(configFile));
+    const exporter = new Exporter(path.resolve(configFile), path.resolve(cachePath));
 
     if (!exporter.config.cacheDataSources) {
-        // Clearing Midgard cache
-        // Delete everything in src/cryptotax-thorchain/_cache
-        fs.removeSync('src/cryptotax-thorchain/_cache');
-
-        // Clearing Viewblock cache
-        // Delete everything in src/viewblock/_cache
-        fs.removeSync('src/viewblock/_cache');
+        // Delete all cached data sources
+        fs.removeSync(path.resolve(__dirname, cachePath));
     }
 
     const wallets = exporter.config.wallets;
