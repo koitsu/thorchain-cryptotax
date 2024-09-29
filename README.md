@@ -2,10 +2,15 @@
 
 ## What is this?
 
-This is a tool that is intended to assist with doing taxes for THORChain transactions.
+This is a tool to help with doing taxes for your THORChain transactions by exporting them
+into a CSV format that can be directly imported into [Crypto Tax Calculator](https://cryptotaxcalculator.io/?via=glaj5hf5).
 
-It will download all transactions for specified wallets and generate CSV files in
-[Crypto Tax Calculator](https://cryptotaxcalculator.io) format [Advanced CSV Import](https://help.cryptotaxcalculator.io/en/articles/5777675-advanced-custom-csv-import).
+It has been built for myself to reduce the manual effort in doing taxes.
+I'm sharing it in the hope that it makes it easier for others as well.
+
+Having used Crypto Tax Calculator for years, I can highly recommend it.
+
+You can get $40 off a subscription with this [referral link](https://cryptotaxcalculator.io/?via=glaj5hf5) (only applies if purchasing a plan for the first time).
 
 Currently supported transactions
 
@@ -17,6 +22,7 @@ Currently supported transactions
 - savers
 
 Not currently supported
+- Mayachain
 - THORNames
 - RUNEPool
 - aggregated swaps (i.e. where the swap is routed through more than just THORChain)
@@ -74,11 +80,10 @@ They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`
 ## Liquidity Pools
 
 - LP actions are converted to Add/Remove Liquidity transactions for Crypto Tax Calculator
-- Also creates Receive/Return LP Token transactions
-- LP Token is set to the `liquidityUnits` amount provided by Midgard
-  - **Note:** This may not be 100% accurate way of accounting for the LP
-- LP token is given the name `ThorLP.{asset}`
-  - e.g. ThorLP.BTC.BTC
+- It also creates Receive/Return LP Token transactions
+  - LP Token amount is set to the `liquidityUnits` amount provided by Midgard
+  - LP token is given the name `ThorLP.{asset}`
+    - e.g. ThorLP.BTC.BTC
 
 ## Savers
 
@@ -87,11 +92,11 @@ They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`
     and the other side of the LP is provided by the protocol.
     Assumption here is that Savers should be considered as LP rather than staking when
     converting to Crypto Tax Calculator.
-- Also creates Receive/Return LP Token transactions
-- LP Token is set to the `liquidityUnits` amount provided by Midgard
-  - For Savers, this is equal to the asset amount being added
-- LP token is given the name `ThorLP.{savers_asset}`
-  - e.g. ThorLP.BTC/BTC (savers assets have a slash)
+- It also creates Receive/Return LP Token transactions
+  - LP Token amount is set to the `liquidityUnits` amount provided by Midgard
+    - For Savers, this is equal to the asset amount being added
+  - LP token is given the name `ThorLP.{savers_asset}`
+    - e.g. ThorLP.BTC/BTC (savers assets have a slash)
 
 ## Other notes
 
@@ -104,6 +109,7 @@ They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`
 
 ## Useful References
 
+- [Crypto Tax Calculator - Advanced CSV Import](https://help.cryptotaxcalculator.io/en/articles/5777675-advanced-custom-csv-import)
 - [THORChain Dev Docs - Asset Notation](https://dev.thorchain.org/concepts/asset-notation.html)
 - [THORChain Dev Docs - Transaction Memos](https://dev.thorchain.org/concepts/memos.html)
 - [Thornode API docs](https://thornode.ninerealms.com/thorchain/doc)
