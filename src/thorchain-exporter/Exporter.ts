@@ -1,5 +1,6 @@
 import {Viewblock} from "../viewblock";
 import fs from "fs-extra";
+import toml from 'js-toml';
 import {CryptoTaxTransaction, writeCsv} from "../cryptotax";
 import {MidgardService} from "../cryptotax-thorchain/MidgardService";
 import {ThornodeService} from "../cryptotax-thorchain/ThornodeService";
@@ -29,8 +30,18 @@ export class Exporter {
     }
 
     loadConfig(filename: string): ITaxConfig {
-        info(`Load config: ${filename}`);
-        return JSON.parse(fs.readFileSync(filename).toString());
+        info(`Wallets config file: ${filename}\n`);
+
+        const fileExtension = path.extname(filename).toLowerCase();
+        const fileContent = fs.readFileSync(filename).toString();
+
+        if (fileExtension === '.toml') {
+            return toml.load(fileContent) as ITaxConfig;
+        } else if (fileExtension === '.json') {
+            return JSON.parse(fileContent);
+        } else {
+            throw new Error(`Unsupported config file format: ${fileExtension}`);
+        }
     }
 
     async getEvents(wallet: IWallet): Promise<TaxEvents> {

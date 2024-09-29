@@ -5,7 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "jest",
-    "export": "ts-node src/full-export.ts wallets-config.json"
+    "export": "ts-node src/full-export.ts wallets-config.toml"
   },
   "dependencies": {
     "@types/fs-extra": "^9.0.13",
@@ -19,6 +19,7 @@
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.1",
     "fs-extra": "^10.1.0",
+    "js-toml": "^1.0.0",
     "lodash": "^4.17.21",
     "markdown-it": "^13.0.1",
     "markdown-it-collapsible": "^1.0.0",

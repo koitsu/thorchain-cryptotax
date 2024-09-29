@@ -7,17 +7,18 @@ import {TaxEvents} from "./thorchain-exporter/TaxEvents";
 
 async function main() {
 
+    console.log(`Current directory: ${process.cwd()}`);
+
+    // Get the last argument as the config filename
     const configFile = process.argv[process.argv.length - 1];
 
-    if (!configFile.endsWith('.json')) {
+    if (!configFile.endsWith('.json') && !configFile.endsWith('.toml')) {
         throw new Error('must specify config file');
     }
 
-    const timestamp = format(new Date(), 'yyyy-MM-dd_hh-mm-ss');
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
     const outputPath = `output/${timestamp}`;
     const cachePath = 'cache';
-
-    console.log(path.resolve(cachePath))
 
     // Read config
     const exporter = new Exporter(path.resolve(configFile), path.resolve(cachePath));

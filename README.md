@@ -42,7 +42,7 @@ Install the node packages
 
 ### Wallet config
 
-Edit [wallets-config.json](wallets-config.json)
+Edit [wallets-config.toml](wallets-config.toml)
 
 Add your wallet addresses, they can be given names using the `name` property.
 Which is helpful to identify the wallets when looking at the generated CSV filenames.

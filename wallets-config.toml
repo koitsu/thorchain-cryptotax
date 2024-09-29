@@ -1,0 +1,44 @@
+
+# Start and end date to get transactions for
+fromDate = "2020-01-01"
+toDate = "2024-12-31"
+
+# How to split up the exported CSV files for each wallet
+# yearly  - one file per year
+# monthly - one file per month
+# none    - single file
+frequency = "yearly"
+
+# Store the downloaded source files to be able to re-run without downloading again
+cacheDataSources = false
+
+# List of wallets
+# add a new [[wallets]] entry for each wallet
+# add each wallet that was used in swaps/LP/etc
+# remove/replace the sample wallets below
+
+# Wallet 1
+[[wallets]]
+
+# 'name' is a descriptive name for the wallet which will be added to the CSV filename
+name = "Sample"
+
+# wallet address
+address = "thor1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# 'blockchain' is only used in the CSV filename.
+# Only THORChain wallets need to be imported into Crypto Tax Calculator.
+# Other blockchain wallet CSV files can be used for reference when categorising transactions in CTC.
+blockchain = "THOR"
+
+# Wallet 2 (remove if not required)
+[[wallets]]
+name = "Sample"
+address = "0x0000000000000000000000000000000000000000"
+blockchain = "ETH"
+
+# Wallet 3 (remove if not required)
+[[wallets]]
+name = "Sample"
+address = "bc1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+blockchain = "BTC"
