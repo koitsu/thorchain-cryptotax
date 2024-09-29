@@ -98,15 +98,6 @@ They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`
   - LP token is given the name `ThorLP.{savers_asset}`
     - e.g. ThorLP.BTC/BTC (savers assets have a slash)
 
-## Other notes
-
-- Reference prices are pulled from CoinMarketCap using a script [cmc-scraper.py](./src/cmc-scraper/cmc-scraper.py)
-  and saved into [src/cmc-scraper/data](./src/cmc-scraper/data).
-  It requires Python to run the script to update the price history files.
-  Reference prices are currently disabled.
-- Sends and receives are pulled using the viewblock.io API.
-  This is not a public API, so may change without warning which breaks the tool.
-
 ## Useful References
 
 - [Crypto Tax Calculator - Advanced CSV Import](https://help.cryptotaxcalculator.io/en/articles/5777675-advanced-custom-csv-import)
@@ -114,3 +105,14 @@ They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`
 - [THORChain Dev Docs - Transaction Memos](https://dev.thorchain.org/concepts/memos.html)
 - [Thornode API docs](https://thornode.ninerealms.com/thorchain/doc)
 - [XChainJS docs](https://docs.xchainjs.org)
+
+## Other Notes
+
+- Sends and receives are fetched using the viewblock.io API.
+  This is not a public API, so may change without warning which breaks the tool.
+- Fetching reference prices is disabled as it's not currently working and needs updating.<br>
+  So adding the market price to LP transactions requires the manual step of copying the fiat amount from
+  the related Spam transaction into the market value section for the LP token in CTC.
+  - Reference prices are pulled from CoinMarketCap using a script [cmc-scraper.py](./src/cmc-scraper/cmc-scraper.py)
+    and saved into [src/cmc-scraper/data](./src/cmc-scraper/data).
+    It requires Python to run the script to update the price history files.
