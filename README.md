@@ -29,55 +29,105 @@ Not currently supported
 
 ## Usage
 
-### Prerequisites
+There are 2 ways to run this tool.
+1. Run using NodeJS
+2. Run using Replit
 
-- Git
-- Node
+### Run using NodeJS
+If you are familiar with Git and NodeJS.<br>
+Follow the [NodeJS Instructions](docs/nodejs-instructions.md).
 
-Clone the repo
-
-Install the node packages
-
-`npm install`
-
-### Wallet config
-
-Edit [wallets-config.toml](wallets-config.toml)
-
-Add your wallet addresses, they can be given names using the `name` property.
-Which is helpful to identify the wallets when looking at the generated CSV filenames.
-
-Set `fromDate`, `toDate`, and `frequency` ("monthly", "yearly", "none") for how to split up the CSV files.
-
-The `blockchain` property for each wallet is only used in creating the CSV filenames, so it can be anything.
-e.g. "THOR", "BTC", "ETH"
-
-### Run the tool
-
-`npm run export`
-
-This will get all the transactions for the wallets and create reports and CSV files in the following paths:
-
-- `./output/{current_datetime}/report`
-- `./output/{current_datetime}/csv`
+### Run using Replit
+Allows you to run in the browser.<br>
+Follow the [Replit Instructions](docs/replit-instructions.md).
 
 ### Import into Crypto Tax Calculator
 
-Go to Integrations
+Once you have successfully exported transactions into CSV files, you can import them
+into Crypto Tax Calculator.
 
-Add THORChain
+Log in to Crypto Tax Calculator
 
-Import the CSV files.
+Go to **Integrations**
 
-You only need to import the THORChain specific files.
+Click **Add integrations**
 
-e.g.
-- `YYYY-MM-DD_YYYY-MM-DD_THOR_xxxxx_Sample.csv`
+Search for **THORChain** and click it
 
-Swaps should be updated in CTC as Cross Chain Sell (outgoing from wallet to THORChain) and Cross Chain Buy (incoming into wallet from THORChain).<br>
+Click **Upload** to select the files
+
+You only need to import your THORChain wallet CSV files (YYYY-MM-DD_YYYY-MM-DD_**THOR**_xxxxx_Sample.csv).<br>
+Not the CSV files for other wallets (as they are added into Crypto Tax Calculator using their own wallet integrations).
+
+Once you've selected all the files then click **Import THORChain CSV**
+
+This will import all the transactions that use your THORChain wallets. This will include
+sends/receives, and swaps, LPs, savers, lending.
+
+### Categorising Transactions
+
+As THORChain is a cross-chain protocol, most transactions span more than one blockchain.
+
+This means the transactions from your THORChain wallet may only be one side of the action.
+For example, a transaction could be adding RUNE to an LP and there could be another transaction of adding BTC
+to the same LP. Or you may have a swap from BTC to ETH which won't even appear as
+any transaction in your THORChain wallet (it will be in the other wallet CSV files and in **all.csv**).
+
+Crypto Tax Calculator has support for these other chains, like BTC, ETH, etc.
+You need to add the wallet addresses in the integrations section of CTC and once they
+are imported, you will need to categorise the transactions from the other chains.
+
+To help you categorise the transactions, you can refer to the **all.csv** file or
+the other individual wallet files to be able to see a description on the transaction
+which can look something like "1/2 - Swap 1 BTC to 20 ETH; tx12345".
+
+Swaps should be updated in CTC as **Cross Chain Sell** (outgoing from your wallet to THORChain) and **Cross Chain Buy** (incoming into your wallet from THORChain).<br>
 They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`.
 
-## Liquidity Pools
+The same needs to be done for categorising transactions on the other chains.
+Such as **Add Liquidity**, **Remove Liquidity**, etc.
+
+### Missing Market Prices
+
+The other manual step that needs to be performed in CTC is to add missing market
+prices.
+
+If you have a swap of say RUNE to VTHOR, it won't have the market price for VTHOR.
+But it does have the market price for RUNE. So you can copy the fiat amount from the RUNE
+side (Cross Chain Sell) and apply it to the VTHOR side (Cross Chain Buy).
+
+The other instance where there won't be market prices is for adding/removing liquidity
+via LPs or savers.
+
+Add to an LP with dual assets will be listed as 4 transactions in CTC.
+
+- Add Liquidity (Asset 1)
+- Add Liquidity (Asset 2)
+- Receive Receipt Token (aka. Receive LP Token)
+- Spam
+
+The reason for the Spam transaction is to help you get the market price.
+If its a dual LP add then the Spam transaction will be 2x the RUNE amount.
+If its an asymmetric add then the Spam transaction will be a copy of the single asset
+being added.
+
+Copy the fiat value from the Spam transaction, and apply it into the **Receive Receipt Token**
+transaction. If it is withdrawing from an LP then apply it to the **Return Receipt Token** transaction.
+
+## Reporting Issues / Supporting Development
+
+If you run into errors (probably likely as I mainly built this to cover my own usage),
+you can either raise them in GitHub https://github.com/skelethorfi/thorchain-cryptotax/issues or
+DM me on Twitter/X [@skelethorfi](https://x.com/skelethorfi).
+
+If you found this useful, and it saved you a lot of manual effort, feel free to send a small donation as thanks:
+- BTC: `bc1qe3lhk5d72gs6t7q6z5z982dfhzfya7d8t9thha`
+- ETH: `0x6822b44Fe0EDa7962E59ed11bfdFa1F323F19C0a`
+- THORChain: `thor1q3dsqslgz3kdxprvcra3e2xmessznlz0d7n3pf`
+
+## Other Notes
+
+### Liquidity Pools
 
 - LP actions are converted to Add/Remove Liquidity transactions for Crypto Tax Calculator
 - It also creates Receive/Return LP Token transactions
@@ -85,7 +135,7 @@ They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`
   - LP token is given the name `ThorLP.{asset}`
     - e.g. ThorLP.BTC.BTC
 
-## Savers
+### Savers
 
 - Savers are converted to Add/Remove Liquidity transactions for Crypto Tax Calculator
   - **Note:** In THORChain when doing a Savers deposit, it goes into the liquidity pool
@@ -98,21 +148,22 @@ They will be listed in the CSV files as `bridge-trade-out` and `bridge-trade-in`
   - LP token is given the name `ThorLP.{savers_asset}`
     - e.g. ThorLP.BTC/BTC (savers assets have a slash)
 
-## Useful References
+### Sends/Receives
+
+Sends and receives are fetched using the viewblock.io API.
+This is not a public API, so may change without warning which breaks the tool.
+
+### Reference Prices
+
+Fetching reference prices is disabled as it's not currently working and needs updating.
+
+So adding the market price to LP transactions requires the manual step of copying the fiat amount from
+the related Spam transaction into the market value section for the LP token in CTC.
+
+### Useful References
 
 - [Crypto Tax Calculator - Advanced CSV Import](https://help.cryptotaxcalculator.io/en/articles/5777675-advanced-custom-csv-import)
 - [THORChain Dev Docs - Asset Notation](https://dev.thorchain.org/concepts/asset-notation.html)
 - [THORChain Dev Docs - Transaction Memos](https://dev.thorchain.org/concepts/memos.html)
 - [Thornode API docs](https://thornode.ninerealms.com/thorchain/doc)
 - [XChainJS docs](https://docs.xchainjs.org)
-
-## Other Notes
-
-- Sends and receives are fetched using the viewblock.io API.
-  This is not a public API, so may change without warning which breaks the tool.
-- Fetching reference prices is disabled as it's not currently working and needs updating.<br>
-  So adding the market price to LP transactions requires the manual step of copying the fiat amount from
-  the related Spam transaction into the market value section for the LP token in CTC.
-  - Reference prices are pulled from CoinMarketCap using a script [cmc-scraper.py](./src/cmc-scraper/cmc-scraper.py)
-    and saved into [src/cmc-scraper/data](./src/cmc-scraper/data).
-    It requires Python to run the script to update the price history files.
