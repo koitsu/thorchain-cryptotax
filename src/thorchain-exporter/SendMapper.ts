@@ -1,12 +1,5 @@
 import {BaseMapper} from "./BaseMapper";
-import {
-    resolveAmount,
-    ViewblockCoin,
-    ViewblockEvent,
-    ViewblockEventSend,
-    ViewblockTx,
-    ViewblockTxV2
-} from "../viewblock";
+import {resolveAmount, ViewblockCoin, ViewblockEvent, ViewblockEventSend, ViewblockTx} from "../viewblock";
 import {CryptoTaxTransaction, CryptoTaxTransactionType, txToCsv} from "../cryptotax";
 import assert from "assert";
 
@@ -50,9 +43,11 @@ export class SendMapper extends BaseMapper {
         );
 
         // Fee
-        ctcTx.feeCurrency = 'RUNE';
-        // ctcTx.feeAmount = resolveAmount(this.tx.fee);
-        ctcTx.feeAmount = resolveAmount(((this.tx as any) as ViewblockTxV2).gas.amount)
+        // Only apply the fee on send (not on receive)
+        if (ctcTx.type === CryptoTaxTransactionType.Send) {
+            ctcTx.feeCurrency = 'RUNE';
+            ctcTx.feeAmount = resolveAmount(event.fee.amount[0].amount);
+        }
 
         ctcTx.from = from;
         ctcTx.to = to;

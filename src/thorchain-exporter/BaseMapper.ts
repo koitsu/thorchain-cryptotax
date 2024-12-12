@@ -3,6 +3,9 @@ import {CryptoTaxTransaction, CryptoTaxTransactionType} from "../cryptotax";
 import assert from "assert";
 import {TypeMsgSend, ViewblockMsg, ViewblockTxV2} from "../viewblock";
 
+// 0.02 RUNE
+const DEFAULT_RUNE_GAS = '2000000';
+
 export interface IThorchainMapper {
     toCtc(): CryptoTaxTransaction[];
 }
@@ -49,8 +52,8 @@ export class BaseMapper implements IThorchainMapper {
             name: 'send',
             fee: {
                 amount: [{
-                    denom: tx2.gas.asset,
-                    amount: tx2.gas.amount
+                    denom: tx2.gas?.asset ?? tx2.input.asset,
+                    amount: tx2.gas?.amount ?? DEFAULT_RUNE_GAS
                 }],
                 gas: tx2.gas_used
             },
