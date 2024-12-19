@@ -1,3 +1,4 @@
+import {AnyAsset, assetFromStringEx, AssetType} from "@xchainjs/xchain-util";
 import {BaseMapper} from "./BaseMapper";
 import {resolveAmount, ViewblockCoin, ViewblockEvent, ViewblockEventSend, ViewblockTx} from "../viewblock";
 import {CryptoTaxTransaction, CryptoTaxTransactionType, txToCsv} from "../cryptotax";
@@ -18,8 +19,11 @@ export class SendMapper extends BaseMapper {
         const from = event.params.fromAddress;
         const to = event.params.toAddress;
 
+        let isSend = false;
+
         if (from === this.wallet) {
             ctcTx.type = CryptoTaxTransactionType.Send;
+            isSend = true;
         } else if (to === this.wallet) {
             ctcTx.type = CryptoTaxTransactionType.Receive;
         } else {
@@ -35,12 +39,16 @@ export class SendMapper extends BaseMapper {
         // Amount
         ctcTx.baseAmount = resolveAmount(coin.amount);
 
-        assert.ok(coin.asset.includes('THOR.'));
+        const asset: AnyAsset = assetFromStringEx(coin.asset);
 
-        ctcTx.baseCurrency = coin.asset.replace(
-            'THOR.',
-            ''
-        );
+        const isSynth = asset.type === AssetType.SYNTH;
+        const isTrade = asset.type === AssetType.TRADE;
+
+        // Asset samples
+        // THOR.RUNE
+        // DOGE/DOGE (synth DOGE)
+
+        ctcTx.baseCurrency = asset.ticker;
 
         // Fee
         // Only apply the fee on send (not on receive)
@@ -53,7 +61,7 @@ export class SendMapper extends BaseMapper {
         ctcTx.to = to;
         ctcTx.blockchain = 'THOR'; // Sends/receives will only be for thorchain
         ctcTx.id = this.getId(ctcTx.type);
-        ctcTx.description = ``;
+        ctcTx.description = `${isSend ? 'Send' : 'Receive'} ${isSynth ? 'Synth ' : ''}${isTrade ? 'Trade ' : ''}${asset.ticker}; ${this.tx.hash}`;
 
         console.log(txToCsv(ctcTx));
 

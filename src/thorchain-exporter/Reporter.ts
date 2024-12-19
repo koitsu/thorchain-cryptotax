@@ -144,8 +144,15 @@ export function generateReport(allEvents: TaxEvents, wallet: IWallet, outputPath
         } else if (event.source === 'midgard') {
             report.info((event.input as Action).type);
 
-            // TODO: out tx id?
-            const txID = (event.input as Action).in[0].txID;
+            let action = event.input as Action;
+            let txID;
+
+            // runePoolWithdraw does not have 'in'
+            if (action.in.length > 0) {
+                txID = action.in[0].txID;
+            } else if (action.out.length > 0) {
+                txID = action.out[0].txID;
+            }
 
             if (txID) {
                 report.link('Midgard TX', 'https://thorchain.net/tx/' + txID);

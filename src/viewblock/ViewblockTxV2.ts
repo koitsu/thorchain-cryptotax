@@ -11,7 +11,8 @@ export interface ViewblockTxV2 {
         asset: string;    // "THOR.RUNE"
         amount: string;   // e8 number
         type: any;
-    }
+    };
+    memo?: string;
     msgs: ViewblockMsg[];
     signer: string;
     status: string;       // "success"

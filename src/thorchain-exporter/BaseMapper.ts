@@ -52,7 +52,7 @@ export class BaseMapper implements IThorchainMapper {
             name: 'send',
             fee: {
                 amount: [{
-                    denom: tx2.gas?.asset ?? tx2.input.asset,
+                    denom: tx2.gas?.asset ?? 'THOR.RUNE', // expecting sends only on THORChain
                     amount: tx2.gas?.amount ?? DEFAULT_RUNE_GAS
                 }],
                 gas: tx2.gas_used
