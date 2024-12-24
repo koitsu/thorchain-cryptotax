@@ -15,6 +15,7 @@ You can get $40 off a subscription with this [referral link](https://cryptotaxca
 Currently supported transactions
 
 - sends/receives of Rune
+- sends/receives of Synth Assets
 - upgrade BEP Rune to native Rune
 - swaps
 - LPs (add/remove liquidity)
