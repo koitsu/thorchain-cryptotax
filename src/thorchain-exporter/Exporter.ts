@@ -90,6 +90,7 @@ export class Exporter {
     saveToCsv(txs: CryptoTaxTransaction[], outputPath: string) {
 
         const totalTxs = txs.length;
+        let expectedExportCount =  0;
         let count = 0;
         const walletExchanges = this.getUniqueWalletExchanges(txs);
 
@@ -99,7 +100,9 @@ export class Exporter {
 
         for (const range of ranges) {
             const rangeTxs = this.getTxsInRange(txs, range);
+            expectedExportCount += rangeTxs.length;
 
+            // If no txs in the current range then skip
             if (rangeTxs.length === 0) {
                 continue;
             }
@@ -131,8 +134,8 @@ export class Exporter {
 
         console.log(`Total exported: ${count}`);
 
-        if (count !== totalTxs) {
-            throw new Error(`failed to export all txs. expected ${totalTxs}`);
+        if (count !== expectedExportCount) {
+            throw new Error(`failed to export all txs. expected ${expectedExportCount}`);
         }
     }
 

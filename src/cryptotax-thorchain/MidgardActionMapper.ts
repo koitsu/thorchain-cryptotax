@@ -18,6 +18,10 @@ type ActionMappers = {
 const actionMappers: ActionMappers = {
     [ActionType.AddLiquidity]: new AddLiquidityMapper(),
     [ActionType.Donate]: null,
+    [ActionType.Send]: null,
+    [ActionType.Thorname]: null,
+    [ActionType.RunePoolDeposit]: null,
+    [ActionType.RunePoolWithdraw]: null,
     [ActionType.Refund]: new RefundMapper(),
     [ActionType.Swap]: SwapMapper,
     [ActionType.Switch]: new SwitchMapper(),
