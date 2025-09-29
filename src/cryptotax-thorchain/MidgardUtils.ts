@@ -21,7 +21,13 @@ export function parseMidgardAsset(assetStr: string): {
     blockchain: string;
     currency: string;
 } {
-    const asset = assetFromStringEx(assetStr);
+    let asset;
+
+    try {
+        asset = assetFromStringEx(assetStr);
+    } catch (e) {
+        throw new Error(`Failed to parse asset string: "${assetStr}"`);
+    }
 
     // Update ticker if it has been renamed
     const ticker = tickerRename(asset.ticker);

@@ -1,6 +1,7 @@
 import {describe, expect, test} from "@jest/globals";
 import fs from 'fs-extra';
 import {SendMapper} from "../src/thorchain-exporter/SendMapper";
+import {SwapMapper} from "../src/cryptotax-thorchain/SwapMapper";
 
 function getTestData(filename: string) {
     return fs.readJSONSync(`test/testdata/${filename}.json`);
@@ -30,5 +31,18 @@ describe('SendMapper', () => {
                 "walletExchange": "thor1-user-wallet-11111"
             }
         ]);
+    });
+
+    test('should error on incorrect asset string', () => {
+        let tx = getTestData('Send_SynthDOGE');
+
+        // Set invalid asset string
+        tx.input.asset = "DOGEDOGE";
+
+        mapper = new SendMapper(tx, 'thor1-user-wallet-11111');
+
+        expect(() => mapper.toCtc()).toThrow(
+            'Failed to parse asset string: "DOGEDOGE"'
+        );
     });
 });

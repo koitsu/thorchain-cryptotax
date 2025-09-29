@@ -39,7 +39,14 @@ export class SendMapper extends BaseMapper {
         // Amount
         ctcTx.baseAmount = resolveAmount(coin.amount);
 
-        const asset: AnyAsset = assetFromStringEx(coin.asset);
+        const assetStr = coin.asset;
+        let asset: AnyAsset;
+
+        try {
+            asset = assetFromStringEx(assetStr);
+        } catch (e) {
+            throw new Error(`Failed to parse asset string: "${assetStr}"`);
+        }
 
         const isSynth = asset.type === AssetType.SYNTH;
         const isTrade = asset.type === AssetType.TRADE;

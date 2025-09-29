@@ -61,11 +61,31 @@ describe('SwapMapper', () => {
                 swapTarget: '0',
                 swapSlip: '0',
                 txType: 'swap',
+                inPriceUSD: '',
+                outPriceUSD: '',
             },
         },
         pools: [],
         status: 'success',
         type: 'swap',
+    });
+
+    test('should error on incorrect asset string', () => {
+        const action = createMockAction({
+            inputAsset: 'BTCBTC',
+            inputAmount: 1,
+            outputAsset: 'ETH.ETH',
+            outputAmount: 20,
+            inputAddress: 'btc1address',
+            outputAddress: 'eth1address',
+            txID: 'tx123',
+        });
+
+        swapMapper = new SwapMapper(action, false, []);
+
+        expect(() => swapMapper.toCryptoTax(action, false)).toThrow(
+            'Failed to parse asset string: "BTCBTC"'
+        );
     });
 
     test('should correctly map a simple swap', () => {
