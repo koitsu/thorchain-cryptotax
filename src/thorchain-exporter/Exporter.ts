@@ -4,7 +4,7 @@ import toml from 'js-toml';
 import {CryptoTaxTransaction, writeCsv} from "../cryptotax";
 import {MidgardService} from "../cryptotax-thorchain/MidgardService";
 import {ThornodeService} from "../cryptotax-thorchain/ThornodeService";
-import {Action, ActionStatusEnum} from "@xchainjs/xchain-midgard";
+import {Action, ActionStatusEnum, ActionTypeEnum} from "@xchainjs/xchain-midgard";
 import {ITaxConfig} from "./ITaxConfig";
 import {Reporter} from "./Reporter";
 import {IWallet} from "./IWallet";
@@ -67,8 +67,11 @@ export class Exporter {
 
             // Get related noOp tx
             if (action.metadata.swap?.txType === 'noOp') {
-                const noopTxId = action.in[0].txID;
-                const tx = await this.thornode.getTxStatus(noopTxId);
+                const tx = await this.thornode.getTxStatus(action.in[0].txID);
+                thornodeTxs.push(tx);
+            } else if (action.type === ActionTypeEnum.Switch) {
+                // For a switch tx, get the thornode tx to determine fees
+                const tx = await this.thornode.getTxStatus(action.in[0].txID);
                 thornodeTxs.push(tx);
             }
 

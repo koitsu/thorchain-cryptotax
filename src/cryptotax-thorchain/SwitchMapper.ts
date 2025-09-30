@@ -11,19 +11,24 @@ import { baseToAssetAmountString } from '../utils/Amount';
 import { Mapper } from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
-// Switch is an upgrade of BNB.RUNE to THOR.RUNE
+// Switch is used to migrate an asset from one chain to another.
+// e.g. BNB.RUNE to THOR.RUNE, or GAIA.KUJI to THOR.KUJI
 //
-// This will be converted to 2 transactions, BridgeOut and BridgeIn, as it is crossing from one chain to another (Binance to THORChain) and retaining the
+// Asset migration generally has some time based decay, so the output amount may be less than the input amount.
+//
+// This will be converted to 2 transactions, BridgeOut and BridgeIn, as it is crossing from one chain to another (e.g. Binance to THORChain) and retaining the
 // same asset (and same cost basis). https://help.cryptotaxcalculator.io/en/articles/6268264-bridging-transactions
 //
 // Both transactions are created here as we have the details from both chains from the Midgard API.
-// The Binance transaction also holds the details as well, as it will contain a memo which says, "SWITCH:{to_thorchain_address}".
+// The external transaction will be a send to THORChain with the memo "switch:{to_thorchain_address}".
 export class SwitchMapper implements Mapper {
     toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = date.toISOString();
         const idPrefix: string = date.toISOString();
 
+        // Add some time to the second transaction so it is linked correctly in CTC as it needs to occur after the first.
+        // Not sure if this is still required. If so, it could probably just be milliseconds instead.
         const date_plus_10 = new Date(date.getTime() + (10 * 1000));
         const timestamp_plus_10: string = date_plus_10.toISOString();
 
@@ -41,7 +46,18 @@ export class SwitchMapper implements Mapper {
         const { blockchain: outputBlockchain, currency: outputCurrency } =
             parseMidgardAsset(outputCoin.asset);
 
-        // Send BNB.RUNE
+        // Find the thornode tx to get the fee
+        const thornodeTx = thornodeTxs.find(tx => tx.tx?.id === txId);
+        let feeCurrency = '';
+        let feeAmount = '';
+        if (thornodeTx && thornodeTx.tx?.gas && thornodeTx.tx.gas.length > 0) {
+            const gasCoin = thornodeTx.tx.gas[0];
+            const { currency } = parseMidgardAsset(gasCoin.asset);
+            feeCurrency = currency;
+            feeAmount = baseToAssetAmountString(gasCoin.amount);
+        }
+
+        // Send input asset
 
         transactions.push({
             walletExchange: input.address,
@@ -49,14 +65,16 @@ export class SwitchMapper implements Mapper {
             type: CryptoTaxTransactionType.BridgeOut,
             baseCurrency: inputCurrency,
             baseAmount: baseToAssetAmountString(inputCoin.amount),
+            feeCurrency,
+            feeAmount,
             from: input.address,
             to: output.address,
             blockchain: inputBlockchain,
             id: `${idPrefix}.bridge-out`,
-            description: `1/2 - Upgrade BNB.RUNE to THOR.RUNE (send BNB.RUNE); ${txId}`,
+            description: `1/2 - Switch ${inputBlockchain}.${inputCurrency} to ${outputBlockchain}.${outputCurrency} (send ${inputBlockchain}.${inputCurrency}); ${txId}`,
         });
 
-        // Receive THOR.RUNE
+        // Receive output asset
 
         transactions.push({
             walletExchange: output.address,
@@ -68,7 +86,7 @@ export class SwitchMapper implements Mapper {
             to: output.address,
             blockchain: outputBlockchain,
             id: `${idPrefix}.bridge-in`,
-            description: `2/2 - Upgrade BNB.RUNE to THOR.RUNE (receive THOR.RUNE); ${txId}`,
+            description: `2/2 - Switch ${inputBlockchain}.${inputCurrency} to ${outputBlockchain}.${outputCurrency} (receive ${outputBlockchain}.${outputCurrency}); ${txId}`,
         });
 
         return transactions;
