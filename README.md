@@ -21,8 +21,9 @@ Currently supported transactions
 - LPs (add/remove liquidity)
 - lending
 - savers
-- bond/unbond
-- TCY claim (Note: This is mapped as a Receive/Transfer In)
+- bonding/unbonding
+- TCY claiming (Note: This is mapped as a Receive/Transfer In)
+- TCY staking
 
 Not currently supported
 - Mayachain

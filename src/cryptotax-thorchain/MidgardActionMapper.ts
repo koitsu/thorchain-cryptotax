@@ -15,6 +15,7 @@ import {TcyClaimMapper} from "./TcyClaimMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
+import {TcyStakeMapper} from "./TcyStakeMapper";
 
 type ActionMappers = {
     [index in ActionType | string]: Mapper | null | any;
@@ -33,7 +34,8 @@ const actionMappers: ActionMappers = {
     [ActionType.Withdraw]: new WithdrawMapper(),
     'bond': new BondMapper(),
     'unbond': new UnbondMapper(),
-    'tcy_claim': new TcyClaimMapper()
+    'tcy_claim': new TcyClaimMapper(),
+    'tcy_stake': new TcyStakeMapper()
 }
 
 const loanOpenMapper = new LoanOpenMapper();
