@@ -12,6 +12,8 @@ import {LoanRepaymentMapper} from "./LoanRepaymentMapper";
 import {BondMapper} from "./BondMapper";
 import {UnbondMapper} from "./UnbondMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
+import { writeFileSync, mkdirSync } from "fs";
+import { dirname } from "path";
 
 type ActionMappers = {
     [index in ActionType | string]: Mapper | null | any;
@@ -52,12 +54,13 @@ export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[
     if (mapper) {
         console.log(`${date} ${action.type}: ${transactions.length}`);
     } else {
-        // TODO: currently using viewblock/runescan for sends, but looks like midgard supports it so could try switching
-        // TODO: could also support thorname, runePoolDeposit txs
-        if (!['send', 'thorname', 'runePoolDeposit'].includes(action.type as string)) {
-            console.log(action);
-            console.error(`${date} ${action.type}: no mapper found`);
-        }
+        console.error(`${date} ${action.type}: unsupported action`);
+
+        // Write unsupported action to JSON
+        const txId = action.in?.[0]?.txID;
+        const filePath = `unsupported-actions/${action.type}/${txId ? txId : date}.json`;
+        mkdirSync(dirname(filePath), { recursive: true });
+        writeFileSync(filePath, JSON.stringify(action, null, 4));
     }
 
     return transactions;

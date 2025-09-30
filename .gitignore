@@ -1,5 +1,6 @@
 
 out/
+unsupported-actions/
 
 # output for CSV and report files
 output/
