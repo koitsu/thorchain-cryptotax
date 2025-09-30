@@ -1,4 +1,7 @@
 import {assetFromStringEx} from "@xchainjs/xchain-util";
+import { baseToAssetAmountString } from '../utils/Amount';
+
+export { baseToAssetAmountString as formatBaseAmount };
 
 export function parseMidgardDate(nanoTimestamp: string): Date {
     return new Date(parseInt(nanoTimestamp) / 1000000);
@@ -41,8 +44,4 @@ export function parseMidgardAsset(assetStr: string): {
 export function parseMidgardPool(pool: string): string {
     const { blockchain, currency } = parseMidgardAsset(pool);
     return `${blockchain}.${currency}`;
-}
-
-export function parseMidgardAmount(amount: string): string {
-    return (parseInt(amount) / 100000000).toString();
 }

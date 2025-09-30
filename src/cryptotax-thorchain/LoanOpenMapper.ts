@@ -1,7 +1,8 @@
 import {Mapper} from "./Mapper";
 import {Action, Coin, Transaction} from "@xchainjs/xchain-midgard";
 import {CryptoTaxTransaction, CryptoTaxTransactionType} from "../cryptotax";
-import {parseMidgardAmount, parseMidgardAsset, parseMidgardDate} from "./MidgardUtils";
+import {parseMidgardAsset, parseMidgardDate} from "./MidgardUtils";
+import {baseToAssetAmountString} from "../utils/Amount";
 import {isEmpty} from "lodash";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
@@ -45,7 +46,7 @@ export class LoanOpenMapper implements Mapper {
         const outputCoin: Coin = output.coins[0];
         const {blockchain: outputBlockchain, currency: outputCurrency} =
             parseMidgardAsset(outputCoin.asset);
-        const outputAmount: string = parseMidgardAmount(outputCoin.amount);
+        const outputAmount: string = baseToAssetAmountString(outputCoin.amount);
 
         if (!inputCurrency) {
             throw this.error('No input currency', action);
@@ -61,7 +62,7 @@ export class LoanOpenMapper implements Mapper {
 
         const liquidityFee = {
             feeCurrency: 'RUNE',
-            feeAmount: parseMidgardAmount(action.metadata.swap?.liquidityFee ?? '')
+            feeAmount: baseToAssetAmountString(action.metadata.swap?.liquidityFee ?? '')
         };
         const affiliateFee = this.getAffiliateFee(action);
 
@@ -118,7 +119,7 @@ export class LoanOpenMapper implements Mapper {
 
             const {blockchain: inputBlockchain, currency: inputCurrency} =
                 parseMidgardAsset(inputCoin.asset);
-            const inputAmount: string = parseMidgardAmount(inputCoin.amount);
+            const inputAmount: string = baseToAssetAmountString(inputCoin.amount);
             const txId = input?.id;
             const memo = input?.memo;
             const inputAddress = input?.from_address;
@@ -130,7 +131,7 @@ export class LoanOpenMapper implements Mapper {
         const inputCoin: Coin = input.coins[0];
         const {blockchain: inputBlockchain, currency: inputCurrency} =
             parseMidgardAsset(inputCoin.asset);
-        const inputAmount: string = parseMidgardAmount(inputCoin.amount);
+        const inputAmount: string = baseToAssetAmountString(inputCoin.amount);
         const txId = input.txID;
         const memo = action.metadata.swap?.memo;
         const inputAddress = input.address;
@@ -166,7 +167,7 @@ export class LoanOpenMapper implements Mapper {
         const {currency: feeCurrency} =
             parseMidgardAsset(action.metadata.swap?.networkFees[0].asset ?? '');
 
-        const feeAmount= parseMidgardAmount(action.metadata.swap?.networkFees[0].amount ?? '');
+        const feeAmount= baseToAssetAmountString(action.metadata.swap?.networkFees[0].amount ?? '');
 
         return {
             feeCurrency,
@@ -189,7 +190,7 @@ export class LoanOpenMapper implements Mapper {
         }
 
         const {currency: feeCurrency} = parseMidgardAsset(out.coins[0].asset)
-        const feeAmount = parseMidgardAmount(out.coins[0].amount)
+        const feeAmount = baseToAssetAmountString(out.coins[0].amount)
 
         return {
             feeCurrency,

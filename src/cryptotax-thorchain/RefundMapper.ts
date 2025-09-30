@@ -9,10 +9,10 @@ import {
     CryptoTaxTransactionType,
 } from '../cryptotax';
 import {
-    parseMidgardAmount,
     parseMidgardAsset,
     parseMidgardDate,
 } from './MidgardUtils';
+import { baseToAssetAmountString } from '../utils/Amount';
 import { Mapper } from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
@@ -32,7 +32,7 @@ export class RefundMapper implements Mapper {
             parseMidgardAsset(inputCoin.asset);
         const { blockchain: feeBlockchain, currency: feeCurrency } =
             parseMidgardAsset(refundMetadata.networkFees[0].asset ?? '');
-        const feeAmount = parseMidgardAmount(
+        const feeAmount = baseToAssetAmountString(
             refundMetadata.networkFees[0].amount ?? '0'
         );
         const txId = input.txID ?? '';
@@ -43,7 +43,7 @@ export class RefundMapper implements Mapper {
             timestamp,
             type: CryptoTaxTransactionType.FailedIn,
             baseCurrency: inputCurrency,
-            baseAmount: parseMidgardAmount(inputCoin.amount),
+            baseAmount: baseToAssetAmountString(inputCoin.amount),
             feeCurrency,
             feeAmount,
             from: input.address,

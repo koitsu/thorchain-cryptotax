@@ -1,6 +1,7 @@
 import {AnyAsset, assetFromStringEx, AssetType} from "@xchainjs/xchain-util";
 import {BaseMapper} from "./BaseMapper";
-import {resolveAmount, ViewblockCoin, ViewblockEvent, ViewblockEventSend, ViewblockTx} from "../viewblock";
+import {ViewblockCoin, ViewblockEvent, ViewblockEventSend, ViewblockTx} from "../viewblock";
+import { baseToAssetAmountString } from "../utils/Amount";
 import {CryptoTaxTransaction, CryptoTaxTransactionType, txToCsv} from "../cryptotax";
 import assert from "assert";
 
@@ -37,7 +38,7 @@ export class SendMapper extends BaseMapper {
         const coin: ViewblockCoin = event.params.coins[0];
 
         // Amount
-        ctcTx.baseAmount = resolveAmount(coin.amount);
+        ctcTx.baseAmount = baseToAssetAmountString(coin.amount);
 
         const assetStr = coin.asset;
         let asset: AnyAsset;
@@ -61,7 +62,7 @@ export class SendMapper extends BaseMapper {
         // Only apply the fee on send (not on receive)
         if (ctcTx.type === CryptoTaxTransactionType.Send) {
             ctcTx.feeCurrency = 'RUNE';
-            ctcTx.feeAmount = resolveAmount(event.fee.amount[0].amount);
+            ctcTx.feeAmount = baseToAssetAmountString(event.fee.amount[0].amount);
         }
 
         ctcTx.from = from;

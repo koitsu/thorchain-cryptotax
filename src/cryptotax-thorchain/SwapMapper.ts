@@ -1,6 +1,7 @@
 import { Action, Coin, Transaction } from '@xchainjs/xchain-midgard';
 import { CryptoTaxTransaction, CryptoTaxTransactionType } from '../cryptotax';
-import { parseMidgardAmount, parseMidgardAsset } from './MidgardUtils';
+import { parseMidgardAsset } from './MidgardUtils';
+import { baseToAssetAmountString } from '../utils/Amount';
 import { TxStatusResponse } from '@xchainjs/xchain-thornode';
 import { BaseMapper } from './BaseMapper';
 
@@ -85,9 +86,9 @@ export class SwapMapper extends BaseMapper {
             baseCurrency: inputCurrency,
             baseAmount: inputAmount,
             quoteCurrency: outputCurrency,
-            quoteAmount: parseMidgardAmount(outputCoin.amount),
+            quoteAmount: baseToAssetAmountString(outputCoin.amount),
             feeCurrency,
-            feeAmount: parseMidgardAmount(action.metadata.swap?.networkFees[0].amount ?? ''),
+            feeAmount: baseToAssetAmountString(action.metadata.swap?.networkFees[0].amount ?? ''),
             from: input.address,
             to: 'thorchain',
             blockchain: inputBlockchain,

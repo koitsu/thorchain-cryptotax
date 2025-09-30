@@ -4,10 +4,10 @@ import {
     CryptoTaxTransactionType,
 } from '../cryptotax';
 import {
-    parseMidgardAmount,
     parseMidgardAsset,
     parseMidgardDate,
 } from './MidgardUtils';
+import { baseToAssetAmountString } from '../utils/Amount';
 import { Mapper } from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
@@ -48,7 +48,7 @@ export class SwitchMapper implements Mapper {
             timestamp,
             type: CryptoTaxTransactionType.BridgeOut,
             baseCurrency: inputCurrency,
-            baseAmount: parseMidgardAmount(inputCoin.amount),
+            baseAmount: baseToAssetAmountString(inputCoin.amount),
             from: input.address,
             to: output.address,
             blockchain: inputBlockchain,
@@ -63,7 +63,7 @@ export class SwitchMapper implements Mapper {
             timestamp: timestamp_plus_10,
             type: CryptoTaxTransactionType.BridgeIn,
             baseCurrency: outputCurrency,
-            baseAmount: parseMidgardAmount(outputCoin.amount),
+            baseAmount: baseToAssetAmountString(outputCoin.amount),
             from: input.address,
             to: output.address,
             blockchain: outputBlockchain,

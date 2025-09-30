@@ -1,6 +1,7 @@
 import { Action } from '@xchainjs/xchain-midgard';
 import { CryptoTaxTransaction, CryptoTaxTransactionType } from '../cryptotax';
-import { parseMidgardAmount, parseMidgardAsset, parseMidgardDate } from './MidgardUtils';
+import { parseMidgardAsset, parseMidgardDate } from './MidgardUtils';
+import { baseToAssetAmountString } from '../utils/Amount';
 import { TxStatusResponse } from '@xchainjs/xchain-thornode';
 import { Mapper } from './Mapper';
 import { getPrice } from '../cmc-scraper';
@@ -37,7 +38,7 @@ export abstract class BaseMapper implements Mapper {
 
     protected parseCoin(asset: string, amount: string): { blockchain: string; currency: string; amountParsed: string } {
         const { blockchain, currency } = parseMidgardAsset(asset);
-        const amountParsed = parseMidgardAmount(amount);
+        const amountParsed = baseToAssetAmountString(amount);
         return { blockchain, currency, amountParsed };
     }
 

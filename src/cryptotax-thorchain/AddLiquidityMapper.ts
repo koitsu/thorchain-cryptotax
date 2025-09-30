@@ -5,11 +5,11 @@ import {
 } from '../cryptotax';
 import { getPrice } from "../cmc-scraper";
 import {
-    parseMidgardAmount,
     parseMidgardAsset,
     parseMidgardDate,
     parseMidgardPool,
 } from './MidgardUtils';
+import { baseToAssetAmountString } from '../utils/Amount';
 import { Mapper } from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
@@ -26,7 +26,7 @@ export class AddLiquidityMapper implements Mapper {
         const idPrefix: string = date.toISOString();
         const pool: string = parseMidgardPool(action.pools[0]);
         const poolName: string = `ThorLP.${pool}`;
-        const liquidityUnits: string = parseMidgardAmount(
+        const liquidityUnits: string = baseToAssetAmountString(
             action.metadata.addLiquidity?.liquidityUnits ?? ''
         );
         const isSavers: boolean = action.pools[0].includes('/');
@@ -68,7 +68,7 @@ export class AddLiquidityMapper implements Mapper {
                 timestamp,
                 type: CryptoTaxTransactionType.AddLiquidity,
                 baseCurrency: currency,
-                baseAmount: parseMidgardAmount(coin.amount),
+                baseAmount: baseToAssetAmountString(coin.amount),
                 from: from,
                 to: 'thorchain',
                 blockchain,

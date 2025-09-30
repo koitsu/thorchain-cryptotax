@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { range } from '../utils/Range';
 import { ViewblockTx } from './ViewblockTx';
 import {Cache} from "../cache/Cache";
-import { baseAmount, baseToAsset, formatAssetAmount, BaseAmount, AssetAmount } from "@xchainjs/xchain-util";
+import { baseToAssetAmountString } from "../utils/Amount";
 
 export const BASE_URL = 'https://api.viewblock.io';
 export const ORIGIN = 'https://viewblock.io';
@@ -29,16 +29,7 @@ interface PaginatedQueryTxs {
     type: string;
 }
 
-export function resolveAmount(amount: string): string {
-    // Create a BaseAmount from the string amount with 8 decimal places (standard for RUNE and most assets)
-    const base: BaseAmount = baseAmount(amount, 8);
 
-    // Convert the BaseAmount to an AssetAmount (human-readable units)
-    const asset: AssetAmount = baseToAsset(base);
-
-    // Format the AssetAmount as a string, trimming trailing zeros for clean display
-    return formatAssetAmount({ amount: asset, trimZeros: true });
-}
 
 export class Viewblock {
 

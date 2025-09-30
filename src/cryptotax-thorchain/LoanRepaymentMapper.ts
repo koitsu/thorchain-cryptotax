@@ -1,7 +1,8 @@
 import {Mapper} from "./Mapper";
 import {Action, Coin, Transaction} from "@xchainjs/xchain-midgard";
 import {CryptoTaxTransaction, CryptoTaxTransactionType} from "../cryptotax";
-import {parseMidgardAmount, parseMidgardAsset, parseMidgardDate} from "./MidgardUtils";
+import {parseMidgardAsset, parseMidgardDate} from "./MidgardUtils";
+import {baseToAssetAmountString} from "../utils/Amount";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 // https://dev.thorchain.org/concepts/memos.html#repay-loan
@@ -36,7 +37,7 @@ export class LoanRepaymentMapper implements Mapper {
         const inputCoin: Coin = input.coins[0];
         const {blockchain: inputBlockchain, currency: inputCurrency} =
             parseMidgardAsset(inputCoin.asset);
-        const inputAmount: string = parseMidgardAmount(inputCoin.amount);
+        const inputAmount: string = baseToAssetAmountString(inputCoin.amount);
         const txId = input.txID;
 
         if (!inputCurrency) {
@@ -49,7 +50,7 @@ export class LoanRepaymentMapper implements Mapper {
 
         const liquidityFee = {
             feeCurrency: 'RUNE',
-            feeAmount: parseMidgardAmount(action.metadata.swap?.liquidityFee ?? '')
+            feeAmount: baseToAssetAmountString(action.metadata.swap?.liquidityFee ?? '')
         };
 
         const networkFee = this.getNetworkFee(action);
@@ -81,7 +82,7 @@ export class LoanRepaymentMapper implements Mapper {
             const outputCoin: Coin = output.coins[0];
             const {blockchain: outputBlockchain, currency: outputCurrency} =
                 parseMidgardAsset(outputCoin.asset);
-            const outputAmount: string = parseMidgardAmount(outputCoin.amount);
+            const outputAmount: string = baseToAssetAmountString(outputCoin.amount);
 
             transactions.push({
                 walletExchange: output.address,
@@ -140,7 +141,7 @@ export class LoanRepaymentMapper implements Mapper {
         const {currency: feeCurrency} =
             parseMidgardAsset(action.metadata.swap?.networkFees[0].asset ?? '');
 
-        const feeAmount= parseMidgardAmount(action.metadata.swap?.networkFees[0].amount ?? '');
+        const feeAmount= baseToAssetAmountString(action.metadata.swap?.networkFees[0].amount ?? '');
 
         return {
             feeCurrency,
