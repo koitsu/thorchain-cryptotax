@@ -94,6 +94,7 @@ export class Exporter {
         let count = 0;
         const walletExchanges = this.getUniqueWalletExchanges(txs);
 
+        // Output all fetched txs in a single CSV
         writeCsv(`${outputPath}/all.csv`, txs);
 
         const ranges = generateDateRanges(this.config.fromDate, this.config.toDate, this.config.frequency);
@@ -101,6 +102,9 @@ export class Exporter {
         for (const range of ranges) {
             const rangeTxs = this.getTxsInRange(txs, range);
             expectedExportCount += rangeTxs.length;
+
+            // Output all txs in each range to CSV
+            writeCsv(`${outputPath}/all-${range.from}_${range.to}.csv`, rangeTxs);
 
             // If no txs in the current range then skip
             if (rangeTxs.length === 0) {
