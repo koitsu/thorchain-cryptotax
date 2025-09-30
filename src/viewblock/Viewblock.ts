@@ -1,8 +1,6 @@
-import fetch from 'node-fetch';
-import { range } from '../utils/Range';
-import { ViewblockTx } from './ViewblockTx';
+import {range} from '../utils/Range';
+import {ViewblockTx} from './ViewblockTx';
 import {Cache} from "../cache/Cache";
-import { baseToAssetAmountString } from "../utils/Amount";
 
 export const BASE_URL = 'https://api.viewblock.io';
 export const ORIGIN = 'https://viewblock.io';
@@ -29,8 +27,6 @@ interface PaginatedQueryTxs {
     type: string;
 }
 
-
-
 export class Viewblock {
 
     cache: Cache;
@@ -40,7 +36,7 @@ export class Viewblock {
         this.cache = new Cache(cachePath);
     }
 
-    async query(path: any, { apiKey, query = {}, network, agent = null }: any) {
+    async query(path: any, { apiKey, query = {}, network }: any) {
         const q = makeQuery({ ...query, network });
         const url = `${BASE_URL}${path}${q}`;
         const headers: any = {
@@ -54,7 +50,6 @@ export class Viewblock {
 
         return fetch(url, {
             headers,
-            agent,
         }).then((response) => response.json());
     }
 
