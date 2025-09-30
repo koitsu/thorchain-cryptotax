@@ -7,8 +7,13 @@ import { baseAmount, baseToAsset, trimZeros } from "@xchainjs/xchain-util";
  * @param amount - The base amount as a string (e.g., "1" for 1 base unit)
  * @param decimals - Number of decimals for the asset (default 8 for RUNE)
  * @returns The formatted asset amount string
+ * @throws Error if amount is empty or contains non-numeric characters
  */
 export function baseToAssetAmountString(amount: string, decimals: number = 8): string {
+    if (!amount || !/^\d+$/.test(amount)) {
+        throw new Error(`Invalid base amount: ${amount}`);
+    }
+
     const base = baseAmount(amount, decimals);
     const asset = baseToAsset(base);
     return trimZeros(asset.amount().toFixed(asset.decimal));
