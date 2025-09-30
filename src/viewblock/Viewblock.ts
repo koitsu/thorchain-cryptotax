@@ -55,7 +55,6 @@ export class Viewblock {
         return fetch(url, {
             headers,
             agent,
-            timeout: 0,
         }).then((response) => response.json());
     }
 
@@ -91,12 +90,12 @@ export class Viewblock {
             return this.cache.read(address);
         }
 
-        let page: PaginatedQueryTxs = await this.getTxs({
+        let page = await this.getTxs({
             address,
             network,
             type,
             page: 1,
-        });
+        }) as PaginatedQueryTxs;
 
         const totalPages = page.pages;
         const total = page.total;
@@ -118,7 +117,7 @@ export class Viewblock {
                 network,
                 type,
                 page: i,
-            });
+            }) as PaginatedQueryTxs;
 
             results = results.concat(...page.docs);
         }
