@@ -9,10 +9,11 @@ import { WithdrawMapper } from "./WithdrawMapper";
 import { RefundMapper } from "./RefundMapper";
 import {LoanOpenMapper} from "./LoanOpenMapper";
 import {LoanRepaymentMapper} from "./LoanRepaymentMapper";
+import {BondMapper} from "./BondMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
 type ActionMappers = {
-    [index in ActionType]: Mapper | null | any;
+    [index in ActionType | string]: Mapper | null | any;
 }
 
 const actionMappers: ActionMappers = {
@@ -25,7 +26,8 @@ const actionMappers: ActionMappers = {
     [ActionType.Refund]: new RefundMapper(),
     [ActionType.Swap]: SwapMapper,
     [ActionType.Switch]: new SwitchMapper(),
-    [ActionType.Withdraw]: new WithdrawMapper()
+    [ActionType.Withdraw]: new WithdrawMapper(),
+    'bond': new BondMapper()
 }
 
 const loanOpenMapper = new LoanOpenMapper();
