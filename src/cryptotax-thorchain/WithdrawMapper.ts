@@ -4,8 +4,8 @@ import {
     CryptoTaxTransactionType,
 } from '../cryptotax';
 import { getPrice } from "../cmc-scraper";
+import { baseToAssetAmountString } from '../utils/Amount';
 import {
-    formatBaseAmount,
     parseMidgardAsset,
     parseMidgardDate,
     parseMidgardPool,
@@ -46,7 +46,7 @@ export class WithdrawMapper implements Mapper {
         const idPrefix: string = date.toISOString();
         const pool: string = parseMidgardPool(action.pools[0]);
         const poolName: string = `ThorLP.${pool}`;
-        const liquidityUnits: string = formatBaseAmount(
+        const liquidityUnits: string = baseToAssetAmountString(
             action.metadata.withdraw?.liquidityUnits ?? ''
         ).replace('-', '');
         const isSavers: boolean = action.pools[0].includes('/');
@@ -87,7 +87,7 @@ export class WithdrawMapper implements Mapper {
                 timestamp: timestamp_plus_20,
                 type: CryptoTaxTransactionType.RemoveLiquidity,
                 baseCurrency: currency,
-                baseAmount: formatBaseAmount(coin.amount),
+                baseAmount: baseToAssetAmountString(coin.amount),
                 feeCurrency,
                 feeAmount,
                 from: 'thorchain',
@@ -157,7 +157,7 @@ export class WithdrawMapper implements Mapper {
     getFee(networkFee: Coin | undefined) {
         return networkFee ? {
             feeCurrency: parseMidgardAsset(networkFee.asset).currency,
-            feeAmount: formatBaseAmount(networkFee.amount)
+            feeAmount: baseToAssetAmountString(networkFee.amount)
         } : {
             feeCurrency: '',
             feeAmount: ''

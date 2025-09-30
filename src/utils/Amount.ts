@@ -10,7 +10,7 @@ import { baseAmount, baseToAsset, trimZeros } from "@xchainjs/xchain-util";
  * @throws Error if amount is empty or contains non-numeric characters
  */
 export function baseToAssetAmountString(amount: string, decimals: number = 8): string {
-    if (!amount || !/^\d+$/.test(amount)) {
+    if (!amount || !/^-?\d+$/.test(amount)) {
         throw new Error(`Invalid base amount: ${amount}`);
     }
 

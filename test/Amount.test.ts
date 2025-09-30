@@ -54,4 +54,9 @@ describe('Amount', () => {
     test('baseToAssetAmountString throws error for string with invalid characters', () => {
         expect(() => baseToAssetAmountString("123abc")).toThrow("Invalid base amount: 123abc");
     });
+
+    test('baseToAssetAmountString handles negative amounts', () => {
+        const result = baseToAssetAmountString("-1");
+        expect(result).toBe("-0.00000001");
+    });
 });
