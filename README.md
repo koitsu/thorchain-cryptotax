@@ -22,6 +22,7 @@ Currently supported transactions
 - lending
 - savers
 - bond/unbond
+- TCY claim (Note: This is mapped as a Receive/Transfer In)
 
 Not currently supported
 - Mayachain
