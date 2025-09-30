@@ -17,6 +17,7 @@ import { writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import {TcyStakeMapper} from "./TcyStakeMapper";
 import {RunePoolDepositMapper} from "./RunePoolDepositMapper";
+import {RunePoolWithdrawMapper} from "./RunePoolWithdrawMapper";
 
 type ActionMappers = {
     [index in ActionType | string]: Mapper | null | any;
@@ -28,7 +29,7 @@ const actionMappers: ActionMappers = {
     [ActionType.Send]: null,
     [ActionType.Thorname]: null,
     [ActionType.RunePoolDeposit]: new RunePoolDepositMapper(),
-    [ActionType.RunePoolWithdraw]: null,
+    [ActionType.RunePoolWithdraw]: new RunePoolWithdrawMapper(),
     [ActionType.Refund]: new RefundMapper(),
     [ActionType.Swap]: SwapMapper,
     [ActionType.Switch]: new SwitchMapper(),

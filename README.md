@@ -24,11 +24,11 @@ Currently supported transactions
 - bonding/unbonding
 - TCY claiming (Note: This is mapped as a Receive/Transfer In)
 - TCY staking
-- RUNEPool deposit
+- RUNEPool deposit/withdrawal
 
 Not currently supported
-- RUNEPool withdrawal
-- Mayachain
+
+- Maya Protocol
 - THORNames
 - aggregated swaps (i.e. where the swap is routed through more than just THORChain)
 
