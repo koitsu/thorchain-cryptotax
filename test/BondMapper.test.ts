@@ -25,7 +25,7 @@ describe('BondMapper', () => {
             to: 'thorchain',
             blockchain: 'THOR',
             id: '2020-12-31T13:00:00.000Z.bond',
-            description: '1/1 - Bond RUNE to thor1-node-address; 0000000000000000000000000000000000000000000000000000000000000000',
+            description: '1/1 - Bond 1 RUNE to thor1-node-address; 0000000000000000000000000000000000000000000000000000000000000000',
         });
     });
 });

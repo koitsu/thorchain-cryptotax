@@ -21,7 +21,7 @@ Currently supported transactions
 - LPs (add/remove liquidity)
 - lending
 - savers
-- bonding
+- bond/unbond
 
 Not currently supported
 - Mayachain

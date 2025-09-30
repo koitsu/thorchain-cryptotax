@@ -8,7 +8,7 @@ import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 // 0.02 RUNE
 const DEFAULT_RUNE_GAS = '2000000';
 
-export class BondMapper implements Mapper {
+export class UnbondMapper implements Mapper {
     toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = date.toISOString();
@@ -17,8 +17,9 @@ export class BondMapper implements Mapper {
         const transactions: CryptoTaxTransaction[] = [];
 
         const input: Transaction = action.in[0];
-        const inputCoin: Coin = input.coins[0];
-        const amount = baseToAssetAmountString(inputCoin.amount);
+        const output: Transaction = action.out[0];
+        const outputCoin: Coin = output.coins[0];
+        const amount = baseToAssetAmountString(outputCoin.amount);
         const txId = input.txID ?? '';
 
         const bondMetadata: BondMetadata = action.metadata.bond as BondMetadata;
@@ -27,16 +28,16 @@ export class BondMapper implements Mapper {
         transactions.push({
             walletExchange: input.address,
             timestamp,
-            type: CryptoTaxTransactionType.StakingDeposit,
+            type: CryptoTaxTransactionType.StakingWithdrawal,
             baseCurrency: 'RUNE',
             baseAmount: amount,
             feeCurrency: 'RUNE',
             feeAmount: baseToAssetAmountString(DEFAULT_RUNE_GAS),
-            from: input.address,
-            to: 'thorchain',
+            from: 'thorchain',
+            to: input.address,
             blockchain: 'THOR',
-            id: `${idPrefix}.bond`,
-            description: `1/1 - Bond ${amount} RUNE to ${nodeAddress}; ${txId}`,
+            id: `${idPrefix}.unbond`,
+            description: `1/1 - Unbond ${amount} RUNE from ${nodeAddress}; ${txId}`,
         });
 
         return transactions;
