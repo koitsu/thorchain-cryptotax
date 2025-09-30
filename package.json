@@ -29,5 +29,8 @@
   "devDependencies": {
     "@jest/globals": "^30.2.0",
     "ts-jest": "^29.4.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
