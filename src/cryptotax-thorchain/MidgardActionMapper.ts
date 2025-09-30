@@ -16,6 +16,7 @@ import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import {TcyStakeMapper} from "./TcyStakeMapper";
+import {RunePoolDepositMapper} from "./RunePoolDepositMapper";
 
 type ActionMappers = {
     [index in ActionType | string]: Mapper | null | any;
@@ -26,7 +27,7 @@ const actionMappers: ActionMappers = {
     [ActionType.Donate]: null,
     [ActionType.Send]: null,
     [ActionType.Thorname]: null,
-    [ActionType.RunePoolDeposit]: null,
+    [ActionType.RunePoolDeposit]: new RunePoolDepositMapper(),
     [ActionType.RunePoolWithdraw]: null,
     [ActionType.Refund]: new RefundMapper(),
     [ActionType.Swap]: SwapMapper,
