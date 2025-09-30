@@ -41,7 +41,7 @@ describe('SendMapper', () => {
         mapper = new SendMapper(tx, 'thor1-user-wallet-11111');
 
         expect(() => mapper.toCtc()).toThrow(
-            'Failed to parse asset string: "DOGEDOGE"'
+            '[Viewblock] Failed to parse asset string "DOGEDOGE". type: send, txid: 0000000000000000000000000000000000000000000000000000000000000000'
         );
     });
 

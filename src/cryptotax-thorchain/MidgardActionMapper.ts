@@ -51,25 +51,31 @@ export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[
     const date: string = getActionDate(action).toISOString();
     let mapper = getMapper(action);
 
-    if (typeof mapper === 'function') {
-        mapper = new (mapper as any)(action, addReferencePrices, thornodeTxs);
+    try {
+        if (typeof mapper === 'function') {
+            mapper = new (mapper as any)(action, addReferencePrices, thornodeTxs);
+        }
+
+        const transactions: CryptoTaxTransaction[] = mapper?.toCryptoTax(action, addReferencePrices, thornodeTxs) ?? [];
+
+        if (mapper) {
+            console.log(`${date} ${action.type}: ${transactions.length}`);
+        } else {
+            console.error(`${date} ${action.type}: unsupported action`);
+
+            // Write unsupported action to JSON
+            const txId = action.in?.[0]?.txID;
+            const filePath = `unsupported-actions/${action.type}/${txId ? txId : date}.json`;
+            mkdirSync(dirname(filePath), { recursive: true });
+            writeFileSync(filePath, JSON.stringify(action, null, 4));
+        }
+
+        return transactions;
+
+    } catch (e: any) {
+        const txId = action.in?.[0]?.txID || 'unknown';
+        throw new Error(`[Midgard] ${e.message || 'unknown error'}. type: ${action.type}, txid: ${txId}`);
     }
-
-    const transactions: CryptoTaxTransaction[] = mapper?.toCryptoTax(action, addReferencePrices, thornodeTxs) ?? [];
-
-    if (mapper) {
-        console.log(`${date} ${action.type}: ${transactions.length}`);
-    } else {
-        console.error(`${date} ${action.type}: unsupported action`);
-
-        // Write unsupported action to JSON
-        const txId = action.in?.[0]?.txID;
-        const filePath = `unsupported-actions/${action.type}/${txId ? txId : date}.json`;
-        mkdirSync(dirname(filePath), { recursive: true });
-        writeFileSync(filePath, JSON.stringify(action, null, 4));
-    }
-
-    return transactions;
 }
 
 function getMapper(action: Action): Mapper | null {

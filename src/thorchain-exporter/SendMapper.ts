@@ -46,7 +46,7 @@ export class SendMapper extends BaseMapper {
         try {
             asset = assetFromStringEx(assetStr);
         } catch (e) {
-            throw new Error(`Failed to parse asset string: "${assetStr}"`);
+            throw new Error(`[Viewblock] Failed to parse asset string "${assetStr}". type: send, txid: ${this.tx.hash}`);
         }
 
         const isSynth = asset.type === AssetType.SYNTH;
