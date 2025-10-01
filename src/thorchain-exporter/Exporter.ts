@@ -130,7 +130,7 @@ export class Exporter {
         const walletExchanges = this.getUniqueWalletExchanges(txs);
 
         // Output all fetched txs in a single CSV
-        writeCsv(`${outputPath}/all.csv`, txs);
+        writeCsv(path.join(outputPath, 'all.csv'), txs);
 
         const ranges = generateDateRanges(this.config.fromDate, this.config.toDate, this.config.frequency);
 
@@ -139,7 +139,9 @@ export class Exporter {
             expectedExportCount += rangeTxs.length;
 
             // Output all txs in each range to CSV
-            writeCsv(`${outputPath}/all-${range.from}_${range.to}.csv`, rangeTxs);
+            const fn1 = 'all-' + range.from + '_' + range.to + '.csv';
+
+            writeCsv(path.join(outputPath, fn1), rangeTxs);
 
             // If no txs in the current range then skip
             if (rangeTxs.length === 0) {
@@ -158,12 +160,16 @@ export class Exporter {
                             throw new Error('bad txs');
                         }
 
-                        writeCsv(`${outputPath}/${range.from}_${range.to}_THOR_thorchain_swaps.csv`, walletTxs);
+                        const fn2 = range.from + '_' + range.to + '_THOR_thorchain_swaps.csv';
+
+                        writeCsv(path.join(outputPath, fn2), walletTxs);
 
                         count += walletTxs.length;
 
                     } else {
-                        writeCsv(`${outputPath}/${this.makeFilename(walletExchange, range)}.csv`, walletTxs);
+                        const fn3 = this.makeFilename(walletExchange, range) + '.csv';
+
+                        writeCsv(path.join(outputPath, fn3), walletTxs);
 
                         count += walletTxs.length;
                     }
