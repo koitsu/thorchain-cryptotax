@@ -30,7 +30,7 @@ describe('RunePoolDepositMapper', () => {
             walletExchange: 'thor1-user-wallet-11111',
             timestamp: '2020-12-31T13:00:10.000Z',
             type: CryptoTaxTransactionType.ReceiveLpToken,
-            baseCurrency: 'ThorLP.RUNE',
+            baseCurrency: 'ThorLP.THOR.RUNE',
             baseAmount: '190',
             from: 'thorchain',
             to: 'thor1-user-wallet-11111',

@@ -22,7 +22,7 @@ export class RunePoolWithdrawMapper implements Mapper {
         );
         const txId = output.txID ?? '';
 
-        const lpToken: string = 'ThorLP.RUNE';
+        const lpToken: string = 'ThorLP.THOR.RUNE';
 
         const date_plus_10 = new Date(date.getTime() + (10 * 1000));
         const timestamp_plus_10: string = date_plus_10.toISOString();
