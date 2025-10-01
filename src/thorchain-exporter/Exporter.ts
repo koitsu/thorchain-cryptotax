@@ -1,6 +1,7 @@
 import {Viewblock} from "../viewblock";
 import fs from "fs-extra";
 import toml from 'js-toml';
+import {format} from 'date-fns-tz';
 import {CryptoTaxTransaction, writeCsv} from "../cryptotax";
 import {MidgardService} from "../cryptotax-thorchain/MidgardService";
 import {ThornodeService} from "../cryptotax-thorchain/ThornodeService";
@@ -11,6 +12,8 @@ import {IWallet} from "./IWallet";
 import {TaxEvents} from "./TaxEvents";
 import {DateRange, generateDateRanges} from "../utils/DateRange";
 import path from "path";
+import {BaseMapper} from "./BaseMapper";
+import {getActionDate} from "../cryptotax-thorchain/MidgardActionMapper";
 
 const info = console.info;
 
@@ -44,7 +47,7 @@ export class Exporter {
         }
     }
 
-    async getEvents(wallet: IWallet): Promise<TaxEvents> {
+    async getEvents(wallet: IWallet, outputPath: string): Promise<TaxEvents> {
         const events = new TaxEvents();
 
         const txs = await this.viewblock.getAllTxs({
@@ -54,7 +57,14 @@ export class Exporter {
         });
 
         for (const tx of txs) {
-            events.addViewblock(tx, wallet);
+            try {
+                events.addViewblock(tx, wallet);
+            } catch (error) {
+                // Log the error, save a copy of failed transaction and keep going
+                console.error(error);
+                const mapper = new BaseMapper(tx, wallet.address);
+                this.saveFailure(outputPath, wallet.address, 'viewblock', mapper.datetime, tx, error);
+            }
         }
 
         // Get Midgard actions
@@ -75,7 +85,13 @@ export class Exporter {
                 thornodeTxs.push(tx);
             }
 
-            events.addMidgard(action, wallet, thornodeTxs);
+            try {
+                events.addMidgard(action, wallet, thornodeTxs);
+            } catch (error) {
+                // Log the error, save a copy of failed transaction and keep going
+                console.error(error);
+                this.saveFailure(outputPath, wallet.address, 'midgard', getActionDate(action), action, error);
+            }
         }
 
         return events;
@@ -193,5 +209,13 @@ export class Exporter {
     // Returns last 5 characters of address
     private shortenAddress(address: string): string {
         return address.slice(-5);
+    }
+
+    private saveFailure(outputPath: string, walletAddress: string, source: string, date: Date, data: any, error: any): void {
+        const failureDir = path.join(outputPath, 'failures', walletAddress, source);
+        fs.ensureDirSync(failureDir);
+        const timestamp = format(date, 'yyyy-MM-dd_HHmm_ssSSS');
+        const errorMessage = error.message || 'unknown error';
+        fs.writeJsonSync(path.join(failureDir, `${timestamp}.json`), { ERROR_MESSAGE: errorMessage, ...data }, { spaces: 4});
     }
 }

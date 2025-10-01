@@ -35,7 +35,7 @@ async function main() {
     // Import viewblock and midgard into TaxEvents
 
     for (const wallet of wallets) {
-        const events = await exporter.getEvents(wallet);
+        const events = await exporter.getEvents(wallet, outputPath);
         events.sortDesc();
 
         // Generate each report with the events for that wallet only.
