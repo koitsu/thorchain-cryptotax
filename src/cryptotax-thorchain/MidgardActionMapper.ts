@@ -18,6 +18,7 @@ import { dirname } from "path";
 import {TcyStakeMapper} from "./TcyStakeMapper";
 import {RunePoolDepositMapper} from "./RunePoolDepositMapper";
 import {RunePoolWithdrawMapper} from "./RunePoolWithdrawMapper";
+import {ThornameMapper} from "./ThornameMapper";
 
 type ActionMappers = {
     [index in ActionType | string]: Mapper | null | any;
@@ -27,7 +28,7 @@ const actionMappers: ActionMappers = {
     [ActionType.AddLiquidity]: new AddLiquidityMapper(),
     [ActionType.Donate]: null,
     [ActionType.Send]: null,
-    [ActionType.Thorname]: null,
+    [ActionType.Thorname]: new ThornameMapper(),
     [ActionType.RunePoolDeposit]: new RunePoolDepositMapper(),
     [ActionType.RunePoolWithdraw]: new RunePoolWithdrawMapper(),
     [ActionType.Refund]: new RefundMapper(),

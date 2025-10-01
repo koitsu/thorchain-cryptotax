@@ -25,11 +25,12 @@ Currently supported transactions
 - TCY claiming (Note: This is mapped as a Receive/Transfer In)
 - TCY staking
 - RUNEPool deposit/withdrawal
+- Thorname register/update
 
 Not currently supported
 
+- Rujira contracts
 - Maya Protocol
-- THORNames
 - aggregated swaps (i.e. where the swap is routed through more than just THORChain)
 
 ## Usage
