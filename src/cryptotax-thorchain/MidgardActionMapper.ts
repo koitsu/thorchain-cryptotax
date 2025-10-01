@@ -69,7 +69,7 @@ export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[
                 // Write unsupported action to JSON
                 const txId = action.in?.[0]?.txID;
                 const filename = (txId ? txId : date) + '.json';
-                const filePath = path.join(directory, action.type, filename);
+                const filePath = path.join(unsupportedActionsPath, action.type, filename);
                 mkdirSync(path.dirname(filePath), {recursive: true});
                 writeFileSync(filePath, JSON.stringify(action, null, 4));
             }
