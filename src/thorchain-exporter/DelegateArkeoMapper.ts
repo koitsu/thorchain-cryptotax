@@ -20,7 +20,9 @@ export class DelegateArkeoMapper extends BaseMapper {
         const from = event.params.fromAddress;
         const to = event.params.toAddress;
 
-        ctcTx.type = CryptoTaxTransactionType.Expense;
+        // Categorising this as a send, as it is a send to yourself, only the fee should apply.
+        ctcTx.type = CryptoTaxTransactionType.Send;
+
         ctcTx.timestamp = this.timestamp;
 
         assert.equal(1, event.params.coins.length);

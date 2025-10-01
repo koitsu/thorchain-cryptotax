@@ -23,10 +23,10 @@ describe('DelegateArkeoMapper', () => {
                 "feeAmount": "0.02",
                 "feeCurrency": "RUNE",
                 "from": "thor1-user-wallet-11111",
-                "id": "2020-12-31T13:00:00.000Z.expense",
+                "id": "2020-12-31T13:00:00.000Z.send",
                 "timestamp": "2020-12-31T13:00:00.000Z",
                 "to": "thor1-user-wallet-11111",
-                "type": "expense",
+                "type": "send",
                 "walletExchange": "thor1-user-wallet-11111"
             }
         ]);
