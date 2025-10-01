@@ -12,6 +12,15 @@ frequency = "yearly"
 # Store the downloaded source files to be able to re-run without downloading again
 cacheDataSources = false
 
+# Optional: path to output/ directory
+# outputPath = "/some/path/output"
+
+# Optional: path to unsupported-actions/ directory
+# unsupportedActionsPath = "/some/path/unsupported-actions"
+
+# Optional: path to cache/ directory
+# cachePath = "/some/path/cache"
+
 # List of wallets
 # add a new [[wallets]] entry for each wallet
 # add each wallet that was used in swaps/LP/etc

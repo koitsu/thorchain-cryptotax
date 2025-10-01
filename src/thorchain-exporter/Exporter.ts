@@ -24,8 +24,9 @@ export class Exporter {
     thornode: ThornodeService;
     report: Reporter;
 
-    constructor(filename: string, cachePath: string) {
+    constructor(filename: string) {
         this.config = this.loadConfig(filename);
+        const cachePath = this.config.cachePath;
         this.viewblock = new Viewblock(path.join(cachePath, 'viewblock'));
         this.midgard = new MidgardService(path.join(cachePath, 'midgard'));
         this.thornode = new ThornodeService(path.join(cachePath, 'thornode'));
@@ -38,13 +39,28 @@ export class Exporter {
         const fileExtension = path.extname(filename).toLowerCase();
         const fileContent = fs.readFileSync(filename).toString();
 
+        let config;
         if (fileExtension === '.toml') {
-            return toml.load(fileContent) as ITaxConfig;
+            config = toml.load(fileContent) as ITaxConfig;
         } else if (fileExtension === '.json') {
-            return JSON.parse(fileContent);
+            config = JSON.parse(fileContent);
         } else {
             throw new Error(`Unsupported config file format: ${fileExtension}`);
         }
+
+        // Default values in case config directives are missing
+        config.outputPath = config.outputPath ?? 'output';
+        config.unsupportedActionsPath = config.unsupportedActionsPath ?? 'unsupported-actions';
+        config.cachePath = config.cachePath ?? 'cache';
+
+        // Debugging
+        /*
+        console.log(`outputPath = ${config.outputPath}`);
+        console.log(`unsupportedActionsPath = ${config.unsupportedActionsPath}`);
+        console.log(`cachePath = ${config.cachePath}`);
+        */
+
+        return config;
     }
 
     async getEvents(wallet: IWallet, outputPath: string): Promise<TaxEvents> {
@@ -58,7 +74,7 @@ export class Exporter {
 
         for (const tx of txs) {
             try {
-                events.addViewblock(tx, wallet);
+                events.addViewblock(tx, wallet, this.config);
             } catch (error) {
                 // Log the error, save a copy of failed transaction and keep going
                 console.error(error);
@@ -86,7 +102,7 @@ export class Exporter {
             }
 
             try {
-                events.addMidgard(action, wallet, thornodeTxs);
+                events.addMidgard(action, wallet, thornodeTxs, this.config);
             } catch (error) {
                 // Log the error, save a copy of failed transaction and keep going
                 console.error(error);

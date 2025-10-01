@@ -17,11 +17,12 @@ async function main() {
     }
 
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-    const outputPath = `output/${timestamp}`;
-    const cachePath = 'cache';
 
     // Read config
-    const exporter = new Exporter(path.resolve(configFile), path.resolve(cachePath));
+    const exporter = new Exporter(path.resolve(configFile));
+
+    const outputPath = path.join(exporter.config.outputPath, timestamp);
+    const cachePath = exporter.config.cachePath;
 
     if (!exporter.config.cacheDataSources) {
         // Delete all cached data sources
