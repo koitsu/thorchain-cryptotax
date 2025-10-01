@@ -72,6 +72,7 @@ export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[
                 const filePath = path.join(directory, action.type, filename);
                 mkdirSync(path.dirname(filePath), {recursive: true});
                 writeFileSync(filePath, JSON.stringify(action, null, 4));
+            }
         }
 
         return transactions;
