@@ -49,7 +49,7 @@ export function getActionDate(action: Action): Date {
     return parseMidgardDate(action.date);
 }
 
-export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[], addReferencePrices: boolean = false, directory: string): CryptoTaxTransaction[] {
+export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[], addReferencePrices: boolean = false, unsupportedActionsPath: string): CryptoTaxTransaction[] {
     const date: string = getActionDate(action).toISOString();
     let mapper = getMapper(action);
 
