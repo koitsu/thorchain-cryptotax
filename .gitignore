@@ -6,7 +6,8 @@ unsupported-actions/
 output/
 
 # cache data sources
-cache/
+# Note: match against cache in "root of repo", thus excludes src/cache
+/cache/
 
 # NodeJS
 node_modules/
