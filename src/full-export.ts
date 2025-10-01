@@ -1,4 +1,3 @@
-import * as path from "path";
 import fs from "fs-extra";
 import {format} from 'date-fns-tz';
 import {Exporter} from "./thorchain-exporter/Exporter";
@@ -19,14 +18,14 @@ async function main() {
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
 
     // Read config
-    const exporter = new Exporter(path.resolve(configFile));
+    const exporter = new Exporter(configFile);
 
     const outputPath = path.join(exporter.config.outputPath, timestamp);
     const cachePath = exporter.config.cachePath;
 
     if (!exporter.config.cacheDataSources) {
         // Delete all cached data sources
-        console.log(`Removing cache: ${path.resolve(cachePath)}\n`);
+        console.log(`Removing cache: ${cachePath}\n`);
         fs.removeSync(cachePath);
     }
 
