@@ -7,6 +7,7 @@ import {IWallet} from "./IWallet";
 import {ITaxConfig} from "./ITaxConfig";
 import {actionToCryptoTax} from "../cryptotax-thorchain/MidgardActionMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
+import {DelegateArkeoMapper} from "./DelegateArkeoMapper";
 
 type TaxEventSource = 'viewblock' | 'midgard';
 
@@ -46,7 +47,15 @@ export class TaxEvent {
         let mapper: IThorchainMapper | undefined;
 
         if (labels.includes('send')) {
-            mapper = new SendMapper(tx, this.wallet.address);
+            // Check if memo starts with "delegate:arkeo:"
+            const memo = tx.memo || '';
+            const isDelegateArkeo = memo.startsWith('delegate:arkeo:');
+
+            if (isDelegateArkeo) {
+                mapper = new DelegateArkeoMapper(tx, this.wallet.address);
+            } else {
+                mapper = new SendMapper(tx, this.wallet.address);
+            }
         }
 
         if (!mapper) {

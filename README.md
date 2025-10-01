@@ -26,6 +26,7 @@ Currently supported transactions
 - TCY staking
 - RUNEPool deposit/withdrawal
 - Thorname register/update
+- rujira-merge/deposit
 
 Not currently supported
 

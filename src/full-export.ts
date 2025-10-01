@@ -31,7 +31,7 @@ async function main() {
     }
 
     const wallets = exporter.config.wallets;
-    const allEvents= new TaxEvents();
+    const allEvents = new TaxEvents();
 
     // Import viewblock and midgard into TaxEvents
 

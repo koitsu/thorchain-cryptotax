@@ -20,6 +20,7 @@ export interface ViewblockTx {
     // new
     msgs: ViewblockMsg[];
     types: string[]; // e.g. network | send | main
+    memo?: string;
 }
 
 export interface ViewblockTransfer {

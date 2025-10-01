@@ -19,6 +19,7 @@ import {TcyStakeMapper} from "./TcyStakeMapper";
 import {RunePoolDepositMapper} from "./RunePoolDepositMapper";
 import {RunePoolWithdrawMapper} from "./RunePoolWithdrawMapper";
 import {ThornameMapper} from "./ThornameMapper";
+import {RujiraMergeDepositMapper} from "./RujiraMergeDepositMapper";
 
 type ActionMappers = {
     [index in ActionType | string]: Mapper | null | any;
@@ -62,14 +63,15 @@ export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[
         if (mapper) {
             console.log(`${date} ${action.type}: ${transactions.length}`);
         } else {
-            console.error(`${date} ${action.type}: unsupported action`);
+            if (action.type as string !== 'send') {
+                console.error(`${date} ${action.type}: unsupported action`);
 
-            // Write unsupported action to JSON
-            const txId = action.in?.[0]?.txID;
-            const filename = (txId ? txId : date) + '.json';
-            const filePath = path.join(directory, action.type, filename);
-            mkdirSync(path.dirname(filePath), { recursive: true });
-            writeFileSync(filePath, JSON.stringify(action, null, 4));
+                // Write unsupported action to JSON
+                const txId = action.in?.[0]?.txID;
+                const filename = (txId ? txId : date) + '.json';
+                const filePath = path.join(directory, action.type, filename);
+                mkdirSync(path.dirname(filePath), {recursive: true});
+                writeFileSync(filePath, JSON.stringify(action, null, 4));
         }
 
         return transactions;
@@ -83,7 +85,9 @@ export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[
 function getMapper(action: Action): Mapper | null {
     let mapper: Mapper | null = actionMappers[action.type];
 
-    if (action.type === 'swap') {
+    const actionType = action.type as string;
+
+    if (actionType === 'swap') {
         const txType = (action.metadata.swap as any)?.txType;
 
         if (txType === 'loanOpen') {
@@ -94,6 +98,12 @@ function getMapper(action: Action): Mapper | null {
             // Some loan open shows as a noOp swap from midgard
             // With the swap output being the loan
             mapper = loanOpenMapper;
+        }
+    } else if (actionType === 'contract') {
+        const contractType = (action.metadata as any).contract?.contractType;
+
+        if (contractType === 'wasm-rujira-merge/deposit') {
+            mapper = new RujiraMergeDepositMapper();
         }
     }
 
