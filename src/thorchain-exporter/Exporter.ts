@@ -160,7 +160,7 @@ export class Exporter {
                             throw new Error('bad txs');
                         }
 
-                        const fn2 = range.from + '_' + range.to + '_THOR_thorchain_swaps.csv';
+                        const fn2 = `${range.from}_${range.to}_THOR_thorchain_swaps.csv`;
 
                         writeCsv(path.join(outputPath, fn2), walletTxs);
 
