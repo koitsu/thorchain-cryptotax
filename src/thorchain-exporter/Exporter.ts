@@ -139,7 +139,7 @@ export class Exporter {
             expectedExportCount += rangeTxs.length;
 
             // Output all txs in each range to CSV
-            const fn1 = 'all-' + range.from + '_' + range.to + '.csv';
+            const fn1 = `all-${range.from}_${range.to}.csv`;
 
             writeCsv(path.join(outputPath, fn1), rangeTxs);
 
