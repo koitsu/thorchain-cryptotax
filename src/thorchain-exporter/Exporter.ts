@@ -24,8 +24,9 @@ export class Exporter {
     thornode: ThornodeService;
     report: Reporter;
 
-    constructor(filename: string, cachePath: string) {
+    constructor(filename: string) {
         this.config = this.loadConfig(filename);
+        const cachePath = this.config.cachePath;
         this.viewblock = new Viewblock(path.join(cachePath, 'viewblock'));
         this.midgard = new MidgardService(path.join(cachePath, 'midgard'));
         this.thornode = new ThornodeService(path.join(cachePath, 'thornode'));
@@ -38,13 +39,28 @@ export class Exporter {
         const fileExtension = path.extname(filename).toLowerCase();
         const fileContent = fs.readFileSync(filename).toString();
 
+        let config;
         if (fileExtension === '.toml') {
-            return toml.load(fileContent) as ITaxConfig;
+            config = toml.load(fileContent) as ITaxConfig;
         } else if (fileExtension === '.json') {
-            return JSON.parse(fileContent);
+            config = JSON.parse(fileContent);
         } else {
             throw new Error(`Unsupported config file format: ${fileExtension}`);
         }
+
+        // Default values in case config directives are missing
+        config.outputPath = config.outputPath ?? 'output';
+        config.unsupportedActionsPath = config.unsupportedActionsPath ?? 'unsupported-actions';
+        config.cachePath = config.cachePath ?? 'cache';
+
+        // Debugging
+        /*
+        console.log(`outputPath = ${config.outputPath}`);
+        console.log(`unsupportedActionsPath = ${config.unsupportedActionsPath}`);
+        console.log(`cachePath = ${config.cachePath}`);
+        */
+
+        return config;
     }
 
     async getEvents(wallet: IWallet, outputPath: string): Promise<TaxEvents> {
@@ -58,7 +74,7 @@ export class Exporter {
 
         for (const tx of txs) {
             try {
-                events.addViewblock(tx, wallet);
+                events.addViewblock(tx, wallet, this.config);
             } catch (error) {
                 // Log the error, save a copy of failed transaction and keep going
                 console.error(error);
@@ -86,7 +102,7 @@ export class Exporter {
             }
 
             try {
-                events.addMidgard(action, wallet, thornodeTxs);
+                events.addMidgard(action, wallet, thornodeTxs, this.config);
             } catch (error) {
                 // Log the error, save a copy of failed transaction and keep going
                 console.error(error);
@@ -114,7 +130,7 @@ export class Exporter {
         const walletExchanges = this.getUniqueWalletExchanges(txs);
 
         // Output all fetched txs in a single CSV
-        writeCsv(`${outputPath}/all.csv`, txs);
+        writeCsv(path.join(outputPath, 'all.csv'), txs);
 
         const ranges = generateDateRanges(this.config.fromDate, this.config.toDate, this.config.frequency);
 
@@ -123,7 +139,9 @@ export class Exporter {
             expectedExportCount += rangeTxs.length;
 
             // Output all txs in each range to CSV
-            writeCsv(`${outputPath}/all-${range.from}_${range.to}.csv`, rangeTxs);
+            const fn1 = `all-${range.from}_${range.to}.csv`;
+
+            writeCsv(path.join(outputPath, fn1), rangeTxs);
 
             // If no txs in the current range then skip
             if (rangeTxs.length === 0) {
@@ -142,12 +160,16 @@ export class Exporter {
                             throw new Error('bad txs');
                         }
 
-                        writeCsv(`${outputPath}/${range.from}_${range.to}_THOR_thorchain_swaps.csv`, walletTxs);
+                        const fn2 = `${range.from}_${range.to}_THOR_thorchain_swaps.csv`;
+
+                        writeCsv(path.join(outputPath, fn2), walletTxs);
 
                         count += walletTxs.length;
 
                     } else {
-                        writeCsv(`${outputPath}/${this.makeFilename(walletExchange, range)}.csv`, walletTxs);
+                        const fn3 = this.makeFilename(walletExchange, range) + '.csv';
+
+                        writeCsv(path.join(outputPath, fn3), walletTxs);
 
                         count += walletTxs.length;
                     }

@@ -5,5 +5,8 @@ export interface ITaxConfig {
     toDate: string;
     frequency: 'monthly' | 'yearly' | 'none',
     cacheDataSources: boolean;
+    outputPath: string;
+    unsupportedActionsPath: string;
+    cachePath: string;
     wallets: IWallet[];
 }

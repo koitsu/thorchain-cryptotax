@@ -1,5 +1,5 @@
-import * as path from "path";
 import fs from "fs-extra";
+import * as path from "path";
 import {format} from 'date-fns-tz';
 import {Exporter} from "./thorchain-exporter/Exporter";
 import {generateReport} from "./thorchain-exporter/Reporter";
@@ -17,15 +17,16 @@ async function main() {
     }
 
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-    const outputPath = `output/${timestamp}`;
-    const cachePath = 'cache';
 
     // Read config
-    const exporter = new Exporter(path.resolve(configFile), path.resolve(cachePath));
+    const exporter = new Exporter(configFile);
+
+    const outputPath = path.join(exporter.config.outputPath, timestamp);
+    const cachePath = exporter.config.cachePath;
 
     if (!exporter.config.cacheDataSources) {
         // Delete all cached data sources
-        console.log(`Removing cache: ${path.resolve(cachePath)}\n`);
+        console.log(`Removing cache: ${cachePath}\n`);
         fs.removeSync(cachePath);
     }
 
@@ -40,7 +41,7 @@ async function main() {
 
         // Generate each report with the events for that wallet only.
         // After calling addEvents then events will be de-duplicated so not all would show up in their wallet report.
-        generateReport(events, wallet, `${outputPath}/report`);
+        generateReport(events, wallet, path.join(outputPath, 'report'));
 
         allEvents.addEvents(events);
     }
@@ -49,7 +50,7 @@ async function main() {
 
     // Convert TaxEvents to CTC
     // Collect all events and then save, otherwise one wallet's TC swaps could overwrite another
-    exporter.saveToCsv(allEvents.getAllCtcTx(), `${outputPath}/csv`);
+    exporter.saveToCsv(allEvents.getAllCtcTx(), path.join(outputPath, 'csv'));
 }
 
 main().then(() => {

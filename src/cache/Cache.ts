@@ -9,7 +9,7 @@ export class Cache {
     }
 
     getPathForKey(key: string) {
-        return path.resolve(this.cachePath, key + '.json');
+        return path.join(this.cachePath, key + '.json');
     }
 
     has(key: string): boolean {

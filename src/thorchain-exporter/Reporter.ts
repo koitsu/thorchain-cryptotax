@@ -1,5 +1,6 @@
 import MarkdownIt from "markdown-it";
 import fs from "fs-extra";
+import * as path from "path";
 import {TaxEvents} from "./TaxEvents";
 import {IWallet} from "./IWallet";
 import {ViewblockTx} from "../viewblock";
@@ -198,5 +199,5 @@ export function generateReport(allEvents: TaxEvents, wallet: IWallet, outputPath
         i++;
     }
 
-    report.output(`${outputPath}/${wallet.address}.html`);
+    report.output(path.join(outputPath, wallet.address + '.html'));
 }

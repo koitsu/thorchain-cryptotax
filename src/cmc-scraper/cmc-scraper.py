@@ -1,3 +1,4 @@
+import os
 import json
 from cryptocmd import CmcScraper
 
@@ -15,7 +16,7 @@ def dump_all(coin, path):
     js += '\n'
     js += 'export default data;'
 
-    save(js, path + '/' + coin + '.ts')
+    save(js, os.path.join(path, coin + '.ts'))
 
 
 def save(text, file):

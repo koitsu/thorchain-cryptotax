@@ -14,7 +14,7 @@ import {UnbondMapper} from "./UnbondMapper";
 import {TcyClaimMapper} from "./TcyClaimMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 import { writeFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
+import * as path from "path";
 import {TcyStakeMapper} from "./TcyStakeMapper";
 import {RunePoolDepositMapper} from "./RunePoolDepositMapper";
 import {RunePoolWithdrawMapper} from "./RunePoolWithdrawMapper";
@@ -49,7 +49,7 @@ export function getActionDate(action: Action): Date {
     return parseMidgardDate(action.date);
 }
 
-export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[], addReferencePrices: boolean = false): CryptoTaxTransaction[] {
+export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[], addReferencePrices: boolean = false, unsupportedActionsPath: string): CryptoTaxTransaction[] {
     const date: string = getActionDate(action).toISOString();
     let mapper = getMapper(action);
 
@@ -68,8 +68,9 @@ export function actionToCryptoTax(action: Action, thornodeTxs: TxStatusResponse[
 
                 // Write unsupported action to JSON
                 const txId = action.in?.[0]?.txID;
-                const filePath = `unsupported-actions/${action.type}/${txId ? txId : date}.json`;
-                mkdirSync(dirname(filePath), {recursive: true});
+                const filename = (txId ? txId : date) + '.json';
+                const filePath = path.join(unsupportedActionsPath, action.type, filename);
+                mkdirSync(path.dirname(filePath), {recursive: true});
                 writeFileSync(filePath, JSON.stringify(action, null, 4));
             }
         }

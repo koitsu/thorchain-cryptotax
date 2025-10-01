@@ -9,7 +9,7 @@ describe('MidgardActionMapper', () => {
         // Make the asset string invalid
         action.in[0].coins[0].asset = 'INVALID';
 
-        expect(() => actionToCryptoTax(action, [])).toThrow(
+        expect(() => actionToCryptoTax(action, [], false, 'some/path')).toThrow(
             '[Midgard] Failed to parse asset string: "INVALID". type: switch, txid: 0000000000000000000000000000000000000000000000000000000000000000'
         );
     });

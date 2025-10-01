@@ -2,6 +2,7 @@ import {TaxEvent} from "./TaxEvent";
 import {ViewblockTx} from "../viewblock";
 import {BaseMapper} from "./BaseMapper";
 import {IWallet} from "./IWallet";
+import {ITaxConfig} from "./ITaxConfig";
 import {CryptoTaxTransaction} from "../cryptotax";
 import {Action} from "@xchainjs/xchain-midgard";
 import {getActionDate} from "../cryptotax-thorchain/MidgardActionMapper";
@@ -12,9 +13,9 @@ export class TaxEvents {
 
     events: TaxEvent[] = [];
 
-    addViewblock(tx: ViewblockTx, wallet: IWallet) {
+    addViewblock(tx: ViewblockTx, wallet: IWallet, config: ITaxConfig) {
         const mapper = new BaseMapper(tx, wallet.address);
-        const event = new TaxEvent(mapper.datetime, 'viewblock', wallet);
+        const event = new TaxEvent(mapper.datetime, 'viewblock', wallet, config);
         event.input = tx;
         event.convert();
 
@@ -22,9 +23,9 @@ export class TaxEvents {
         this.events.push(event);
     }
 
-    addMidgard(action: Action, wallet: IWallet, thornodeTxs: TxStatusResponse[] = []) {
+    addMidgard(action: Action, wallet: IWallet, thornodeTxs: TxStatusResponse[] = [], config: ITaxConfig) {
 
-        const event = new TaxEvent(getActionDate(action), 'midgard', wallet);
+        const event = new TaxEvent(getActionDate(action), 'midgard', wallet, config);
         event.input = action;
         event.thornodeTxs = thornodeTxs;
         event.convert();
