@@ -10,7 +10,7 @@ describe('SendMapper', () => {
     let mapper: SendMapper;
 
     test('Send Synth DOGE', () => {
-        const tx = getTestData('Send_SynthDOGE');
+        const tx = getTestData('viewblock/Send_SynthDOGE');
         mapper = new SendMapper(tx, 'thor1-user-wallet-11111');
         const ctc = mapper.toCtc();
 
@@ -19,7 +19,7 @@ describe('SendMapper', () => {
                 "baseAmount": "1.23",
                 "baseCurrency": "DOGE",
                 "blockchain": "THOR",
-                "description": "Send Synth DOGE; 0000000000000000000000000000000000000000000000000000000000000000",
+                "description": "Send 1.23 Synth DOGE; 0000000000000000000000000000000000000000000000000000000000000000",
                 "feeAmount": "0.02",
                 "feeCurrency": "RUNE",
                 "from": "thor1-user-wallet-11111",
@@ -33,7 +33,7 @@ describe('SendMapper', () => {
     });
 
     test('should error on incorrect asset string', () => {
-        let tx = getTestData('Send_SynthDOGE');
+        let tx = getTestData('viewblock/Send_SynthDOGE');
 
         // Set invalid asset string
         tx.input.asset = "DOGEDOGE";
@@ -91,13 +91,36 @@ describe('SendMapper', () => {
                 "baseAmount": "0.00000001",
                 "baseCurrency": "RUNE",
                 "blockchain": "THOR",
-                "description": "Send RUNE; 0000000000000000000000000000000000000000000000000000000000000000",
+                "description": "Send 0.00000001 RUNE; 0000000000000000000000000000000000000000000000000000000000000000",
                 "feeAmount": "0.02",
                 "feeCurrency": "RUNE",
                 "from": "thor1-user-wallet-11111",
                 "id": "2020-12-31T13:00:00.000Z.send",
                 "timestamp": "2020-12-31T13:00:00.000Z",
                 "to": "thor1-user-wallet-11111",
+                "type": "send",
+                "walletExchange": "thor1-user-wallet-11111"
+            }
+        ]);
+    });
+
+    test('Send TCY', () => {
+        const tx = getTestData('viewblock/Send_TCY');
+        mapper = new SendMapper(tx, 'thor1-user-wallet-11111');
+        const ctc = mapper.toCtc();
+
+        expect(ctc).toStrictEqual([
+            {
+                "baseAmount": "10000",
+                "baseCurrency": "TCY",
+                "blockchain": "THOR",
+                "description": "Send 10000 TCY; 0000000000000000000000000000000000000000000000000000000000000000",
+                "feeAmount": "0.02",
+                "feeCurrency": "RUNE",
+                "from": "thor1-user-wallet-11111",
+                "id": "2020-12-31T13:00:00.000Z.send",
+                "timestamp": "2020-12-31T13:00:00.000Z",
+                "to": "thor1-user-wallet-22222",
                 "type": "send",
                 "walletExchange": "thor1-user-wallet-11111"
             }

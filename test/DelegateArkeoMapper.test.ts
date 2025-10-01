@@ -10,7 +10,7 @@ describe('DelegateArkeoMapper', () => {
     let mapper: DelegateArkeoMapper;
 
     test('DelegateArkeo', () => {
-        const tx = getTestData('DelegateArkeo');
+        const tx = getTestData('viewblock/DelegateArkeo');
         mapper = new DelegateArkeoMapper(tx, 'thor1-user-wallet-11111');
         const ctc = mapper.toCtc();
 

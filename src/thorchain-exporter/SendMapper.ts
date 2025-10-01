@@ -42,21 +42,36 @@ export class SendMapper extends BaseMapper {
 
         const assetStr = coin.asset;
         let asset: AnyAsset;
+        let isSynth = false;
+        let isTrade = false;
+        let ticker: string;
+
+        // Asset samples
+        // ============================
+        // THOR.RUNE
+        // DOGE/DOGE    Synth DOGE
+        // TCY          THORChain Yield
+        // X/RUJI       TODO: confirm how this is handled, would it be flagged as synth?
 
         try {
             asset = assetFromStringEx(assetStr);
+            isSynth = asset.type === AssetType.SYNTH;
+            isTrade = asset.type === AssetType.TRADE;
+            ticker = asset.ticker;
         } catch (e) {
-            throw new Error(`[Viewblock] Failed to parse asset string "${assetStr}". type: send, txid: ${this.tx.hash}`);
+            // I would expect THOR.TCY, like THOR.RUNE. But that's not how it comes through.
+            // TODO: Using custom handling of TCY for now, but consider just allowing anything.
+            if (assetStr === 'TCY') {
+                ticker = 'TCY';
+                isSynth = false;
+                isTrade = false;
+            } else {
+                // For other unknown assets, still throw the error
+                throw new Error(`[Viewblock] Failed to parse asset string "${assetStr}". type: send, txid: ${this.tx.hash}`);
+            }
         }
 
-        const isSynth = asset.type === AssetType.SYNTH;
-        const isTrade = asset.type === AssetType.TRADE;
-
-        // Asset samples
-        // THOR.RUNE
-        // DOGE/DOGE (synth DOGE)
-
-        ctcTx.baseCurrency = asset.ticker;
+        ctcTx.baseCurrency = ticker;
 
         // Fee
         // Only apply the fee on send (not on receive)
@@ -69,9 +84,7 @@ export class SendMapper extends BaseMapper {
         ctcTx.to = to;
         ctcTx.blockchain = 'THOR'; // Sends/receives will only be for thorchain
         ctcTx.id = this.getId(ctcTx.type);
-        ctcTx.description = `${isSend ? 'Send' : 'Receive'} ${isSynth ? 'Synth ' : ''}${isTrade ? 'Trade ' : ''}${asset.ticker}; ${this.tx.hash}`;
-
-        console.log(txToCsv(ctcTx));
+        ctcTx.description = `${isSend ? 'Send' : 'Receive'} ${ctcTx.baseAmount} ${isSynth ? 'Synth ' : ''}${isTrade ? 'Trade ' : ''}${ticker}; ${this.tx.hash}`;
 
         return [ctcTx];
     }
