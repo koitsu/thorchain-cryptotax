@@ -5,9 +5,7 @@ import {baseToAssetAmountString} from '../utils/Amount';
 import {Mapper} from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
-// This is only mapping the receive tx of TCY.
-// Not the signing tx with a dust amount from the original wallet.
-export class TcyClaimMapper implements Mapper {
+export class TcyUnstakeMapper implements Mapper {
     toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);
         const timestamp: string = date.toISOString();
@@ -15,7 +13,6 @@ export class TcyClaimMapper implements Mapper {
 
         const transactions: CryptoTaxTransaction[] = [];
 
-        const input: Transaction = action.in[0];
         const output: Transaction = action.out[0];
         const outputCoin: Coin = output.coins[0];
         const amount = baseToAssetAmountString(outputCoin.amount);
@@ -24,14 +21,14 @@ export class TcyClaimMapper implements Mapper {
         transactions.push({
             walletExchange: output.address,
             timestamp,
-            type: CryptoTaxTransactionType.Receive,
+            type: CryptoTaxTransactionType.StakingWithdrawal,
             baseCurrency: 'TCY',
             baseAmount: amount,
             from: 'thorchain',
             to: output.address,
             blockchain: 'THOR',
-            id: `${idPrefix}.tcy_claim`,
-            description: `1/1 - Claim ${amount} TCY for address ${input.address}; ${txId}`,
+            id: `${idPrefix}.tcy_unstake`,
+            description: `1/1 - Unstake ${amount} TCY; ${txId}`,
         });
 
         return transactions;

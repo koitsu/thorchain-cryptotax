@@ -5,8 +5,6 @@ import {baseToAssetAmountString} from '../utils/Amount';
 import {Mapper} from './Mapper';
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 
-// This is only mapping the receive tx of TCY.
-// Not the signing with a dust amount from the original wallet.
 export class TcyStakeMapper implements Mapper {
     toCryptoTax(action: Action, addReferencePrices: boolean, thornodeTxs: TxStatusResponse[] = []): CryptoTaxTransaction[] {
         const date: Date = parseMidgardDate(action.date);

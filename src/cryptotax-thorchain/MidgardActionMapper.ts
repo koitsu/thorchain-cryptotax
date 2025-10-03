@@ -20,6 +20,7 @@ import {RunePoolDepositMapper} from "./RunePoolDepositMapper";
 import {RunePoolWithdrawMapper} from "./RunePoolWithdrawMapper";
 import {ThornameMapper} from "./ThornameMapper";
 import {RujiraMergeDepositMapper} from "./RujiraMergeDepositMapper";
+import {TcyUnstakeMapper} from "./TcyUnstakeMapper";
 
 type ActionMappers = {
     [index in ActionType | string]: Mapper | null | any;
@@ -39,7 +40,8 @@ const actionMappers: ActionMappers = {
     'bond': new BondMapper(),
     'unbond': new UnbondMapper(),
     'tcy_claim': new TcyClaimMapper(),
-    'tcy_stake': new TcyStakeMapper()
+    'tcy_stake': new TcyStakeMapper(),
+    'tcy_unstake': new TcyUnstakeMapper()
 }
 
 const loanOpenMapper = new LoanOpenMapper();

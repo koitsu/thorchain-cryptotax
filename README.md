@@ -23,7 +23,7 @@ Currently supported transactions
 - savers
 - bonding/unbonding
 - TCY claiming (Note: This is mapped as a Receive/Transfer In)
-- TCY staking
+- TCY staking/unstaking
 - RUNEPool deposit/withdrawal
 - Thorname register/update
 - rujira-merge/deposit
