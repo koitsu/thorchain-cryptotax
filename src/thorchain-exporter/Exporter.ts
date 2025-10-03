@@ -1,6 +1,5 @@
 import {Viewblock} from "../viewblock";
 import fs from "fs-extra";
-import toml from 'js-toml';
 import {format} from 'date-fns-tz';
 import {CryptoTaxTransaction, writeCsv} from "../cryptotax";
 import {MidgardService} from "../cryptotax-thorchain/MidgardService";
@@ -14,8 +13,7 @@ import {DateRange, generateDateRanges} from "../utils/DateRange";
 import path from "path";
 import {BaseMapper} from "./BaseMapper";
 import {getActionDate} from "../cryptotax-thorchain/MidgardActionMapper";
-
-const info = console.info;
+import {TaxConfig} from "./TaxConfig";
 
 export class Exporter {
     config: ITaxConfig;
@@ -25,42 +23,12 @@ export class Exporter {
     report: Reporter;
 
     constructor(filename: string) {
-        this.config = this.loadConfig(filename);
+        this.config = TaxConfig.load(filename);
         const cachePath = this.config.cachePath;
         this.viewblock = new Viewblock(path.join(cachePath, 'viewblock'));
         this.midgard = new MidgardService(path.join(cachePath, 'midgard'));
         this.thornode = new ThornodeService(path.join(cachePath, 'thornode'));
         this.report = new Reporter();
-    }
-
-    loadConfig(filename: string): ITaxConfig {
-        info(`Wallets config file: ${filename}\n`);
-
-        const fileExtension = path.extname(filename).toLowerCase();
-        const fileContent = fs.readFileSync(filename).toString();
-
-        let config;
-        if (fileExtension === '.toml') {
-            config = toml.load(fileContent) as ITaxConfig;
-        } else if (fileExtension === '.json') {
-            config = JSON.parse(fileContent);
-        } else {
-            throw new Error(`Unsupported config file format: ${fileExtension}`);
-        }
-
-        // Default values in case config directives are missing
-        config.outputPath = config.outputPath ?? 'output';
-        config.unsupportedActionsPath = config.unsupportedActionsPath ?? 'unsupported-actions';
-        config.cachePath = config.cachePath ?? 'cache';
-
-        // Debugging
-        /*
-        console.log(`outputPath = ${config.outputPath}`);
-        console.log(`unsupportedActionsPath = ${config.unsupportedActionsPath}`);
-        console.log(`cachePath = ${config.cachePath}`);
-        */
-
-        return config;
     }
 
     async getEvents(wallet: IWallet, outputPath: string): Promise<TaxEvents> {
@@ -123,8 +91,6 @@ export class Exporter {
     }
 
     saveToCsv(txs: CryptoTaxTransaction[], outputPath: string) {
-
-        const totalTxs = txs.length;
         let expectedExportCount =  0;
         let count = 0;
         const walletExchanges = this.getUniqueWalletExchanges(txs);

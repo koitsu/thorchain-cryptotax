@@ -1,5 +1,6 @@
 
 # Start and end date to get transactions for
+# toDate is optional
 fromDate = "2020-01-01"
 toDate = "2024-12-31"
 
