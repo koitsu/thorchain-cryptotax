@@ -42,22 +42,16 @@ export class RunePoolDepositMapper implements Mapper {
             description: `1/2 - Deposit ${amount} RUNE to ${poolName}; ${txId}`,
         });
 
-        let lpTokenReceivingAddress = action.in[0].address;
-
-        if (!lpTokenReceivingAddress) {
-            lpTokenReceivingAddress = 'MISSING-DEPOSIT-ADDRESS';
-        }
-
         // Receive liquidity units
 
         transactions.push({
-            walletExchange: lpTokenReceivingAddress,
+            walletExchange: input.address,
             timestamp: timestamp_plus_10,
             type: CryptoTaxTransactionType.ReceiveLpToken,
             baseCurrency: lpToken,
             baseAmount: liquidityUnits,
             from: 'thorchain',
-            to: lpTokenReceivingAddress,
+            to: input.address,
             blockchain: 'THOR',
             id: `${idPrefix}.receive-lp-token`,
             description: `2/2 - Receive LP token from ${poolName}; ${txId}`,
