@@ -4,6 +4,7 @@ import {format} from 'date-fns-tz';
 import {CryptoTaxTransaction, writeCsv} from "../cryptotax";
 import {MidgardService} from "../cryptotax-thorchain/MidgardService";
 import {ThornodeService} from "../cryptotax-thorchain/ThornodeService";
+import {TcyDistributionService} from "../cryptotax-thorchain/TcyDistributionService";
 import {Action, ActionStatusEnum, ActionTypeEnum} from "@xchainjs/xchain-midgard";
 import {ITaxConfig} from "./ITaxConfig";
 import {Reporter} from "./Reporter";
@@ -14,12 +15,14 @@ import path from "path";
 import {BaseMapper} from "./BaseMapper";
 import {getActionDate} from "../cryptotax-thorchain/MidgardActionMapper";
 import {TaxConfig} from "./TaxConfig";
+import {TcyDistributionMapper} from "../cryptotax-thorchain/TcyDistributionMapper";
 
 export class Exporter {
     config: ITaxConfig;
     viewblock: Viewblock;
     midgard: MidgardService;
     thornode: ThornodeService;
+    tcyDistribution: TcyDistributionService;
     report: Reporter;
 
     constructor(filename: string) {
@@ -28,6 +31,7 @@ export class Exporter {
         this.viewblock = new Viewblock(path.join(cachePath, 'viewblock'));
         this.midgard = new MidgardService(path.join(cachePath, 'midgard'));
         this.thornode = new ThornodeService(path.join(cachePath, 'thornode'));
+        this.tcyDistribution = new TcyDistributionService(path.join(cachePath, 'tcy'));
         this.report = new Reporter();
     }
 
@@ -75,6 +79,22 @@ export class Exporter {
                 // Log the error, save a copy of failed transaction and keep going
                 console.error(error);
                 this.saveFailure(outputPath, wallet.address, 'midgard', getActionDate(action), action, error);
+            }
+        }
+
+        // Get TCY distributions
+        if (this.isThorchain(wallet.address)) {
+            const tcyDistribution = await this.tcyDistribution.getTcyDistribution(wallet.address);
+            const distributions = tcyDistribution.distributions || [];
+
+            for (const item of distributions) {
+                try {
+                    events.addTcyDistribution(item, wallet, this.config);
+                } catch (error) {
+                    // Log the error, save a copy of failed transaction and keep going
+                    console.error(error);
+                    this.saveFailure(outputPath, wallet.address, 'tcy', TcyDistributionMapper.parseDate(item), item, error);
+                }
             }
         }
 
@@ -205,5 +225,9 @@ export class Exporter {
         const timestamp = format(date, 'yyyy-MM-dd_HHmm_ssSSS');
         const errorMessage = error.message || 'unknown error';
         fs.writeJsonSync(path.join(failureDir, `${timestamp}.json`), { ERROR_MESSAGE: errorMessage, ...data }, { spaces: 4});
+    }
+
+    private isThorchain(wallet: string): boolean {
+        return wallet.toLowerCase().startsWith('thor1');
     }
 }

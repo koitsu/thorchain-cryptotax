@@ -8,14 +8,16 @@ import {ITaxConfig} from "./ITaxConfig";
 import {actionToCryptoTax} from "../cryptotax-thorchain/MidgardActionMapper";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
 import {DelegateArkeoMapper} from "./DelegateArkeoMapper";
+import {TcyDistributionItem} from "../cryptotax-thorchain/TcyDistributionService";
+import {TcyDistributionMapper} from "../cryptotax-thorchain/TcyDistributionMapper";
 
-type TaxEventSource = 'viewblock' | 'midgard';
+type TaxEventSource = 'viewblock' | 'midgard' | 'tcy';
 
 export class TaxEvent {
 
     datetime: Date;
     source: TaxEventSource;
-    input?: ViewblockTx | Action;
+    input?: ViewblockTx | Action | TcyDistributionItem;
     thornodeTxs: TxStatusResponse[] = [];  // Related txs from THORNode API
     output: CryptoTaxTransaction[] = [];
     wallet: IWallet;
@@ -35,6 +37,8 @@ export class TaxEvent {
             this.convertViewblock(this.addReferencePrices);
         } else if (this.source === 'midgard') {
             this.convertMidgardAction(this.addReferencePrices);
+        } else if (this.source === 'tcy') {
+            this.convertTcy();
         }
     }
 
@@ -72,5 +76,10 @@ export class TaxEvent {
 
     convertMidgardAction(addReferencePrices: boolean) {
         this.output = actionToCryptoTax(this.input as Action, this.thornodeTxs, addReferencePrices, this.config.unsupportedActionsPath);
+    }
+
+    convertTcy() {
+        const mapper = new TcyDistributionMapper(this.input as TcyDistributionItem, this.wallet.address);
+        this.output = mapper.toCtc();
     }
 }

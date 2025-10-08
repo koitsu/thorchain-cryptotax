@@ -8,6 +8,8 @@ import {Action} from "@xchainjs/xchain-midgard";
 import {getActionDate} from "../cryptotax-thorchain/MidgardActionMapper";
 import {deepEqual} from "../utils/DeepEqual";
 import {TxStatusResponse} from "@xchainjs/xchain-thornode";
+import {TcyDistributionItem} from "../cryptotax-thorchain/TcyDistributionService";
+import {TcyDistributionMapper} from "../cryptotax-thorchain/TcyDistributionMapper";
 
 export class TaxEvents {
 
@@ -24,10 +26,18 @@ export class TaxEvents {
     }
 
     addMidgard(action: Action, wallet: IWallet, thornodeTxs: TxStatusResponse[] = [], config: ITaxConfig) {
-
         const event = new TaxEvent(getActionDate(action), 'midgard', wallet, config);
         event.input = action;
         event.thornodeTxs = thornodeTxs;
+        event.convert();
+
+        this.events.push(event);
+    }
+
+    addTcyDistribution(item: TcyDistributionItem, wallet: IWallet, config: ITaxConfig) {
+        const datetime = TcyDistributionMapper.parseDate(item);
+        const event = new TaxEvent(datetime, 'tcy', wallet, config);
+        event.input = item;
         event.convert();
 
         this.events.push(event);

@@ -24,6 +24,7 @@ Currently supported transactions
 - bonding/unbonding
 - TCY claiming (Note: This is mapped as a Receive/Transfer In)
 - TCY staking/unstaking
+- TCY distributions (i.e. RUNE received from staking TCY)
 - RUNEPool deposit/withdrawal
 - Thorname register/update
 - rujira-merge/deposit
