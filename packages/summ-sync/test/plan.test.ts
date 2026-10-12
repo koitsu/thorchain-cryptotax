@@ -100,6 +100,16 @@ test('a trade compares its quote leg; amounts within 1e-8 of the amount or at th
     assert.deepEqual(p.edit[0].changes.map((c) => [c.leg, c.field, c.summ, c.desired]), [['quote', 'quantity', 0.002, 0.001]])
 })
 
+test('a sell paying its fee in the asset sold matches Summ\'s amount with the fee added; another amount is an edit', () => {
+    const r = row({ type: 'sell', baseAmount: '400', quoteCurrency: 'BRUNE', quoteAmount: '399.4', feeCurrency: 'RUNE', feeAmount: '0.24488481' })
+    assert.ok(empty(plan({ rows: [r], legs: legsOf(r, { quantity: 400.24488481 }) }).plan))
+    assert.ok(empty(plan({ rows: [r], legs: legsOf(r) }).plan))
+    const { plan: p } = plan({ rows: [r], legs: legsOf(r, { quantity: 401 }) })
+    assert.deepEqual(p.edit[0].changes.map((c) => [c.field, c.summ, c.desired]), [['quantity', 401, 400]])
+    const send = row({ feeCurrency: 'RUNE', feeAmount: '0.02' })
+    assert.deepEqual(plan({ rows: [send], legs: legsOf(send, { quantity: 1.52 }) }).plan.edit[0].changes.map((c) => c.field), ['quantity'])
+})
+
 test('a changed amount, type or time is an edit of the leg', () => {
     const r = row({ type: 'receive', baseAmount: '2' })
     const legs = legsOf(row({ type: 'receive' }), { trade: 'staking', timestamp: '2024-03-01T10:00:00.900Z' })

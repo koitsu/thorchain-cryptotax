@@ -339,9 +339,13 @@ export function makePlan(input: PlanInput): PlanResult {
         const type = typeOf(row)
         const chain = summBlockchain(row.blockchain)
         if (row.blockchain && !chain) unmappedChains.add(row.blockchain)
+        // A sell paying its fee in the asset sold is held by Summ with the fee added to the amount (the fee leg is
+        // 'nettedOff'), so that gross amount matches too
+        const amount = Number(row.baseAmount)
+        const gross = amount + (type.trade === 'sell' && hasFee(row) && sameCurrency(row.feeCurrency, row.baseCurrency) ? Number(row.feeAmount) : 0)
         const changes = [
             ...compare(base, 'base', 'trade', type.trade),
-            ...compare(base, 'base', 'quantity', Number(row.baseAmount)),
+            ...compare(base, 'base', 'quantity', sameAmount(base.quantity, gross) ? gross : amount),
             ...compare(base, 'base', 'timestamp', row.timestamp),
             ...compare(base, 'base', 'from', row.from),
             ...compare(base, 'base', 'to', row.to),

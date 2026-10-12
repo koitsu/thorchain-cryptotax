@@ -219,6 +219,11 @@ Amounts are equal when they differ by less than `1e-8` of the amount, or
 by at most one unit at the 8th decimal: the exporter's amounts carry
 THORChain's 8 decimals, while Summ's own imports hold e.g. ETH gas in full.
 
+A `sell` row whose fee is in the asset sold is held by Summ with the fee
+added to the sold amount (its fee leg is marked `nettedOff`), so that gross
+amount matches the row too. Other types (e.g. `bridge-trade-out`) keep the
+row's amount.
+
 ## Plan
 
 `plan` writes `plans/<timestamp>/plan.json` (machine-readable, the input to
