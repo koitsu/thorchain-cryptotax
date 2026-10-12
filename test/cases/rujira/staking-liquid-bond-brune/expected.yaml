@@ -5,6 +5,8 @@ baseCurrency: BRUNE
 baseAmount: "21.20049376"
 quoteCurrency: YBRUNE
 quoteAmount: "20.90723337"
+referencePricePerUnit: "0.5998751190022197"
+referencePriceCurrency: USD
 from: thor183cdad9tju0943nffu00ctnf2zrxmep5tzrq7p
 to: thorchain
 blockchain: THORChain

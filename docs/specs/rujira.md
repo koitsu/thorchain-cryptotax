@@ -76,9 +76,17 @@ the wallet in the Cosmos tx.
 The CSV names the receipt tokens `SRUJI` and `YBRUNE` (no Summ currency has
 either symbol). Summ prices a trade from whichever side it knows: RUJI has a
 market price, so `RUJI` → `SRUJI` is valued at the RUJI. Summ has no price for
-`BRUNE` (its catalogue's `BRUNE` symbols are unrelated tokens), so a `BRUNE` →
-`YBRUNE` trade needs its price set in Summ: bRUNE is minted 1:1 for RUNE (the
-`rujira-brune` contract asks 1 RUNE per bRUNE), so its price is RUNE's.
+`BRUNE` (its catalogue's `BRUNE` symbols are unrelated tokens) or `YBRUNE`, so
+a `BRUNE` → `YBRUNE` trade-out carries a reference price: bRUNE is minted 1:1
+for RUNE (the `rujira-brune` contract asks 1 RUNE per bRUNE), so its price is
+taken as RUNE's USD price at the time. This is a deliberate approximation: the
+price bRUNE trades at on FIN can sit a little under 1 RUNE (bids follow the
+contract's liquid reserves). RUNE's price comes from Midgard's
+`/v2/history/rune` (5-minute buckets, any past time). The exporter fetches it
+for each liquid bond of bRUNE and stores it as a `midgard-rune-price` record
+keyed by the bucket's start; a bucket still open when fetched is fetched again
+on the next run. A golden case carries the price as `runePriceUsd`. Rujira's
+API has only current prices, and FIN's candles are priced in RUNE.
 
 Before October 2026 a liquid bond was exported as a `staking-deposit` of the
 bonded asset. Re-exported years replace that row with the trade pair.

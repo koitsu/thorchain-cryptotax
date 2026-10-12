@@ -40,6 +40,8 @@ export interface GoldenCaseInput {
     inbounds?: Action[];
     // The native fee at the action's height (Maya), base units
     nativeFee?: string;
+    // RUNE's USD price at the action's time (a contract action that sends bRUNE)
+    runePriceUsd?: string;
     // The config's treatment choices the case is mapped with, e.g. {mayaLiquidityAuction: 'income'}
     treatment?: Treatment;
 }
@@ -143,6 +145,7 @@ export function toBundle(input: GoldenCaseInput): RawBundle {
         cosmosTxs: input.cosmosTxs ?? [],
         ...(input.inbounds ? {inbounds: input.inbounds} : {}),
         ...(input.nativeFee ? {nativeFee: input.nativeFee} : {}),
+        ...(input.runePriceUsd ? {runePriceUsd: input.runePriceUsd} : {}),
     };
 }
 
@@ -157,6 +160,7 @@ export function toCaseInput(bundle: RawBundle, description: string): GoldenCaseI
         ...(bundle.cosmosTxs.length ? {cosmosTxs: bundle.cosmosTxs} : {}),
         ...(bundle.inbounds?.length ? {inbounds: bundle.inbounds} : {}),
         ...(bundle.nativeFee ? {nativeFee: bundle.nativeFee} : {}),
+        ...(bundle.runePriceUsd ? {runePriceUsd: bundle.runePriceUsd} : {}),
     };
 }
 

@@ -27,6 +27,9 @@ export interface RawBundle {
     // The protocol's native fee at the action's height, in base units, when it is not constant (Maya); it replaces
     // the protocol's default gas (docs/specs/maya.md, Fees)
     nativeFee?: string;
+    // RUNE's USD price at the action's time, for an asset with no market price of its own that is worth one RUNE
+    // (bRUNE, docs/specs/rujira.md)
+    runePriceUsd?: string;
     // THORChain sends that are this action's inbounds although no txid links them: a Maya liquidity auction's
     // deposits (docs/specs/maya.md, attachAuctionDeposits)
     inbounds?: Action[];

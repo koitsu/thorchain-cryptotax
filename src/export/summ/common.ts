@@ -53,10 +53,10 @@ export function fee(activity: Activity, protocol: Protocol): Pick<SummRow, 'feeC
     return {feeCurrency: currency, feeAmount: amount};
 }
 
-// The USD price the source observed, as the reference price columns
+// The USD price the source observed, as the reference price columns; none without one
 export function referencePrice(activity: Activity, source: string): Pick<SummRow, 'referencePricePerUnit' | 'referencePriceCurrency'> {
     const usd = activity.prices.find(price => price.source === source)?.usd;
-    return {referencePricePerUnit: usd || undefined, referencePriceCurrency: usd ? 'USD' : undefined};
+    return usd ? {referencePricePerUnit: usd, referencePriceCurrency: 'USD'} : {};
 }
 
 export function plusSeconds(time: Date, seconds: number): Date {

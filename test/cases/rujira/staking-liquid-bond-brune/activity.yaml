@@ -24,5 +24,10 @@ legs:
     txid: BA3C3725CEB6628B037D3F5BC98C915EF5BF5CDF6BDAB2E050168B835CA66ACC
     amount: "20.90723337"
     decimals: 8
-prices: []
+prices:
+  - asset:
+      notation: X/BRUNE
+      kind: native
+    usd: "0.5998751190022197"
+    source: midgard:history.rune
 details: {}
