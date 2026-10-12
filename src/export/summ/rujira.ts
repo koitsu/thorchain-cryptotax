@@ -43,16 +43,19 @@ export function rujiraStakeRows(activity: Activity, protocol: Protocol): SummRow
     }];
 }
 
-const TRADES: {[kind: string]: {label: string}} = {
-    'rujira.liquid.bond': {label: 'Liquid bond'},
-    'rujira.fin.trade': {label: 'FIN swap'},
-    'rujira.merge.deposit': {label: 'Merge deposit'},
-    'rujira.merge.withdraw': {label: 'Merge withdraw'},
+// A trade made inside one THORChain tx is one sell row: Summ values it from whichever side it has a price for, as
+// a trade-out/trade-in pair is only joined (and the received side valued) when Summ prices both (rujira.md). A
+// merge keeps the pair for now.
+const TRADES: {[kind: string]: {label: string; sell: boolean}} = {
+    'rujira.liquid.bond': {label: 'Liquid bond', sell: true},
+    'rujira.fin.trade': {label: 'FIN swap', sell: true},
+    'rujira.merge.deposit': {label: 'Merge deposit', sell: false},
+    'rujira.merge.withdraw': {label: 'Merge withdraw', sell: false},
 };
 
-// A trade-out carrying the fee, and the trade-in 10 s later; an amount returned unfilled is netted off
+// A sell row, or a trade-out carrying the fee and the trade-in 10 s later; an amount returned unfilled is netted off
 export function rujiraTradeRows(activity: Activity, protocol: Protocol): SummRow[] {
-    const {label} = TRADES[activity.kind];
+    const {label, sell} = TRADES[activity.kind];
     const sent = leg(activity, 'principal', 'out');
     const received = leg(activity, 'principal', 'in');
     const returned = findLeg(activity, 'returned');
@@ -61,6 +64,26 @@ export function rujiraTradeRows(activity: Activity, protocol: Protocol): SummRow
     const description = `Rujira ${label} ${input.amount} ${input.displayCurrency} to ${output.amount} ${output.displayCurrency}; ${sent.txid ?? ''}`;
     const time = activity.time;
     const blockchain = formatBlockchain(protocol.nativeChain);
+
+    if (sell) {
+        return [{
+            wallet: sent.wallet,
+            timestamp: time,
+            type: SummRowType.Sell,
+            baseCurrency: input.currency,
+            baseAmount: input.amount,
+            quoteCurrency: output.currency,
+            quoteAmount: output.amount,
+            ...feeIfPaid(activity, protocol),
+            // e.g. bRUNE, which Summ has no price for
+            ...referencePrice(activity, 'midgard:history.rune'),
+            from: sent.wallet,
+            to: sent.wallet,
+            blockchain,
+            trace: legTrace(sent),
+            description: `1/1 - ${description}`,
+        }];
+    }
 
     return [
         {
@@ -72,8 +95,6 @@ export function rujiraTradeRows(activity: Activity, protocol: Protocol): SummRow
             quoteCurrency: output.currency,
             quoteAmount: output.amount,
             ...feeIfPaid(activity, protocol),
-            // e.g. bRUNE, which Summ has no price for
-            ...referencePrice(activity, 'midgard:history.rune'),
             from: sent.wallet,
             to: protocol.counterparty,
             blockchain,

@@ -1,6 +1,6 @@
 wallet: thor1v46lh3v2vk9mkcvjs46v203xn46ey40p4xtfcn
 timestamp: 2026-05-06T08:43:29.080Z
-type: bridge-trade-out
+type: sell
 baseCurrency: RUNE
 baseAmount: "550"
 quoteCurrency: BRUNE
@@ -8,18 +8,7 @@ quoteAmount: "549.175"
 feeCurrency: RUNE
 feeAmount: "0.21920891"
 from: thor1v46lh3v2vk9mkcvjs46v203xn46ey40p4xtfcn
-to: thorchain
-blockchain: THORChain
-description: 1/2 - Rujira FIN swap 550 RUNE to 549.175 BRUNE; 47E2DFDED36A137A7D3FCBC444E2F149CD3A5778EB7A1395303E95A37FFBA31B
-id: 2026-05-06T08:43:29.080Z.out.15716f911d11
----
-wallet: thor1v46lh3v2vk9mkcvjs46v203xn46ey40p4xtfcn
-timestamp: 2026-05-06T08:43:39.080Z
-type: bridge-trade-in
-baseCurrency: BRUNE
-baseAmount: "549.175"
-from: thorchain
 to: thor1v46lh3v2vk9mkcvjs46v203xn46ey40p4xtfcn
 blockchain: THORChain
-description: 2/2 - Rujira FIN swap 550 RUNE to 549.175 BRUNE; 47E2DFDED36A137A7D3FCBC444E2F149CD3A5778EB7A1395303E95A37FFBA31B
-id: 2026-05-06T08:43:29.080Z.in.b66ebf8ebf56
+description: 1/1 - Rujira FIN swap 550 RUNE to 549.175 BRUNE; 47E2DFDED36A137A7D3FCBC444E2F149CD3A5778EB7A1395303E95A37FFBA31B
+id: 2026-05-06T08:43:29.080Z.out.15716f911d11

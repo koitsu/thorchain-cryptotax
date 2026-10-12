@@ -1,6 +1,6 @@
 wallet: thor1d9j83ll3e0jh5w8kycjcmzcm2wdy0mr3wr9mtq
 timestamp: 2025-07-23T22:26:38.775Z
-type: bridge-trade-out
+type: sell
 baseCurrency: RUJI
 baseAmount: "2269.0107783"
 quoteCurrency: SRUJI
@@ -8,18 +8,7 @@ quoteAmount: "2252.15635519"
 feeCurrency: RUNE
 feeAmount: "0.00003255"
 from: thor1d9j83ll3e0jh5w8kycjcmzcm2wdy0mr3wr9mtq
-to: thorchain
-blockchain: THORChain
-description: 1/2 - Rujira Liquid bond 2269.0107783 RUJI to 2252.15635519 SRUJI; C74C2BD4E65A2F8EDF6630552429FD148D90DD07AE4877DFCAF54F0EF6E06D8B
-id: 2025-07-23T22:26:38.775Z.out.c81645414c39
----
-wallet: thor1d9j83ll3e0jh5w8kycjcmzcm2wdy0mr3wr9mtq
-timestamp: 2025-07-23T22:26:48.775Z
-type: bridge-trade-in
-baseCurrency: SRUJI
-baseAmount: "2252.15635519"
-from: thorchain
 to: thor1d9j83ll3e0jh5w8kycjcmzcm2wdy0mr3wr9mtq
 blockchain: THORChain
-description: 2/2 - Rujira Liquid bond 2269.0107783 RUJI to 2252.15635519 SRUJI; C74C2BD4E65A2F8EDF6630552429FD148D90DD07AE4877DFCAF54F0EF6E06D8B
-id: 2025-07-23T22:26:38.775Z.in.01c2691a2636
+description: 1/1 - Rujira Liquid bond 2269.0107783 RUJI to 2252.15635519 SRUJI; C74C2BD4E65A2F8EDF6630552429FD148D90DD07AE4877DFCAF54F0EF6E06D8B
+id: 2025-07-23T22:26:38.775Z.out.c81645414c39
