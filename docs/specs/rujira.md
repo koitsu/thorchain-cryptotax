@@ -36,11 +36,19 @@ are not exported as fees.
 
 ## Rows
 
+A trade made inside one THORChain tx (a liquid bond, a FIN swap) is one `sell`
+row. Summ values a trade from whichever side it has a price for, but it joins
+a `bridge-trade-out` and a `bridge-trade-in` into one trade only when it can
+price both: a pair with an unpriced side (bRUNE, sRUJI, ybRUNE) stays two
+actions, and the received side is booked at zero, with no cost base. The pair
+is for a THORChain swap, whose L1 side Summ imports itself. Merges still use
+the pair; a merge position has no price, so set its prices in Summ.
+
 | Contract event | Rows | Amounts | Why |
 | --- | --- | --- | --- |
-| `wasm-rujira-staking/liquid.bond` | `bridge-trade-out` of the bonded asset (`RUJI`, `BRUNE`) and `bridge-trade-in` of its receipt token (`SRUJI`, `YBRUNE`) | sent: `funds`; receipt: the `shares` attribute | The asset goes into a shared pool and the wallet holds a different, transferable token instead (see Liquid and account bonds) |
+| `wasm-rujira-staking/liquid.bond` | one `sell` of the bonded asset (`RUJI`, `BRUNE`) for its receipt token (`SRUJI`, `YBRUNE`) | sent: `funds`; receipt: the `shares` attribute | The asset goes into a shared pool and the wallet holds a different, transferable token instead (see Liquid and account bonds) |
 | `wasm-rujira-staking/account.bond` | one `staking-deposit` | `funds` | The asset stays the wallet's, recorded against its address; no token comes back |
-| `wasm-rujira-fin/trade` (a FIN market swap) | `bridge-trade-out` + `bridge-trade-in`, as for a THORChain swap | sent: `funds`; received: the `transfer` to the wallet in the Cosmos tx | A trade: one asset disposed of for another |
+| `wasm-rujira-fin/trade` (a FIN market swap) | one `sell` of the asset sent for the asset received | sent: `funds`; received: the `transfer` to the wallet in the Cosmos tx | A trade: one asset disposed of for another |
 | `wasm-rujira-merge/deposit` | `bridge-trade-out` of `KUJI` and `bridge-trade-in` of the merge position `RujiraMerge.THOR.KUJI` | sent: `funds`; position: the `shares` attribute | Merging is one-way: the KUJI is gone at the deposit, and only RUJI can come out. The position carries the cost |
 | `wasm-rujira-merge/withdraw` | `bridge-trade-out` of `RujiraMerge.THOR.KUJI` and `bridge-trade-in` of `RUJI` | shares: `shares`; RUJI: `amount` | The position is disposed of for RUJI |
 | Levana perps (`wasm-crank-fee` with `levana_protocol: perps`) | none | – | Levana is discontinued. A position is entered by hand (see below) |
@@ -77,7 +85,7 @@ The CSV names the receipt tokens `SRUJI` and `YBRUNE` (no Summ currency has
 either symbol). Summ prices a trade from whichever side it knows: RUJI has a
 market price, so `RUJI` → `SRUJI` is valued at the RUJI. Summ has no price for
 `BRUNE` (its catalogue's `BRUNE` symbols are unrelated tokens) or `YBRUNE`, so
-a `BRUNE` → `YBRUNE` trade-out carries a reference price: bRUNE is minted 1:1
+a `BRUNE` → `YBRUNE` sell carries a reference price: bRUNE is minted 1:1
 for RUNE (the `rujira-brune` contract asks 1 RUNE per bRUNE), so its price is
 taken as RUNE's USD price at the time. This is a deliberate approximation: the
 price bRUNE trades at on FIN can sit a little under 1 RUNE (bids follow the
@@ -89,7 +97,8 @@ on the next run. A golden case carries the price as `runePriceUsd`. Rujira's
 API has only current prices, and FIN's candles are priced in RUNE.
 
 Before October 2026 a liquid bond was exported as a `staking-deposit` of the
-bonded asset. Re-exported years replace that row with the trade pair.
+bonded asset, then briefly as a `bridge-trade-out`/`bridge-trade-in` pair, as a
+FIN swap was. Re-exported years replace those rows with the `sell` row.
 
 ### bRUNE
 

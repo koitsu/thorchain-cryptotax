@@ -1,6 +1,6 @@
 wallet: thor183cdad9tju0943nffu00ctnf2zrxmep5tzrq7p
 timestamp: 2026-05-09T01:01:07.819Z
-type: bridge-trade-out
+type: sell
 baseCurrency: BRUNE
 baseAmount: "21.20049376"
 quoteCurrency: YBRUNE
@@ -8,18 +8,7 @@ quoteAmount: "20.90723337"
 referencePricePerUnit: "0.5998751190022197"
 referencePriceCurrency: USD
 from: thor183cdad9tju0943nffu00ctnf2zrxmep5tzrq7p
-to: thorchain
-blockchain: THORChain
-description: 1/2 - Rujira Liquid bond 21.20049376 BRUNE to 20.90723337 YBRUNE; BA3C3725CEB6628B037D3F5BC98C915EF5BF5CDF6BDAB2E050168B835CA66ACC
-id: 2026-05-09T01:01:07.819Z.out.0c0d8f6ca8d1
----
-wallet: thor183cdad9tju0943nffu00ctnf2zrxmep5tzrq7p
-timestamp: 2026-05-09T01:01:17.819Z
-type: bridge-trade-in
-baseCurrency: YBRUNE
-baseAmount: "20.90723337"
-from: thorchain
 to: thor183cdad9tju0943nffu00ctnf2zrxmep5tzrq7p
 blockchain: THORChain
-description: 2/2 - Rujira Liquid bond 21.20049376 BRUNE to 20.90723337 YBRUNE; BA3C3725CEB6628B037D3F5BC98C915EF5BF5CDF6BDAB2E050168B835CA66ACC
-id: 2026-05-09T01:01:07.819Z.in.316b27786169
+description: 1/1 - Rujira Liquid bond 21.20049376 BRUNE to 20.90723337 YBRUNE; BA3C3725CEB6628B037D3F5BC98C915EF5BF5CDF6BDAB2E050168B835CA66ACC
+id: 2026-05-09T01:01:07.819Z.out.0c0d8f6ca8d1
