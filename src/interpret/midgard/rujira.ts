@@ -51,6 +51,13 @@ export const RUJIRA_CONTRACT_TYPES = [
     ...INNER_EVENTS,
 ];
 
+// A liquid bond's receipt token is the staking contract's `staking-<bond denom>` TokenFactory denom. Named by the
+// symbol in its on-chain denom metadata (`/cosmos/bank/v1beta1/denoms_metadata`).
+const RECEIPT_TOKENS: {[denom: string]: string} = {
+    'x/staking-x/ruji': 'X/SRUJI',
+    'x/staking-x/brune': 'X/YBRUNE',
+};
+
 // Amounts on THORChain have 8 decimals, whatever the denom
 const DECIMALS = 8;
 
@@ -104,10 +111,12 @@ export function interpretRujira(bundle: RawBundle, protocol: Protocol): Result {
     }
 
     switch (contract.contractType) {
-        case 'wasm-rujira-staking/liquid.bond':
-            return call.result('rujira.stake', [call.fundsLeg()], {bond: 'liquid', shares: contract.attributes.shares});
+        case 'wasm-rujira-staking/liquid.bond': {
+            const funds = call.fundsLeg();
+            return call.result('rujira.liquid.bond', [funds, call.leg('in', receiptAsset(contract.funds ?? ''), contract.attributes.shares)], {});
+        }
         case 'wasm-rujira-staking/account.bond':
-            return call.result('rujira.stake', [call.fundsLeg()], {bond: 'account'});
+            return call.result('rujira.stake', [call.fundsLeg()], {});
         case 'wasm-rujira-fin/trade':
             return call.finTrade();
         case 'wasm-rujira-merge/deposit': {
@@ -139,6 +148,18 @@ export function interpretRujira(bundle: RawBundle, protocol: Protocol): Result {
         default:
             throw new Error(`rujira: unsupported contract ${contract.contractType}`);
     }
+}
+
+// The receipt token a liquid bond of `funds` mints
+function receiptAsset(funds: string): Asset {
+    const denom = `x/staking-${parseCoins(funds)[0].denom}`;
+    const notation = RECEIPT_TOKENS[denom];
+
+    if (!notation) {
+        throw new Error(`rujira: unknown liquid staking receipt token ${denom}`);
+    }
+
+    return toAsset(notation);
 }
 
 // A merge pool position, counted in pool shares

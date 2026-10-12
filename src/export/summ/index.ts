@@ -82,6 +82,7 @@ function toRows(activity: Activity, protocol: Protocol, treatment: Treatment): S
             return mayaDistributionRows(activity, protocol);
         case 'rujira.stake':
             return rujiraStakeRows(activity, protocol);
+        case 'rujira.liquid.bond':
         case 'rujira.fin.trade':
         case 'rujira.merge.deposit':
         case 'rujira.merge.withdraw':
