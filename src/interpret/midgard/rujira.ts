@@ -1,5 +1,5 @@
 import type {Action} from "@xchainjs/xchain-midgard";
-import type {Activity, Leg} from "../../domain/Activity.ts";
+import type {Activity, Leg, Price} from "../../domain/Activity.ts";
 import {parseAmount} from "../../domain/Amount.ts";
 import {type Asset, toAsset} from "../../domain/Asset.ts";
 import type {Issue} from "../../domain/Issue.ts";
@@ -58,6 +58,9 @@ const RECEIPT_TOKENS: {[denom: string]: string} = {
     'x/staking-x/brune': 'X/YBRUNE',
 };
 
+const BRUNE = 'X/BRUNE';
+const RUNE_PRICE_SOURCE = 'midgard:history.rune';
+
 // Amounts on THORChain have 8 decimals, whatever the denom
 const DECIMALS = 8;
 
@@ -113,7 +116,8 @@ export function interpretRujira(bundle: RawBundle, protocol: Protocol): Result {
     switch (contract.contractType) {
         case 'wasm-rujira-staking/liquid.bond': {
             const funds = call.fundsLeg();
-            return call.result('rujira.liquid.bond', [funds, call.leg('in', receiptAsset(contract.funds ?? ''), contract.attributes.shares)], {});
+            const receipt = call.leg('in', receiptAsset(contract.funds ?? ''), contract.attributes.shares);
+            return call.result('rujira.liquid.bond', [funds, receipt], {}, call.bruneUsd(funds));
         }
         case 'wasm-rujira-staking/account.bond':
             return call.result('rujira.stake', [call.fundsLeg()], {});
@@ -242,7 +246,14 @@ class Call {
         ], {});
     }
 
-    result(kind: Activity['kind'], legs: Leg[], details: Record<string, string | undefined>): Result {
+    // bRUNE has no market price; it is minted for one RUNE, so it takes RUNE's price at the time (rujira.md)
+    bruneUsd(funds: Leg): Price[] {
+        return funds.asset.notation === BRUNE && this.bundle.runePriceUsd
+            ? [{asset: funds.asset, usd: this.bundle.runePriceUsd, source: RUNE_PRICE_SOURCE}]
+            : [];
+    }
+
+    result(kind: Activity['kind'], legs: Leg[], details: Record<string, string | undefined>, prices: Price[] = []): Result {
         const gas = this.gas();
 
         return {
@@ -253,7 +264,7 @@ class Call {
                 status: this.action.status as Activity['status'],
                 time: getActionDate(this.action),
                 legs: gas ? [...legs, gas] : legs,
-                prices: [],
+                prices,
                 details: Object.fromEntries(Object.entries(details).filter(([, value]) => value !== undefined)) as Record<string, string>,
             }],
             issues: [],

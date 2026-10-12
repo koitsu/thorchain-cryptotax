@@ -1,5 +1,5 @@
 import {RecordStore} from "../store/RecordStore.ts";
-import {MIDGARD_LIST} from "../store/Sources.ts";
+import {MIDGARD_LIST, RUNE_PRICE_RULES, type RunePrice} from "../store/Sources.ts";
 import {type Action, Configuration, DefaultApi} from '@xchainjs/xchain-midgard';
 import assert from "assert";
 import {API_URLS} from "../../config/apiUrls.ts";
@@ -13,6 +13,9 @@ import {http} from "../http.ts";
 // can load balance between 2 like web3tax
 // MIDGARD_URL_A: "https://midgard.thorchain.info/v2/actions?limit=50&address={WALLETS}&offset={OFFSET}"
 // MIDGARD_URL_B: "https://midgard.thorswap.net/v2/actions?limit=50&address={WALLETS}&offset={OFFSET}"
+
+// Seconds in one of Midgard's 5min history buckets
+const RUNE_PRICE_INTERVAL = 300;
 
 export class MidgardService {
     api: DefaultApi;
@@ -35,6 +38,23 @@ export class MidgardService {
         return this.store.list(this.source, address,
             async () => ({data: await this.fetchActions(address), url: `${this.basePath}/v2/actions?address=${address}`}),
             MIDGARD_LIST);
+    }
+
+    // RUNE's USD price in the 5-minute bucket holding `date`, as a `<source>-rune-price` record
+    async getRunePrice(date: Date): Promise<RunePrice> {
+        const start = Math.floor(date.getTime() / 1000 / RUNE_PRICE_INTERVAL) * RUNE_PRICE_INTERVAL;
+        const url = `${this.basePath}/v2/history/rune?interval=5min&from=${start}&to=${start + RUNE_PRICE_INTERVAL}`;
+
+        return this.store.record<RunePrice>(`${this.source}-rune-price`, String(start), async () => {
+            const intervals: RunePrice[] = (await http.get(url)).data.intervals;
+            const bucket = intervals.find(item => Number(item.startTime) === start);
+
+            if (!bucket) {
+                throw new Error(`[Midgard] no RUNE price for the bucket starting ${start}`);
+            }
+
+            return {data: {startTime: bucket.startTime, endTime: bucket.endTime, runePriceUSD: bucket.runePriceUSD}, url};
+        }, RUNE_PRICE_RULES, date);
     }
 
     private async fetchActions(address: string): Promise<Action[]> {

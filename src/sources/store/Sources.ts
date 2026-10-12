@@ -70,6 +70,17 @@ export const COSMOS_TX_RULES: RecordRules<CosmosTx> = {
     folderOf: tx => tx.timestamp ? monthFolder(new Date(tx.timestamp)) : undefined,
 };
 
+// RUNE's USD price over one of Midgard's 5-minute buckets (/v2/history/rune), keyed by the bucket's start
+export interface RunePrice {
+    startTime: string;
+    endTime: string;
+    runePriceUSD: string;
+}
+
+export const RUNE_PRICE_RULES: RecordRules<RunePrice> = {
+    folderOf: price => monthFolder(new Date(Number(price.startTime) * 1000)),
+};
+
 // Viewblock adds each amount's value at today's price (usdNew), which changes on every fetch and would make
 // every fetch look like a change in the source data. It is dropped before a tx is stored; the value at
 // the time of the tx (usd) is kept.
@@ -136,4 +147,5 @@ export const SOURCES: {[source: string]: ListSource | {kind: 'record', rules: Re
     'maya-distribution': {kind: 'list', options: mayaDistributionList},
     'thornode': {kind: 'record', rules: THORNODE_RULES},
     'thornode-cosmos': {kind: 'record', rules: COSMOS_TX_RULES},
+    'midgard-rune-price': {kind: 'record', rules: RUNE_PRICE_RULES},
 };

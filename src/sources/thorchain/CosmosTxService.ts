@@ -32,6 +32,13 @@ export function getCosmosTxIds(action: Action): string[] {
     return (action.type as string) === 'contract' && txId ? [txId] : [];
 }
 
+// A contract action that sends bRUNE needs RUNE's price: bRUNE is worth one RUNE but has no market price
+// (docs/specs/rujira.md)
+export function needsRunePrice(action: Action): boolean {
+    const funds: string = (action.metadata as any)?.contract?.funds ?? '';
+    return (action.type as string) === 'contract' && /^\d+x\/brune$/.test(funds);
+}
+
 export function toCosmosTx(response: any): CosmosTx {
     const txResponse = response.tx_response;
 

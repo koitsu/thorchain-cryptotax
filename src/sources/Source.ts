@@ -2,7 +2,7 @@ import {type Action, ActionStatusEnum, ActionTypeEnum} from "@xchainjs/xchain-mi
 import {assetFromStringEx, AssetType} from "@xchainjs/xchain-util";
 import {MidgardService} from "./thorchain/MidgardService.ts";
 import {ThornodeService} from "./thorchain/ThornodeService.ts";
-import {CosmosTxService, getCosmosTxIds} from "./thorchain/CosmosTxService.ts";
+import {CosmosTxService, getCosmosTxIds, needsRunePrice} from "./thorchain/CosmosTxService.ts";
 import {MayanodeService} from "./maya/MayanodeService.ts";
 import {TcyDistributionService} from "./tcy/TcyDistributionService.ts";
 import type {MayaDistributionService} from "./maya/MayaDistributionService.ts";
@@ -160,7 +160,10 @@ export class MidgardSource implements Source {
         // Maya's native fee has changed over time: the setting at the action's height (docs/specs/maya.md, Fees)
         const nativeFee = this.mayanode ? (await this.mayanode.nativeFee(Number(action.height), getActionDate(action))).amount : undefined;
 
-        return {source: 'midgard', protocol: this.protocol.id, wallet, data: action, thornodeTxs, cosmosTxs, ...(nativeFee ? {nativeFee} : {})};
+        const runePriceUsd = isThorchain && needsRunePrice(action) ? (await this.midgard.getRunePrice(getActionDate(action))).runePriceUSD : undefined;
+
+        return {source: 'midgard', protocol: this.protocol.id, wallet, data: action, thornodeTxs, cosmosTxs,
+            ...(nativeFee ? {nativeFee} : {}), ...(runePriceUsd ? {runePriceUsd} : {})};
     }
 }
 

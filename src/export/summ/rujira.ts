@@ -3,7 +3,7 @@ import {formatAmount} from "../../domain/Amount.ts";
 import {type SummRow, SummRowType} from "./csv/index.ts";
 import {parseMidgardAsset} from "../../sources/thorchain/MidgardUtils.ts";
 import {formatBlockchain, type Protocol} from "../../domain/Protocol.ts";
-import {findLeg, leg, legTrace, plusSeconds} from "./common.ts";
+import {findLeg, leg, legTrace, plusSeconds, referencePrice} from "./common.ts";
 
 // Rujira rows (docs/specs/rujira.md): an account bond is a staking deposit; liquid bonds, FIN swaps and merges are trades
 
@@ -72,6 +72,8 @@ export function rujiraTradeRows(activity: Activity, protocol: Protocol): SummRow
             quoteCurrency: output.currency,
             quoteAmount: output.amount,
             ...feeIfPaid(activity, protocol),
+            // e.g. bRUNE, which Summ has no price for
+            ...referencePrice(activity, 'midgard:history.rune'),
             from: sent.wallet,
             to: protocol.counterparty,
             blockchain,
