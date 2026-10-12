@@ -11,7 +11,7 @@ export type ActivityKind = 'bond' | 'unbond' | 'swap' | 'refund' | 'lp.add' | 'l
     | 'lp.auction.deposit' | 'lp.auction.position'
     | 'switch' | 'runepool.deposit' | 'runepool.withdraw' | 'loan.open' | 'loan.repay'
     | 'send' | 'tcy.claim' | 'tcy.stake' | 'tcy.unstake' | 'tcy.distribution' | 'thorname' | 'maya.distribution'
-    | 'rujira.stake' | 'rujira.fin.trade' | 'rujira.merge.deposit' | 'rujira.merge.withdraw';
+    | 'rujira.stake' | 'rujira.liquid.bond' | 'rujira.fin.trade' | 'rujira.merge.deposit' | 'rujira.merge.withdraw';
 
 export type ActivityStatus = 'success' | 'pending' | 'failed';
 

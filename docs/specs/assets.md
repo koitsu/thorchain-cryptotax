@@ -11,6 +11,7 @@ the asset lives:
 | `BTC~BTC` | trade asset | THORChain | `BTC` (the L1 asset's name) | `THORChain` |
 | `BTC-BTC`, `ETH-USDC-0X…` | secured asset | THORChain | `BTC`, `USDC` (the L1 asset's name) | `THORChain` |
 | `X/RUJI` | Cosmos denom on THORChain (`x/ruji`), not a synth | THORChain | `RUJI` | `THORChain` |
+| `X/SRUJI`, `X/YBRUNE` | Rujira liquid staking receipt token (`x/staking-x/ruji`, `x/staking-x/brune`; `rujira.md`) | THORChain | `SRUJI`, `YBRUNE` | `THORChain` |
 
 On Maya Protocol the synth prefix is `Maya` (`MayaSynth.BTC.BTC`) and the
 blockchain is Maya Protocol's (`maya.md`).

@@ -15,5 +15,4 @@ legs:
     amount: "1.5"
     decimals: 8
 prices: []
-details:
-  bond: account
+details: {}

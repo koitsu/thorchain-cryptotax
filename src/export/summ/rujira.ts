@@ -1,11 +1,11 @@
 import type {Activity, Leg} from "../../domain/Activity.ts";
-import {formatAmount, parseAmount} from "../../domain/Amount.ts";
+import {formatAmount} from "../../domain/Amount.ts";
 import {type SummRow, SummRowType} from "./csv/index.ts";
 import {parseMidgardAsset} from "../../sources/thorchain/MidgardUtils.ts";
 import {formatBlockchain, type Protocol} from "../../domain/Protocol.ts";
 import {findLeg, leg, legTrace, plusSeconds} from "./common.ts";
 
-// Rujira rows (docs/specs/rujira.md): staking is a staking deposit; FIN swaps and merges are trades
+// Rujira rows (docs/specs/rujira.md): an account bond is a staking deposit; liquid bonds, FIN swaps and merges are trades
 
 // The fee columns when the wasm call paid gas; none at all otherwise
 function feeIfPaid(activity: Activity, protocol: Protocol): Pick<SummRow, 'feeCurrency' | 'feeAmount'> {
@@ -26,8 +26,6 @@ export function rujiraStakeRows(activity: Activity, protocol: Protocol): SummRow
     const funds = leg(activity, 'principal', 'out');
     const {currency, displayCurrency} = name(funds, protocol);
     const amount = formatAmount(funds.amount);
-    const isLiquid = activity.details.bond === 'liquid';
-    const note = isLiquid ? ` for ${formatAmount(parseAmount(activity.details.shares, 8))} shares` : '';
     const time = activity.time;
 
     return [{
@@ -41,11 +39,12 @@ export function rujiraStakeRows(activity: Activity, protocol: Protocol): SummRow
         to: protocol.counterparty,
         blockchain: formatBlockchain(protocol.nativeChain),
         trace: legTrace(funds),
-        description: `1/1 - Rujira ${isLiquid ? 'Liquid bond' : 'Account bond'} ${amount} ${displayCurrency}${note}; ${funds.txid ?? ''}`,
+        description: `1/1 - Rujira Account bond ${amount} ${displayCurrency}; ${funds.txid ?? ''}`,
     }];
 }
 
 const TRADES: {[kind: string]: {label: string}} = {
+    'rujira.liquid.bond': {label: 'Liquid bond'},
     'rujira.fin.trade': {label: 'FIN swap'},
     'rujira.merge.deposit': {label: 'Merge deposit'},
     'rujira.merge.withdraw': {label: 'Merge withdraw'},
