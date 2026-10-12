@@ -59,7 +59,7 @@ lists/midgard/<wallet>.0.json                      the record keys one fetch of 
 | `midgard`, `maya-midgard` | an action | `<type>.<first txid>`; a contract action adds its event (one wasm call gives several); `<type>.date-<date>` with no txid; an action one tx gave to several members adds their addresses (`<type>.<txid>.<addresses>` for Maya's `donate:` adds, `<type>.genesisTx.<pool>.<addresses>` for old Midgard's placeholders) |
 | `thornode` | a tx status | txid |
 | `thornode-cosmos` | a Cosmos tx (contract calls) | txid |
-| `midgard-rune-price` | RUNE's USD price over a Midgard 5-minute bucket (contract actions that send bRUNE, `rujira.md`) | the bucket's start (Unix seconds) |
+| `midgard-rune-price` | RUNE's USD price over a Midgard 5-minute bucket (liquid bonds of bRUNE, `rujira.md`) | the bucket's start (Unix seconds) |
 | `viewblock` | a tx | its hash |
 | `tcy` | a distribution | `<wallet>.<date>` (one a day; several wallets are paid on the same day) |
 

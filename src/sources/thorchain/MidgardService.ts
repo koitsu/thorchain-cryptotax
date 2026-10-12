@@ -46,14 +46,15 @@ export class MidgardService {
         const url = `${this.basePath}/v2/history/rune?interval=5min&from=${start}&to=${start + RUNE_PRICE_INTERVAL}`;
 
         return this.store.record<RunePrice>(`${this.source}-rune-price`, String(start), async () => {
-            const intervals: RunePrice[] = (await http.get(url)).data.intervals;
+            const intervals: Omit<RunePrice, 'final'>[] = (await http.get(url)).data.intervals;
             const bucket = intervals.find(item => Number(item.startTime) === start);
 
             if (!bucket) {
                 throw new Error(`[Midgard] no RUNE price for the bucket starting ${start}`);
             }
 
-            return {data: {startTime: bucket.startTime, endTime: bucket.endTime, runePriceUSD: bucket.runePriceUSD}, url};
+            const final = Number(bucket.endTime) * 1000 <= Date.now();
+            return {data: {startTime: bucket.startTime, endTime: bucket.endTime, runePriceUSD: bucket.runePriceUSD, final}, url};
         }, RUNE_PRICE_RULES, date);
     }
 

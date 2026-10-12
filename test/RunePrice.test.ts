@@ -6,7 +6,7 @@ import path from 'path';
 import {http} from '../src/sources/http.ts';
 import {RecordStore} from '../src/sources/store/RecordStore.ts';
 import {MidgardService} from '../src/sources/thorchain/MidgardService.ts';
-import {needsRunePrice} from '../src/sources/thorchain/CosmosTxService.ts';
+import {needsRunePrice} from '../src/sources/thorchain/MidgardUtils.ts';
 
 const store = () => new RecordStore(fs.mkdtempSync(path.join(os.tmpdir(), 'tc-ct-rune-price-')));
 
@@ -28,12 +28,29 @@ describe('RUNE price at a time (docs/specs/rujira.md)', () => {
         get.mock.restore();
     });
 
-    test('only a contract action that sends bRUNE needs it', () => {
-        const contract = (funds: string) => ({type: 'contract', metadata: {contract: {funds}}}) as any;
+    test('a bucket still open when fetched is fetched again; a missing bucket is an error', async () => {
+        const now = Math.floor(Date.now() / 1000 / 300) * 300;
+        const get = mock.method(http, 'get', async (url: string) => ({
+            data: {intervals: url.includes(`from=${now}&`) ? [{startTime: String(now), endTime: String(now + 300), runePriceUSD: '1.1'}] : []},
+        }) as any);
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tc-ct-rune-price-'));
+        // each run is a new store over the same folder (a store fetches a record at most once per run)
+        const run = () => new MidgardService(new RecordStore(dir), 'midgard', 'https://midgard');
 
-        assert.equal(needsRunePrice(contract('2120049376x/brune')), true);
-        assert.equal(needsRunePrice(contract('226901077830x/ruji')), false);
-        assert.equal(needsRunePrice(contract('55000000000rune')), false);
+        assert.equal((await run().getRunePrice(new Date(now * 1000))).final, false);
+        await run().getRunePrice(new Date(now * 1000));
+        assert.equal(get.mock.calls.length, 2);
+        await assert.rejects(run().getRunePrice(new Date((now - 3600) * 1000)), /no RUNE price/);
+        get.mock.restore();
+    });
+
+    test('only a liquid bond of bRUNE needs it', () => {
+        const contract = (contractType: string, funds: string) => ({type: 'contract', metadata: {contract: {contractType, funds}}}) as any;
+
+        assert.equal(needsRunePrice(contract('wasm-rujira-staking/liquid.bond', '2120049376x/brune')), true);
+        assert.equal(needsRunePrice(contract('wasm-rujira-staking/liquid.bond', '226901077830x/ruji')), false);
+        assert.equal(needsRunePrice(contract('wasm-rujira-fin/trade', '4992500000x/brune')), false);
+        assert.equal(needsRunePrice(contract('wasm-rujira-staking/account.bond', '100x/brune')), false);
         assert.equal(needsRunePrice({type: 'send', metadata: {}} as any), false);
     });
 });

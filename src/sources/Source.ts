@@ -2,12 +2,12 @@ import {type Action, ActionStatusEnum, ActionTypeEnum} from "@xchainjs/xchain-mi
 import {assetFromStringEx, AssetType} from "@xchainjs/xchain-util";
 import {MidgardService} from "./thorchain/MidgardService.ts";
 import {ThornodeService} from "./thorchain/ThornodeService.ts";
-import {CosmosTxService, getCosmosTxIds, needsRunePrice} from "./thorchain/CosmosTxService.ts";
+import {CosmosTxService, getCosmosTxIds} from "./thorchain/CosmosTxService.ts";
 import {MayanodeService} from "./maya/MayanodeService.ts";
 import {TcyDistributionService} from "./tcy/TcyDistributionService.ts";
 import type {MayaDistributionService} from "./maya/MayaDistributionService.ts";
 import {MAYA} from "../domain/Protocol.ts";
-import {getActionDate} from "./thorchain/MidgardUtils.ts";
+import {getActionDate, needsRunePrice} from "./thorchain/MidgardUtils.ts";
 import {Viewblock} from "./viewblock/index.ts";
 import {failedTxPaidFee, type Protocol, THORCHAIN} from "../domain/Protocol.ts";
 import {getBundleKey, type RawBundle} from "./RawBundle.ts";

@@ -70,14 +70,18 @@ export const COSMOS_TX_RULES: RecordRules<CosmosTx> = {
     folderOf: tx => tx.timestamp ? monthFolder(new Date(tx.timestamp)) : undefined,
 };
 
-// RUNE's USD price over one of Midgard's 5-minute buckets (/v2/history/rune), keyed by the bucket's start
+// RUNE's USD price over one of Midgard's 5-minute buckets (/v2/history/rune),
+// keyed by the bucket's start. A bucket still open when fetched has a partial price, so it is fetched again.
 export interface RunePrice {
     startTime: string;
     endTime: string;
     runePriceUSD: string;
+    // The bucket had ended when it was fetched
+    final: boolean;
 }
 
 export const RUNE_PRICE_RULES: RecordRules<RunePrice> = {
+    isPending: price => !price.final,
     folderOf: price => monthFolder(new Date(Number(price.startTime) * 1000)),
 };
 
