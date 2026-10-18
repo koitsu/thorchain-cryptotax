@@ -62,7 +62,7 @@ export interface UploadEntry {
 }
 
 export interface ReportEntry {
-    kind: 'no-leg' | 'several-legs' | 'leg-claimed-twice' | 'not-in-snapshot' | 'fee' | 'ambiguous-adoption' | 'manual-entry' | 'other-source'
+    kind: 'no-leg' | 'several-legs' | 'leg-claimed-twice' | 'not-in-snapshot' | 'fee' | 'ambiguous-adoption' | 'legacy-lookalike' | 'manual-entry' | 'other-source'
     filed: boolean
     id?: string
     legIds?: string[]
@@ -107,6 +107,9 @@ export interface PlanResult {
 const SOFT_TRANSFER = 'soft-transfer'
 const IGNORED = new Set(['ignoreIn', 'ignoreOut'])
 
+/** How far apart, in seconds, an old leg and its row may be when adopted by wallet instead of the exact second. */
+export const ADOPT_WINDOW = 120
+
 const STABLE_ID = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\.[a-z-]+\.[0-9a-f]{12}$/
 
 // Change-history labels of the fields the plan edits (inspect_transaction, "## Change History")
@@ -138,9 +141,12 @@ export function same(field: string, a: Value, b: Value): boolean {
 }
 
 const sameCurrency = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+/** The wallet of the leg's side: the sender of an outgoing leg, the receiver of an incoming one. */
+const sameWallet = (leg: Leg, row: Row) => (leg.side === 'outgoing' ? sameCurrency(leg.from, row.from) : sameCurrency(leg.to, row.to))
 const hasFee = (row: Row) => row.feeAmount !== '' && Number(row.feeAmount) !== 0
 const hasQuote = (row: Row, type: SummType) => type.quote !== undefined && row.quoteCurrency !== ''
 const typeOf = (row: Row) => summType(row.type) as SummType
+const txidsOf = (legs: Leg[]) => legs.flatMap((l) => [...l.description.matchAll(/[0-9a-fA-F]{64}/g)].map((m) => m[0].toLowerCase()))
 
 /** The row's base, quote and fee legs among `legs`, or why the legs do not have the row's shape. */
 function shapeOf(row: Row, legs: Leg[]): { base: Leg; quote?: Leg; fee?: Leg } | string {
@@ -249,29 +255,34 @@ export function makePlan(input: PlanInput): PlanResult {
         else legacy.push([id, legs])
     }
 
-    // Adoption of legs uploaded with an old <file>:<n> ID: the one unmatched row with the same base leg (type,
-    // currency, amount, time to the second) and, when the leg's description has txids, the same txids.
+    // Adoption of legs uploaded with an old <file>:<n> ID: the one unmatched row with the same currency and amount
+    // and, when the leg's description has txids, the same txids. Best first: the same type at the same second;
+    // the same type within ADOPT_WINDOW in the same wallet (old exports took some times from another source);
+    // another type on the same side within the window in the same wallet (an old type, edited to the row's)
     const unmatchedRows = managedRows.filter((r) => !matched.has(r.id))
     const candidates = new Map<string, Row[]>()
     const claims = new Map<string, number>()
     for (const [summId, legs] of legacy) {
-        const found = unmatchedRows.filter((row) => {
+        const txids = txidsOf(legs)
+        const fits = unmatchedRows.flatMap((row) => {
             const type = typeOf(row)
-            const base = legs.filter((l) => l.side === type.side && l.trade === type.trade)
-            if (base.length !== 1) return false
+            const base = legs.filter((l) => l.side === type.side)
+            if (base.length !== 1) return []
             const leg = base[0]
-            const txids = legs.flatMap((l) => [...l.description.matchAll(/[0-9a-fA-F]{64}/g)].map((m) => m[0].toLowerCase()))
-            return (
-                sameCurrency(leg.currency, row.baseCurrency) &&
-                sameAmount(leg.quantity, Number(row.baseAmount)) &&
-                seconds(leg.timestamp) === seconds(row.timestamp) &&
-                txids.every((t) => row.txids.includes(t))
-            )
+            if (!sameCurrency(leg.currency, row.baseCurrency) || !sameAmount(leg.quantity, Number(row.baseAmount)) || !txids.every((t) => row.txids.includes(t))) return []
+            const apart = Math.abs(seconds(leg.timestamp) - seconds(row.timestamp))
+            const sameType = leg.trade === type.trade
+            if (sameType && apart === 0) return [{ row, rank: 0 }]
+            if (apart > ADOPT_WINDOW || !sameWallet(leg, row)) return []
+            return [{ row, rank: sameType ? 1 : 2 }]
         })
+        const best = Math.min(...fits.map((f) => f.rank))
+        const found = fits.filter((f) => f.rank === best).map((f) => f.row)
         candidates.set(summId, found)
         for (const row of found) claims.set(row.id, (claims.get(row.id) ?? 0) + 1)
     }
     const heldBack = new Set<string>()
+    const unadopted: [string, Leg[]][] = []
     for (const [summId, legs] of legacy) {
         const found = candidates.get(summId) as Row[]
         if (found.length === 1 && claims.get(found[0].id) === 1) {
@@ -281,7 +292,7 @@ export function makePlan(input: PlanInput): PlanResult {
             }
             matched.set(found[0].id, legs)
         } else if (found.length === 0) {
-            deleteGroup(summId, legs, null, 'old ID: no row in the run with its txid, time, type, currency and amount')
+            unadopted.push([summId, legs])
         } else {
             for (const row of found) heldBack.add(row.id)
             plan.report.push({
@@ -291,6 +302,29 @@ export function makePlan(input: PlanInput): PlanResult {
                 detail: `old ID ${summId} fits ${found.length} rows (${found.map((r) => r.id).join(', ')})${found.length === 1 ? ', which other old IDs fit too' : ''}; these rows are not uploaded`,
             })
         }
+    }
+    // An old leg no row was adopted to, while an unmatched row has its currency and amount in the same wallet
+    // (and its txids, if the leg names any), may be that row with another time or type: uploading the row and
+    // deleting the leg could double a disposal or lose the leg's pairing, so both are reported instead
+    for (const [summId, legs] of unadopted) {
+        const txids = txidsOf(legs)
+        const lookalikes = unmatchedRows.filter(
+            (row) =>
+                !matched.has(row.id) &&
+                txids.every((t) => row.txids.includes(t)) &&
+                legs.some((l) => l.side === typeOf(row).side && sameCurrency(l.currency, row.baseCurrency) && sameAmount(l.quantity, Number(row.baseAmount)) && sameWallet(l, row)),
+        )
+        if (lookalikes.length === 0) {
+            deleteGroup(summId, legs, null, 'old ID: no row in the run with its txid, time, type, currency and amount')
+            continue
+        }
+        for (const row of lookalikes) heldBack.add(row.id)
+        plan.report.push({
+            kind: 'legacy-lookalike',
+            filed: isFiled(legs[0].timestamp),
+            legIds: legs.map((l) => l.legId),
+            detail: `old ID ${summId} was adopted to no row, but ${lookalikes.map((r) => r.id).join(', ')} ${lookalikes.length === 1 ? 'has' : 'have'} its currency and amount in the same wallet; neither deleted nor uploaded`,
+        })
     }
 
     // A row whose ID is on legs of a source not in managedSources was uploaded under another account:

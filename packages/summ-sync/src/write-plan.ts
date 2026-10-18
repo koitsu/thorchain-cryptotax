@@ -3,7 +3,8 @@
 //   <state dir>/plans/<timestamp>/plan.json        the plan (input to apply)
 //   <state dir>/plans/<timestamp>/plan.md          the same, for review
 //   <state dir>/plans/<timestamp>/upload/<file>    per CSV file, the rows Summ lacks, for the user to upload
-//   <state dir>/adopted.csv, overrides.json        with the adoptions and overrides this plan captured
+//   <state dir>/plans/<timestamp>/adopted.csv, overrides.json   the state tables with what this plan adopted and
+//                                                  captured, installed in the state dir by apply
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -112,8 +113,8 @@ export function writePlan(stateDir: string, runDir: string): string {
     writeFileSync(join(dir, 'plan.json'), JSON.stringify({ snapshot: snapshot.name, run: resolve(runDir), ...plan }, null, 2) + '\n')
     writeFileSync(join(dir, 'plan.md'), renderPlan(plan, snapshot.name, resolve(runDir)) + '\n')
     for (const file of uploadFiles(plan, files, rows)) writeFileSync(join(dir, 'upload', file.name), file.text)
-    if (plan.adopted.length) writeAdopted(stateDir, adopted)
-    if (plan.overridden.some((o) => o.kind === 'captured')) writeOverrides(stateDir, overrides)
+    writeAdopted(dir, adopted)
+    writeOverrides(dir, overrides)
 
     console.log(Object.entries(plan.counts).map(([k, v]) => `${k}: ${v}`).join(', '))
     console.log(`Plan written to ${dir}`)
