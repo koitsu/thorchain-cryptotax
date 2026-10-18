@@ -1,4 +1,4 @@
-import {type ITaxConfig, MAYA_LIQUIDITY_AUCTION} from "./ITaxConfig.ts";
+import {type ITaxConfig, MAYA_LIQUIDITY_AUCTION, MAYA_LIQUIDITY_AUCTION_OLD_NAMES} from "./ITaxConfig.ts";
 import path from "path";
 import fs from "fs-extra";
 import {load as loadToml} from "js-toml";
@@ -58,6 +58,10 @@ export class TaxConfig {
     static applyDefaults(config: Partial<ITaxConfig>, today: Date): ITaxConfig {
         if (config.timezone !== undefined) {
             checkTimeZone(config.timezone);
+        }
+        const auction = config.mayaLiquidityAuction as string | undefined;
+        if (auction !== undefined && auction in MAYA_LIQUIDITY_AUCTION_OLD_NAMES) {
+            config = {...config, mayaLiquidityAuction: MAYA_LIQUIDITY_AUCTION_OLD_NAMES[auction]};
         }
         if (config.mayaLiquidityAuction !== undefined && !MAYA_LIQUIDITY_AUCTION.includes(config.mayaLiquidityAuction)) {
             throw new Error(`Config: mayaLiquidityAuction must be ${MAYA_LIQUIDITY_AUCTION.map(value => `"${value}"`).join(' or ')} (got ${JSON.stringify(config.mayaLiquidityAuction)})`);

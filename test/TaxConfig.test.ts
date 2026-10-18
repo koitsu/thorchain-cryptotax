@@ -41,10 +41,11 @@ describe('TaxConfig', () => {
         assert.throws(() => TaxConfig.applyDefaults({incomeFrom: [''] as any}, new Date()), /incomeFrom must be a list of addresses/);
     });
 
-    test('mayaLiquidityAuction is income or deposit, with no default', () => {
+    test('mayaLiquidityAuction is income or pool-units, with no default; deposit is read as pool-units', () => {
         assert.equal(TaxConfig.applyDefaults({}, new Date()).mayaLiquidityAuction, undefined);
-        assert.equal(TaxConfig.applyDefaults({mayaLiquidityAuction: 'deposit'}, new Date()).mayaLiquidityAuction, 'deposit');
-        assert.throws(() => TaxConfig.applyDefaults({mayaLiquidityAuction: 'gift' as any}, new Date()), /mayaLiquidityAuction must be "income" or "deposit"/);
+        assert.equal(TaxConfig.applyDefaults({mayaLiquidityAuction: 'pool-units'}, new Date()).mayaLiquidityAuction, 'pool-units');
+        assert.equal(TaxConfig.applyDefaults({mayaLiquidityAuction: 'deposit' as any}, new Date()).mayaLiquidityAuction, 'pool-units');
+        assert.throws(() => TaxConfig.applyDefaults({mayaLiquidityAuction: 'gift' as any}, new Date()), /mayaLiquidityAuction must be "income" or "pool-units"/);
     });
 
     test('applyDefaults with populated config', () => {

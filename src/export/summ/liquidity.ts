@@ -174,14 +174,15 @@ export function auctionDepositRows(activity: Activity, protocol: Protocol): Summ
 }
 
 // The auction's end. What the auction supplied (a reward leg): with 'income', an income row, then an add-liquidity
-// row 1 s later; with 'deposit', nothing, so the position's cost is what was deposited. A side added at the end
+// row 1 s later; with 'pool-units', nothing, so the position's cost is what was deposited. A side added at the end
 // (deposits not found): an add-liquidity row. Then the position as a receive-LP-token row 10 s later, and the
 // price-helper row 20 s later: the deposited asset's side twice, as the pool is symmetric.
 export function auctionPositionRows(activity: Activity, protocol: Protocol, treatment?: MayaLiquidityAuction): SummRow[] {
     if (!treatment) {
         throw new Error(`Config: this run has a Maya liquidity auction position (${activity.time.toISOString().slice(0, 10)}). `
-            + 'Set mayaLiquidityAuction = "income" (what the auction supplied is income at its end) or "deposit" '
-            + '(the position\'s cost is what was deposited; any gain shows at withdrawal). See docs/specs/maya.md');
+            + 'Set mayaLiquidityAuction = "income" (what the auction supplied is income at its end) or "pool-units" '
+            + '(only the pool units are received, at the cost of what was deposited; any gain shows at withdrawal). '
+            + 'See docs/specs/maya.md');
     }
 
     const position = activity.legs.find(item => item.role === 'principal' && item.direction === 'in')!;

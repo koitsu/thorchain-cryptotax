@@ -1,7 +1,9 @@
 import type {IWallet} from "./IWallet.ts";
 import type {AssetNamesConfig, ProtocolId} from "../domain/Protocol.ts";
 
-export const MAYA_LIQUIDITY_AUCTION = ['income', 'deposit'] as const;
+export const MAYA_LIQUIDITY_AUCTION = ['income', 'pool-units'] as const;
+// Earlier name of 'pool-units', still accepted in configs
+export const MAYA_LIQUIDITY_AUCTION_OLD_NAMES: Record<string, MayaLiquidityAuction> = {deposit: 'pool-units'};
 export type MayaLiquidityAuction = typeof MAYA_LIQUIDITY_AUCTION[number];
 
 export interface ITaxConfig {
@@ -31,8 +33,8 @@ export interface ITaxConfig {
     // How assets that live on THORChain or Maya are named (docs/specs/assets.md). Default: L1 names
     assets?: AssetNamesConfig;
     // Maya's 2023 liquidity auction (docs/specs/maya.md): 'income' (what the auction supplied is income at its
-    // end) or 'deposit' (the position's cost is the RUNE deposited). No default: a run that finds an auction
-    // position stops until it is set.
+    // end) or 'pool-units' (only the pool units are received; their cost is what was deposited). 'deposit' is
+    // the earlier name of 'pool-units'. No default: a run that finds an auction position stops until it is set.
     mayaLiquidityAuction?: MayaLiquidityAuction;
     // Senders whose transfers to the config's wallets are income, e.g. a project's reward distribution wallet
     // (docs/specs/sends.md). Unset: the known distribution wallets' MAYA (KNOWN_DISTRIBUTORS); set, it replaces

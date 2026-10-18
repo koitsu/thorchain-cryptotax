@@ -65,16 +65,16 @@ describe('Maya liquidity auction', () => {
         const {runBundle} = await import('../src/pipeline/run.ts');
         const {MAYA} = await import('../src/domain/Protocol.ts');
         const bundle = toBundle(readCaseInput(path.join(import.meta.dirname, 'cases', 'maya', 'liquidity-auction-rune')));
-        return (mayaLiquidityAuction?: 'income' | 'deposit') => runBundle(bundle, MAYA, {mayaLiquidityAuction}).rows;
+        return (mayaLiquidityAuction?: 'income' | 'pool-units') => runBundle(bundle, MAYA, {mayaLiquidityAuction}).rows;
     };
 
-    test("with 'deposit', the end gives only the LP token and the price-helper; the deposits and their IDs are as with 'income'", async () => {
+    test("with 'pool-units', the end gives only the LP token and the price-helper; the deposits and their IDs are as with 'income'", async () => {
         const rows = await auction();
         const income = rows('income');
-        const deposit = rows('deposit');
+        const poolUnits = rows('pool-units');
 
-        assert.deepEqual(deposit.map(row => row.type), ['add-liquidity', 'add-liquidity', 'spam', 'receive-lp-token']);
-        assert.equal(deposit.map(row => row.id).every(id => income.some(other => other.id === id)), true);
+        assert.deepEqual(poolUnits.map(row => row.type), ['add-liquidity', 'add-liquidity', 'spam', 'receive-lp-token']);
+        assert.equal(poolUnits.map(row => row.id).every(id => income.some(other => other.id === id)), true);
     });
 
     test('without the config key, the run stops and says what to set', async () => {

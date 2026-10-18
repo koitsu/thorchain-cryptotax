@@ -130,12 +130,23 @@ by the config key `mayaLiquidityAuction`:
 - `"income"`: it is income at the auction's end (an `Income` row), then
   added to the pool (an `AddLiquidity` row 1 s later), so the position's
   cost includes it.
-- `"deposit"`: no rows for it; the position's cost is what was deposited,
-  and any gain shows when the position is withdrawn.
+- `"pool-units"`: no rows for it; the participant received only the pool
+  units, their cost is what was deposited, and any gain shows when the
+  position is withdrawn. (`"deposit"`, its earlier name, is still read as
+  `"pool-units"`.)
+
+No CACAO ever reached the participant's wallet: the auction added it straight
+to the position. Participants chose a tier (Mayanode `handler_donate.go`,
+`withdraw_current.go`): tiers 2 and 3 gave up 10% and 33% of their CACAO
+share to tier 1, and for 200, 90 or 30 days after the auction (tiers 1, 2, 3)
+a position could withdraw at most 0.5%, 1.5% or 4.5% of itself per 24 hours.
+That reads either way: only pool units were received (`"pool-units"`), or
+the bonus is a reward for accepting the limit (`"income"`).
 
 The key has no default: a run that finds an auction position stops, before
-writing anything, until it is set, as a default would make a choice worth
-an income year's timing for the user. Configs without an auction position
+writing anything, until it is set. `"pool-units"` defers the tax and makes it
+a capital gain, so a default would make that choice, worth an income year's
+timing, for the user. Configs without an auction position
 never need it. The rows both choices share (the deposits, the LP token and
 the price-helper) have the same IDs under either, so switching changes
 exactly the `Income` and `AddLiquidity` rows of what the auction supplied.
