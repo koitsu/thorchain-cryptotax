@@ -259,6 +259,33 @@ test('an old leg with a row\'s currency and amount in the same wallet, but adopt
     }
 })
 
+test('an extra row a run row exports itself is left out, and its leg in Summ adopts to the run row', () => {
+    const r = row()
+    const extra = row({ id: 'extra-file.csv:1', description: `Hand-made; ${TX1}`, extra: true })
+    const legs = legsOf(extra)
+    const { plan: p } = plan({ rows: [r, extra], legs })
+    assert.deepEqual(p.superseded, [{ extra: extra.id, run: r.id }])
+    assert.deepEqual(p.adopted, [{ legId: legs[0].legId, id: r.id }])
+    assert.deepEqual([p.upload, p.delete, p.edit, p.report], [[], [], [], []])
+
+    // Neither in Summ yet: the run row is uploaded once
+    assert.deepEqual(plan({ rows: [r, extra] }).plan.upload.map((u) => u.ids), [[r.id]])
+    // A run without the event keeps the extra row
+    assert.deepEqual(plan({ rows: [extra] }).plan.upload.map((u) => u.ids), [[extra.id]])
+    // An extra row without a txid is never left out
+    const bare = row({ id: 'extra-file.csv:2', description: 'Hand-made', txids: [], extra: true })
+    assert.deepEqual(plan({ rows: [r, bare] }).plan.superseded, [])
+})
+
+test('an extra row sharing a txid with a run row, but not the same event, is reported and neither is uploaded', () => {
+    const r = row()
+    const extra = row({ id: 'extra-file.csv:1', type: 'receive', baseAmount: '1', description: `Hand-made; ${TX1}`, extra: true })
+    const { plan: p } = plan({ rows: [r, extra] })
+    assert.deepEqual(p.superseded, [])
+    assert.deepEqual(p.report.map((e) => [e.kind, e.id]), [['extra-overlap', extra.id]])
+    assert.deepEqual(p.upload, [])
+})
+
 test('a field the user changed in Summ is captured as an override and kept', () => {
     const r = row()
     const legs = legsOf(r, { trade: 'outgoingGift' })

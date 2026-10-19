@@ -101,6 +101,7 @@ function planFile(over: Partial<PlanFile> = {}): PlanFile {
         periods: [],
         counts: {},
         adopted: [],
+        superseded: [],
         delete: [],
         edit: [],
         upload: [],

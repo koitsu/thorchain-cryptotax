@@ -131,7 +131,22 @@ the same shape and naming, e.g. rows the exporter cannot produce, uploaded
 like the run's. Their rows are part of the desired state; without them, plan
 would delete those rows as old IDs. Only a file whose period is one of the
 run's counts: another period would widen the plan's scope to a year the run
-does not hold. A row's
+does not hold.
+
+An extra row can be overtaken: an amendment made while the exporter could
+not map an event, which the run now exports itself under a stable ID. Plan
+leaves out an extra row when exactly one run row has its txids, type,
+currency, amount and second (**superseded**). Summ's legs of the extra row
+then have no row with their ID, so they adopt to the run row as legacy legs
+(Matching), and Summ keeps them and their pairing. A run that does not
+export the event keeps the extra row, and an extra row without a txid is
+never left out. An extra row that shares a txid with run rows but differs
+in type, currency, amount or time is reported (`extra-overlap`), and
+neither it nor those run rows is uploaded: it may be the same event in an
+older shape (a refund as one receive, where the run has the failed send and
+the fee kept). If it is, move its file out of `extraDirs`; an event the
+extra row holds with no shared txid, at another time or amount, needs that
+move too. A row's
 on-chain txids are the 64-character hex strings in its description (as
 `run-diff.md`); a payout to an L1 wallet names its outbound txid there too
 (`fees.md`, Txids in descriptions).
@@ -257,7 +272,8 @@ legs share their actions (a delete by action would remove those too).
 | edit | managed legs whose row changed only in editable fields | `edit_transaction` per action |
 | upload | rows with no leg in Summ after the deletes, per CSV file | files written to `plans/<timestamp>/upload/` (the file's header and those rows as the run wrote them; filed-year rows in `<file>_filed.csv`), uploaded by the user |
 | categorise | categorised rows whose Summ leg differs in type or fee | `edit_transaction` |
-| report | categorised rows with no or several matching legs; legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
+| superseded | extra rows a run row exports itself (Extra folders above) | nothing: their legs adopt to the run row |
+| report | categorised rows with no or several matching legs; extra rows that share a txid with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
 | overridden | differences an override keeps, and overrides captured in this plan | nothing |
 
 **Filed years.** An entry whose row or leg is dated before `filedBefore` is

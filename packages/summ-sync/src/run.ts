@@ -42,6 +42,8 @@ export interface Row {
     description: string
     /** Lower case, without 0x. */
     txids: string[]
+    /** From a file in an extra folder (config.extraDirs), not the run's own. */
+    extra?: true
 }
 
 const COLUMNS: Record<string, keyof Row> = {
@@ -128,8 +130,9 @@ export function readRun(runDir: string, extraDirs: string[] = []): { files: RunF
     const files: RunFile[] = []
     const rows: Row[] = []
     const seen = new Map<string, string>()
-    const add = (path: string, name: string) => {
+    const add = (path: string, name: string, extra = false) => {
         const parsed = parseWalletFile(name, readFileSync(path, 'utf8'))
+        if (extra) for (const row of parsed.rows) row.extra = true
         files.push(parsed.file)
         for (const row of parsed.rows) {
             const other = seen.get(row.id)
@@ -146,7 +149,7 @@ export function readRun(runDir: string, extraDirs: string[] = []): { files: RunF
         for (const path of names) {
             const name = basename(path)
             const m = name.match(WALLET_FILE) as RegExpMatchArray
-            if (periods.has(`${m[1]}_${m[2]}`)) add(join(extra, path), name)
+            if (periods.has(`${m[1]}_${m[2]}`)) add(join(extra, path), name, true)
         }
     }
     return { files, rows }

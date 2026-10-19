@@ -53,6 +53,11 @@ export function renderPlan(plan: Plan, snapshot: string, run: string): string {
         ...Object.entries(plan.counts).map(([k, v]) => `- ${k}: ${v}`),
         ...plan.notes.map((n) => `- Note: ${n}`),
         '',
+        ...section(
+            'Superseded extra rows (a run row is the same event; not uploaded, their legs adopt to it)',
+            plan.superseded.map((e) => ({ ...e, filed: false })),
+            (es) => ['| Extra row | Run row |', '| --- | --- |', ...es.map((e) => `| ${cell(e.extra)} | ${cell(e.run)} |`)],
+        ),
         ...section('Delete (only with --approve-deletes)', plan.delete, (es) => [
             '| Row | ID in Summ | Legs | Other legs in the actions | Reason |',
             '| --- | --- | --- | --- | --- |',
