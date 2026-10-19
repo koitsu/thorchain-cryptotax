@@ -82,7 +82,7 @@ in this repo. It is meant to be kept in git (prune relies on it).
 
     actions/<action id>.json    one action's JSON and change history, written once
     snapshots/<time>.json       one pull: counts, and one entry per listed action
-    plans/<time>/               plan.json, plan.md, upload/, adopted.csv, overrides.json
+    plans/<time>/               plan.json, plan.md, upload/
     adopted.csv, overrides.json, apply-log.jsonl, summ-sync.json
 
 **Action store.** Summ's action ids are database ids made when the action
@@ -185,16 +185,17 @@ often do not), the same txids. It takes the best of three fits, in order:
    an old type (a plain withdrawal that is now a bridge trade). The plan
    then edits the type, so Summ keeps the leg and its pairing.
 
-Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
+Each rank is settled for all legacy legs before the next, so a looser fit
+of one leg never blocks or takes a row another leg fits exactly. Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
 ID); later plans match the leg through that table, so a later change of
 the row is an edit, not a re-upload. An in-scope legacy leg that fits no
 row is planned for deletion like any other, unless an unmatched row has its
-currency and amount in the same wallet at any time (and its txids, if the
+currency and amount in the same wallet within a day (and its txids, if the
 leg names any): that leg may be the row under another time or type, and
 deleting one while uploading the other could double a disposal or lose
 Summ's pairing, so both are reported (`legacy-lookalike`) and neither is
 planned. A legacy leg that fits several rows, or a row that several legacy
-legs fit, is reported, and those rows are not uploaded.
+legs fit, is reported, and no row the leg fits at any rank is uploaded.
 
 **Categorised rows** match a leg of Summ's own imports whose tx hash is a
 txid of the row, with the same currency, and an amount equal to the row's
@@ -242,11 +243,11 @@ row's amount.
 ## Plan
 
 `plan` writes `plans/<timestamp>/plan.json` (machine-readable, the input to
-`apply`), `plan.md` (for review), `upload/`, and `adopted.csv` and
-`overrides.json` as they would be with what it adopted and captured. It
-changes nothing in Summ or in the state dir: `apply` installs the plan's
-two tables in the state dir (not on a dry run), so a plan that is never
-applied changes nothing later plans assume. Each change names the row `ID`, the leg `_id`, the field, Summ's
+`apply`), `plan.md` (for review) and `upload/`. It changes nothing in
+Summ or in the state dir: `apply` adds the legs the plan adopted and the
+overrides it captured to `adopted.csv` and `overrides.json` as they are
+then (not on a dry run), so a plan that is never applied changes nothing
+later plans assume, and an override edited by hand after the plan is kept. Each change names the row `ID`, the leg `_id`, the field, Summ's
 value and the desired value; each delete names the legs and how many other
 legs share their actions (a delete by action would remove those too).
 

@@ -8,7 +8,7 @@ import { ADOPT_WINDOW, makePlan, type PlanInput } from '../src/plan.ts'
 import type { Row, RunFile } from '../src/run.ts'
 import type { Leg } from '../src/snapshot.ts'
 import type { Override } from '../src/state.ts'
-import { installTables } from '../src/state.ts'
+import { mergeTables } from '../src/state.ts'
 import { renderPlan, uploadFiles, writePlan } from '../src/write-plan.ts'
 
 // Every value below is made up.
@@ -245,15 +245,18 @@ test('an old leg of another type in the same wallet is adopted and its type edit
 
 test('an old leg with a row\'s currency and amount in the same wallet, but adopted to none, is reported, not deleted', () => {
     const r = row({ description: 'no txid' })
-    const legs = legsOf(r, { id: 'old-file.csv:7', description: '', timestamp: '2024-02-28T10:00:00.000Z' })
+    const legs = legsOf(r, { id: 'old-file.csv:7', description: '', timestamp: '2024-03-01T07:00:00.000Z' })
     const { plan: p } = plan({ rows: [r], legs })
     assert.deepEqual(p.report.map((e) => [e.kind, e.legIds]), [['legacy-lookalike', [legs[0].legId]]])
     assert.match(p.report[0].detail, new RegExp(r.id))
     assert.deepEqual([p.adopted, p.delete, p.upload], [[], [], []])
 
-    // One that names another txid is another tx: deleted, and the row uploaded
-    const other = plan({ rows: [r], legs: legsOf(r, { id: 'old-file.csv:7', description: `Old; ${TX2}`, timestamp: '2024-02-28T10:00:00.000Z' }) }).plan
-    assert.deepEqual([other.report, other.delete.length, other.upload[0].ids], [[], 1, [r.id]])
+    // One that names another txid is another tx, and one more than a day apart another event: deleted, and the
+    // row uploaded
+    for (const over of [{ description: `Old; ${TX2}`, timestamp: '2024-03-01T07:00:00.000Z' }, { description: '', timestamp: '2024-02-28T10:00:00.000Z' }]) {
+        const other = plan({ rows: [r], legs: legsOf(r, { id: 'old-file.csv:7', ...over }) }).plan
+        assert.deepEqual([other.report, other.delete.length, other.upload[0].ids], [[], 1, [r.id]])
+    }
 })
 
 test('a field the user changed in Summ is captured as an override and kept', () => {
@@ -373,7 +376,24 @@ test('plan.md lists each section and keeps filed entries apart', () => {
     for (const heading of ['## Delete', '## Edit', '## Upload (', '## Categorise', '## Report', '## Overridden', '### Amendments']) assert.ok(md.includes(heading), heading)
 })
 
-test('plan writes the tables it would change to its own folder; installTables puts them in the state dir', () => {
+test('an exact fit is adopted though a looser fit of another old leg claims the same row, and no row is uploaded beside an ambiguous leg', () => {
+    const r = row({ description: 'no txid' })
+    const r2 = row({ id: '2024-03-01T10:00:30.000Z.out.bbbbbbbbbbbb', timestamp: '2024-03-01T10:00:30.000Z', type: 'sell', description: 'no txid' })
+    // a: r at the same second; b: r2 under its old type 17 s off, and r (same type) within the window
+    const a = legsOf(r, { id: 'old-file.csv:7', description: '' })
+    const b = legsOf(r, { id: 'old-file.csv:8', description: '', timestamp: '2024-03-01T10:00:47.000Z' }, 'action2')
+    const { plan: p } = plan({ rows: [r, r2], legs: [...a, ...b] })
+    assert.deepEqual(p.adopted.map((x) => [x.legId, x.id]), [[a[0].legId, r.id], [b[0].legId, r2.id]])
+    assert.deepEqual([p.upload, p.delete, p.report], [[], [], []])
+
+    // Two old legs both 17 s off r: ambiguous, and r2, which they fit less well, is not uploaded either
+    const c = legsOf(r, { id: 'old-file.csv:9', description: '', timestamp: '2024-03-01T09:59:43.000Z' }, 'action3')
+    const amb = plan({ rows: [r, r2], legs: [...b, ...c] }).plan
+    assert.deepEqual(amb.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption'])
+    assert.deepEqual([amb.upload, amb.adopted], [[], []])
+})
+
+test('plan writes nothing to the state dir; mergeTables adds its adoptions and captures and keeps hand edits', () => {
     const state = mkdtempSync(join(tmpdir(), 'summ-sync-state-'))
     const runDir = mkdtempSync(join(tmpdir(), 'summ-sync-run-'))
     writeFileSync(join(state, 'summ-sync.json'), JSON.stringify({ managedSources: ['csv-source'] }))
@@ -391,8 +411,14 @@ test('plan writes the tables it would change to its own folder; installTables pu
 
     const dir = writePlan(state, runDir)
     assert.ok(!existsSync(join(state, 'adopted.csv')) && !existsSync(join(state, 'overrides.json')))
-    assert.equal(readFileSync(join(dir, 'adopted.csv'), 'utf8'), `Leg,ID\nleg-old,${r.id}\n`)
-    assert.deepEqual(installTables(dir, state), ['adopted.csv', 'overrides.json'])
+    const saved = JSON.parse(readFileSync(join(dir, 'plan.json'), 'utf8'))
+    assert.deepEqual(saved.adopted, [{ legId: 'leg-old', id: r.id }])
+
+    // A reason filled in by hand after the plan is kept when the same override is captured again
+    const own: Override = { id: r.id, leg: 'base', field: 'trade', run: 'withdrawal', summ: 'outgoingGift', seenAt: '', reason: 'mine' }
+    writeFileSync(join(state, 'overrides.json'), JSON.stringify([own]))
+    assert.deepEqual(mergeTables(state, saved.adopted, [{ ...own, reason: '' }]), ['adopted.csv'])
     assert.equal(readFileSync(join(state, 'adopted.csv'), 'utf8'), `Leg,ID\nleg-old,${r.id}\n`)
-    assert.equal(readFileSync(join(state, 'overrides.json'), 'utf8'), '[]\n')
+    assert.equal(JSON.parse(readFileSync(join(state, 'overrides.json'), 'utf8'))[0].reason, 'mine')
+    assert.deepEqual(mergeTables(state, saved.adopted, []), [])
 })

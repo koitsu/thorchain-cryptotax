@@ -2,12 +2,12 @@
 //
 //   adopted.csv       Leg,ID: a leg uploaded with an old <file>:<n> ID, and the row it was adopted to
 //   overrides.json    values the user set in Summ, kept over the run's (spec: Drift and overrides)
-//
-// plan writes both tables as they would be after it to the plan's folder; apply installs them in the state dir,
-// so a plan that is never applied changes nothing later plans assume.
 //   apply-log.jsonl   one line per call apply made; an edit's lines carry {legId, field, value, ...}
+//
+// plan only lists what it adopted and captured; apply adds those to the first two tables (mergeTables), so a
+// plan that is never applied changes nothing later plans assume.
 
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 export type Value = string | number | null
@@ -72,9 +72,24 @@ export function readApplyLog(stateDir: string): AppliedEdit[] {
         .filter((e) => typeof e.legId === 'string' && typeof e.field === 'string')
 }
 
-/** Copies a plan's adopted.csv and overrides.json, if it has them, into the state dir. */
-export function installTables(planDir: string, stateDir: string): string[] {
-    const names = ['adopted.csv', 'overrides.json'].filter((name) => existsSync(join(planDir, name)))
-    for (const name of names) copyFileSync(join(planDir, name), join(stateDir, name))
-    return names
+/**
+ * Adds a plan's adopted legs and captured overrides to the state dir's tables as they are now, so an edit made
+ * by hand since the plan (an override deleted, a reason filled in) is kept. Returns the tables it changed.
+ */
+export function mergeTables(stateDir: string, adoptedNow: { legId: string; id: string }[], captured: Override[]): string[] {
+    const changed: string[] = []
+    const adopted = readAdopted(stateDir)
+    const newLegs = adoptedNow.filter((a) => adopted.get(a.legId) !== a.id)
+    if (newLegs.length) {
+        for (const a of newLegs) adopted.set(a.legId, a.id)
+        writeAdopted(stateDir, adopted)
+        changed.push('adopted.csv')
+    }
+    const overrides = readOverrides(stateDir)
+    const newOverrides = captured.filter((c) => !overrides.some((o) => o.id === c.id && o.leg === c.leg && o.field === c.field))
+    if (newOverrides.length) {
+        writeOverrides(stateDir, [...overrides, ...newOverrides])
+        changed.push('overrides.json')
+    }
+    return changed
 }

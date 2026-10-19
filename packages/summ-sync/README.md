@@ -55,15 +55,15 @@ Filed years go in a separate apply with `--approve-filed`.
 - `plan` compares the run's period wallet files with the latest snapshot
   and writes `<state dir>/plans/<timestamp>/`: `plan.json`, `plan.md` and
   `upload/` (the rows Summ lacks, per file). It calls nothing and changes
-  nothing in the state dir. Its folder also holds `adopted.csv` (legs it
-  adopted: old `<file>:<n>` IDs) and `overrides.json` (values you changed in
-  Summ, which win over the run until you delete them) as they would be
-  after it; `apply` installs both in the state dir.
+  nothing in the state dir. `plan.json` lists the legs it adopted (old
+  `<file>:<n>` IDs) and the values you changed in Summ that it captured;
+  `apply` adds them to `adopted.csv` and `overrides.json`, where overrides
+  win over the run until you delete them.
 - `apply` carries out a plan made from the latest snapshot: deletes (only
   with `--approve-deletes`), then edits and categorisation, each checked
   against Summ's current value first (categorisation waits while the plan
-  has uploads); then it installs the plan's `adopted.csv` and
-  `overrides.json` and lists the upload files. It
+  has uploads); then it adds the plan's adoptions and captured overrides
+  to `adopted.csv` and `overrides.json` and lists the upload files. It
   applies the current years' entries, or with `--approve-filed` only the
   filed years'. `--dry-run` does the look-ups and checks with read tools
   only and writes nothing. Every write goes to `<state dir>/apply-log.jsonl`
