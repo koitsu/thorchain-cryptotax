@@ -85,10 +85,17 @@ export function mergeTables(stateDir: string, adoptedNow: { legId: string; id: s
         writeAdopted(stateDir, adopted)
         changed.push('adopted.csv')
     }
-    const overrides = readOverrides(stateDir)
-    const newOverrides = captured.filter((c) => !overrides.some((o) => o.id === c.id && o.leg === c.leg && o.field === c.field))
-    if (newOverrides.length) {
-        writeOverrides(stateDir, [...overrides, ...newOverrides])
+    // A capture replaces the override of its field when the user has set another value since, keeping its reason
+    let overrides = readOverrides(stateDir)
+    let overridesChanged = false
+    for (const c of captured) {
+        const old = overrides.find((o) => o.id === c.id && o.leg === c.leg && o.field === c.field)
+        if (old && String(old.summ) === String(c.summ)) continue
+        overrides = [...overrides.filter((o) => o !== old), old ? { ...c, reason: old.reason } : c]
+        overridesChanged = true
+    }
+    if (overridesChanged) {
+        writeOverrides(stateDir, overrides)
         changed.push('overrides.json')
     }
     return changed

@@ -391,6 +391,14 @@ test('an exact fit is adopted though a looser fit of another old leg claims the 
     const amb = plan({ rows: [r, r2], legs: [...b, ...c] }).plan
     assert.deepEqual(amb.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption'])
     assert.deepEqual([amb.upload, amb.adopted], [[], []])
+
+    // Two old legs tied at r's exact second hold r back; a third, 50 s off, does not take it
+    const x1 = legsOf(r, { id: 'old-file.csv:10', description: '' }, 'action4')
+    const x2 = legsOf(r, { id: 'old-file.csv:11', description: '' }, 'action5')
+    const z = legsOf(r, { id: 'old-file.csv:12', description: '', timestamp: '2024-03-01T10:00:50.000Z' }, 'action6')
+    const tie = plan({ rows: [r], legs: [...x1, ...x2, ...z] }).plan
+    assert.deepEqual(tie.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption', 'ambiguous-adoption'])
+    assert.deepEqual([tie.upload, tie.adopted, tie.delete], [[], [], []])
 })
 
 test('plan writes nothing to the state dir; mergeTables adds its adoptions and captures and keeps hand edits', () => {
@@ -421,4 +429,8 @@ test('plan writes nothing to the state dir; mergeTables adds its adoptions and c
     assert.equal(readFileSync(join(state, 'adopted.csv'), 'utf8'), `Leg,ID\nleg-old,${r.id}\n`)
     assert.equal(JSON.parse(readFileSync(join(state, 'overrides.json'), 'utf8'))[0].reason, 'mine')
     assert.deepEqual(mergeTables(state, saved.adopted, []), [])
+
+    // A value the user set again since replaces the override, still with their reason
+    assert.deepEqual(mergeTables(state, [], [{ ...own, summ: 'lost', reason: '' }]), ['overrides.json'])
+    assert.deepEqual(JSON.parse(readFileSync(join(state, 'overrides.json'), 'utf8')).map((o: Override) => [o.summ, o.reason]), [['lost', 'mine']])
 })

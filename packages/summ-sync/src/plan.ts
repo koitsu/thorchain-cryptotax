@@ -285,13 +285,16 @@ export function makePlan(input: PlanInput): PlanResult {
     const heldBack = new Set<string>()
     let pending = legacy
     for (const rank of [0, 1, 2]) {
-        const found = new Map(pending.map(([summId]) => [summId, (fits.get(summId) ?? []).filter((f) => f.rank === rank && !matched.has(f.row.id)).map((f) => f.row)]))
+        const atRank = (summId: string) => (fits.get(summId) ?? []).filter((f) => f.rank === rank && !matched.has(f.row.id)).map((f) => f.row)
+        // A row held back for an ambiguous leg is never taken by a looser fit
+        const found = new Map(pending.map(([summId]) => [summId, atRank(summId).filter((r) => !heldBack.has(r.id))]))
         const claims = new Map<string, number>()
         for (const rows of found.values()) for (const row of rows) claims.set(row.id, (claims.get(row.id) ?? 0) + 1)
         const settled = new Set<string>()
         for (const [summId, legs] of pending) {
             const rows = found.get(summId) as Row[]
-            if (rows.length === 0) continue
+            const blocked = atRank(summId).filter((r) => heldBack.has(r.id))
+            if (rows.length === 0 && blocked.length === 0) continue
             settled.add(summId)
             if (rows.length === 1 && claims.get(rows[0].id) === 1) {
                 for (const leg of legs) {
@@ -304,11 +307,12 @@ export function makePlan(input: PlanInput): PlanResult {
             // Every row the leg fits at any rank is held back, so none of them is uploaded beside it
             const all = [...new Set((fits.get(summId) ?? []).map((f) => f.row).filter((r) => !matched.has(r.id)))]
             for (const row of all) heldBack.add(row.id)
+            const fitted = [...rows, ...blocked]
             plan.report.push({
                 kind: 'ambiguous-adoption',
                 filed: isFiled(legs[0].timestamp),
                 legIds: legs.map((l) => l.legId),
-                detail: `old ID ${summId} fits ${rows.length} rows (${rows.map((r) => r.id).join(', ')})${rows.length === 1 ? ', which other old IDs fit too' : ''}; these rows are not uploaded${all.length > rows.length ? ` (nor ${all.filter((r) => !rows.includes(r)).map((r) => r.id).join(', ')}, which it fits less well)` : ''}`,
+                detail: `old ID ${summId} fits ${fitted.length} rows (${fitted.map((r) => r.id).join(', ')})${rows.length <= 1 ? ', which other old IDs fit too' : ''}; these rows are not uploaded${all.length > fitted.length ? ` (nor ${all.filter((r) => !fitted.includes(r)).map((r) => r.id).join(', ')}, which it fits less well)` : ''}`,
             })
         }
         pending = pending.filter(([summId]) => !settled.has(summId))
