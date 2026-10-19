@@ -172,14 +172,30 @@ types, e.g. `bridge-trade-out`), and a leg in `fees` when the row has a fee,
 all carrying the row's `ID`.
 
 Rows uploaded before stable IDs carry `<file>:<n>`: plan adopts each such
-leg to the one unmatched row with the same base leg (type, currency, amount,
-timestamp to the second) and, when the leg's description holds txids (old
-descriptions often do not), the same txids. It records each adopted leg in
-`adopted.csv` in the state dir (`Leg,ID`: leg `_id`, row ID); later plans
-match the leg through that table, so a later change of the row is an edit,
-not a re-upload. An in-scope legacy leg that fits no row is planned for
-deletion like any other. One that fits several rows, or a row that several
-legacy legs fit, is reported, and those rows are not uploaded.
+leg to the one unmatched row with a leg on the same side, the same currency
+and amount and, when the leg's description holds txids (old descriptions
+often do not), the same txids. It takes the best of three fits, in order:
+
+1. the same type at the same second;
+2. the same type within `ADOPT_WINDOW` (120 s) and the same wallet (the
+   sender of an outgoing leg, the receiver of an incoming one): old exports
+   took some times from Viewblock's block time, the run from Midgard's
+   action time;
+3. another type on the same side, within the window and in the same wallet:
+   an old type (a plain withdrawal that is now a bridge trade). The plan
+   then edits the type, so Summ keeps the leg and its pairing.
+
+Each rank is settled for all legacy legs before the next, so a looser fit
+of one leg never blocks or takes a row another leg fits exactly. Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
+ID); later plans match the leg through that table, so a later change of
+the row is an edit, not a re-upload. An in-scope legacy leg that fits no
+row is planned for deletion like any other, unless an unmatched row has its
+currency and amount in the same wallet within a day (and its txids, if the
+leg names any): that leg may be the row under another time or type, and
+deleting one while uploading the other could double a disposal or lose
+Summ's pairing, so both are reported (`legacy-lookalike`) and neither is
+planned. A legacy leg that fits several rows, or a row that several legacy
+legs fit, is reported, and no row the leg fits at any rank is uploaded.
 
 **Categorised rows** match a leg of Summ's own imports whose tx hash is a
 txid of the row, with the same currency, and an amount equal to the row's
@@ -227,9 +243,11 @@ row's amount.
 ## Plan
 
 `plan` writes `plans/<timestamp>/plan.json` (machine-readable, the input to
-`apply`), `plan.md` (for review) and `upload/`, and adds what it adopted
-and captured to `adopted.csv` and `overrides.json`. It changes nothing in
-Summ. Each change names the row `ID`, the leg `_id`, the field, Summ's
+`apply`), `plan.md` (for review) and `upload/`. It changes nothing in
+Summ or in the state dir: `apply` adds the legs the plan adopted and the
+overrides it captured to `adopted.csv` and `overrides.json` as they are
+then (not on a dry run), so a plan that is never applied changes nothing
+later plans assume, and an override edited by hand after the plan is kept. Each change names the row `ID`, the leg `_id`, the field, Summ's
 value and the desired value; each delete names the legs and how many other
 legs share their actions (a delete by action would remove those too).
 
@@ -239,7 +257,7 @@ legs share their actions (a delete by action would remove those too).
 | edit | managed legs whose row changed only in editable fields | `edit_transaction` per action |
 | upload | rows with no leg in Summ after the deletes, per CSV file | files written to `plans/<timestamp>/upload/` (the file's header and those rows as the run wrote them; filed-year rows in `<file>_filed.csv`), uploaded by the user |
 | categorise | categorised rows whose Summ leg differs in type or fee | `edit_transaction` |
-| report | categorised rows with no or several matching legs; legacy legs that fit several rows; managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
+| report | categorised rows with no or several matching legs; legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
 | overridden | differences an override keeps, and overrides captured in this plan | nothing |
 
 **Filed years.** An entry whose row or leg is dated before `filedBefore` is

@@ -11,6 +11,8 @@
 //      side of the swap only when that side is already there
 //   4. list the upload files for the user
 //   5. every call, its result and undo handle go to <state dir>/apply-log.jsonl as they happen
+//   6. the legs the plan adopted and the overrides it captured are added to adopted.csv and overrides.json
+//      (not on a dry run)
 //
 // Filed-year entries are applied only with --approve-filed, and then only they: a separate apply.
 
@@ -19,6 +21,7 @@ import { basename, dirname, join } from 'node:path'
 import { type ActionDetail, parseActions, parseDetail } from './parse.ts'
 import { type DeleteEntry, type EditEntry, type Plan, same } from './plan.ts'
 import { type Leg, latestSnapshot, legsOf, readSnapshotFile, storeAction } from './snapshot.ts'
+import { mergeTables } from './state.ts'
 
 export const WRITE_TOOLS = ['edit_transaction', 'bulk_edit_transactions']
 
@@ -235,6 +238,12 @@ export async function runApply(client: ToolCaller & { connect(): Promise<void> }
         // Stop at the first failure; a failed write may still have changed Summ, so it counts as a write
         if (!opts.dryRun) log({ call: 'error', error: e instanceof Error ? e.message : String(e) })
         throw e
+    }
+
+    if (!opts.dryRun) {
+        const captured = plan.overridden.filter((o) => o.kind === 'captured').map((o) => o.override)
+        const changed = mergeTables(stateDir, plan.adopted, captured)
+        if (changed.length) console.log(`Added the plan's adoptions and captured overrides to ${changed.join(' and ')}`)
     }
 
     const uploadDir = join(dir, 'upload')

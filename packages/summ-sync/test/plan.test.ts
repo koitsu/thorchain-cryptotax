@@ -1,11 +1,15 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { DEFAULTS, type Config } from '../src/config.ts'
-import { makePlan, type PlanInput } from '../src/plan.ts'
+import { ADOPT_WINDOW, makePlan, type PlanInput } from '../src/plan.ts'
 import type { Row, RunFile } from '../src/run.ts'
 import type { Leg } from '../src/snapshot.ts'
 import type { Override } from '../src/state.ts'
-import { renderPlan, uploadFiles } from '../src/write-plan.ts'
+import { mergeTables } from '../src/state.ts'
+import { renderPlan, uploadFiles, writePlan } from '../src/write-plan.ts'
 
 // Every value below is made up.
 const PERIOD = { from: '2023-07-01', to: '2024-06-30' }
@@ -210,6 +214,51 @@ test('an old leg that fits two rows is reported, and neither row is uploaded', (
     assert.deepEqual(p.delete, [])
 })
 
+test('an old leg a little apart from its row is adopted when it is in the same wallet, and its time edited', () => {
+    const r = row({ description: 'no txid' })
+    const legs = legsOf(r, { id: 'old-file.csv:7', description: '', timestamp: '2024-03-01T09:59:43.000Z', to: 'vault-address' })
+    const { plan: p } = plan({ rows: [r], legs })
+    assert.deepEqual(p.adopted, [{ legId: legs[0].legId, id: r.id }])
+    assert.deepEqual(p.edit[0].changes.map((c) => c.field), ['timestamp', 'to'])
+    assert.deepEqual([p.upload, p.delete], [[], []])
+
+    // In another wallet, or further apart than ADOPT_WINDOW, it is not
+    for (const over of [{ from: 'wallet-z', timestamp: '2024-03-01T09:59:43.000Z' }, { timestamp: new Date(Date.parse(r.timestamp) - (ADOPT_WINDOW + 1) * 1000).toISOString() }]) {
+        assert.deepEqual(plan({ rows: [r], legs: legsOf(r, { id: 'old-file.csv:7', description: '', ...over }) }).plan.adopted, [])
+    }
+})
+
+test('an old leg of another type in the same wallet is adopted and its type edited, unless a row of its own type fits', () => {
+    const r = row({ description: 'no txid' })
+    const legs = legsOf(r, { id: 'old-file.csv:7', description: '', trade: 'outgoingGift', timestamp: '2024-03-01T10:00:10.000Z' })
+    const { plan: p } = plan({ rows: [r], legs })
+    assert.deepEqual(p.adopted.map((a) => a.id), [r.id])
+    assert.deepEqual(p.edit[0].changes.map((c) => [c.field, c.desired]), [['trade', 'withdrawal'], ['timestamp', r.timestamp]])
+
+    // A row of the leg's own type further apart is preferred to one of another type nearer
+    const near = row({ id: '2024-03-01T10:00:10.000Z.out.bbbbbbbbbbbb', timestamp: '2024-03-01T10:00:10.000Z', type: 'sell', description: 'no txid' })
+    const own = row({ id: '2024-03-01T10:01:00.000Z.out.cccccccccccc', timestamp: '2024-03-01T10:01:00.000Z', description: 'no txid' })
+    const both = plan({ rows: [near, own], legs: legsOf(r, { id: 'old-file.csv:7', description: '' }) })
+    assert.deepEqual(both.plan.adopted.map((a) => a.id), [own.id])
+    assert.deepEqual(both.plan.upload[0].ids, [near.id])
+})
+
+test('an old leg with a row\'s currency and amount in the same wallet, but adopted to none, is reported, not deleted', () => {
+    const r = row({ description: 'no txid' })
+    const legs = legsOf(r, { id: 'old-file.csv:7', description: '', timestamp: '2024-03-01T07:00:00.000Z' })
+    const { plan: p } = plan({ rows: [r], legs })
+    assert.deepEqual(p.report.map((e) => [e.kind, e.legIds]), [['legacy-lookalike', [legs[0].legId]]])
+    assert.match(p.report[0].detail, new RegExp(r.id))
+    assert.deepEqual([p.adopted, p.delete, p.upload], [[], [], []])
+
+    // One that names another txid is another tx, and one more than a day apart another event: deleted, and the
+    // row uploaded
+    for (const over of [{ description: `Old; ${TX2}`, timestamp: '2024-03-01T07:00:00.000Z' }, { description: '', timestamp: '2024-02-28T10:00:00.000Z' }]) {
+        const other = plan({ rows: [r], legs: legsOf(r, { id: 'old-file.csv:7', ...over }) }).plan
+        assert.deepEqual([other.report, other.delete.length, other.upload[0].ids], [[], 1, [r.id]])
+    }
+})
+
 test('a field the user changed in Summ is captured as an override and kept', () => {
     const r = row()
     const legs = legsOf(r, { trade: 'outgoingGift' })
@@ -325,4 +374,63 @@ test('plan.md lists each section and keeps filed entries apart', () => {
     const { plan: p } = plan({ rows: [row(), row({ id: '2023-08-01T00:00:00.000Z.out.bbbbbbbbbbbb', timestamp: '2023-08-01T00:00:00.000Z' })], config: { ...CONFIG, filedBefore: '2024-01-01' } })
     const md = renderPlan(p, 'snap', 'run')
     for (const heading of ['## Delete', '## Edit', '## Upload (', '## Categorise', '## Report', '## Overridden', '### Amendments']) assert.ok(md.includes(heading), heading)
+})
+
+test('an exact fit is adopted though a looser fit of another old leg claims the same row, and no row is uploaded beside an ambiguous leg', () => {
+    const r = row({ description: 'no txid' })
+    const r2 = row({ id: '2024-03-01T10:00:30.000Z.out.bbbbbbbbbbbb', timestamp: '2024-03-01T10:00:30.000Z', type: 'sell', description: 'no txid' })
+    // a: r at the same second; b: r2 under its old type 17 s off, and r (same type) within the window
+    const a = legsOf(r, { id: 'old-file.csv:7', description: '' })
+    const b = legsOf(r, { id: 'old-file.csv:8', description: '', timestamp: '2024-03-01T10:00:47.000Z' }, 'action2')
+    const { plan: p } = plan({ rows: [r, r2], legs: [...a, ...b] })
+    assert.deepEqual(p.adopted.map((x) => [x.legId, x.id]), [[a[0].legId, r.id], [b[0].legId, r2.id]])
+    assert.deepEqual([p.upload, p.delete, p.report], [[], [], []])
+
+    // Two old legs both 17 s off r: ambiguous, and r2, which they fit less well, is not uploaded either
+    const c = legsOf(r, { id: 'old-file.csv:9', description: '', timestamp: '2024-03-01T09:59:43.000Z' }, 'action3')
+    const amb = plan({ rows: [r, r2], legs: [...b, ...c] }).plan
+    assert.deepEqual(amb.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption'])
+    assert.deepEqual([amb.upload, amb.adopted], [[], []])
+
+    // Two old legs tied at r's exact second hold r back; a third, 50 s off, does not take it
+    const x1 = legsOf(r, { id: 'old-file.csv:10', description: '' }, 'action4')
+    const x2 = legsOf(r, { id: 'old-file.csv:11', description: '' }, 'action5')
+    const z = legsOf(r, { id: 'old-file.csv:12', description: '', timestamp: '2024-03-01T10:00:50.000Z' }, 'action6')
+    const tie = plan({ rows: [r], legs: [...x1, ...x2, ...z] }).plan
+    assert.deepEqual(tie.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption', 'ambiguous-adoption'])
+    assert.deepEqual([tie.upload, tie.adopted, tie.delete], [[], [], []])
+})
+
+test('plan writes nothing to the state dir; mergeTables adds its adoptions and captures and keeps hand edits', () => {
+    const state = mkdtempSync(join(tmpdir(), 'summ-sync-state-'))
+    const runDir = mkdtempSync(join(tmpdir(), 'summ-sync-run-'))
+    writeFileSync(join(state, 'summ-sync.json'), JSON.stringify({ managedSources: ['csv-source'] }))
+    const header =
+        'Timestamp (UTC),Type,Base Currency,Base Amount,Quote Currency (Optional),Quote Amount (Optional),Fee Currency (Optional),Fee Amount (Optional),From (Optional),To (Optional),Blockchain (Optional),ID (Optional),Description (Optional),Reference Price Per Unit (Optional),Reference Price Currency (Optional)'
+    const r = row()
+    mkdirSync(join(runDir, 'csv'))
+    writeFileSync(join(runDir, 'csv', THOR_FILE), `${header}\n${r.timestamp},send,RUNE,1.5,,,,,wallet-a,wallet-b,THORChain,${r.id},${r.description},,\n`)
+    // Summ holds the row under an old ID, so the plan adopts its leg
+    const leg = { _id: 'leg-old', id: 'old-file.csv:7', trade: 'withdrawal', currency: 'RUNE', quantity: '1.5', timestamp: r.timestamp, from: 'wallet-a', to: 'wallet-b', description: '', source: 'csv-source' }
+    mkdirSync(join(state, 'actions'))
+    writeFileSync(join(state, 'actions', 'action1.json'), JSON.stringify({ action: { _id: 'action1', outgoing: [leg] }, history: [] }))
+    mkdirSync(join(state, 'snapshots'))
+    writeFileSync(join(state, 'snapshots', '2024-08-01T00-00-00.json'), JSON.stringify({ takenAt: '2024-08-01T00:00:00.000Z', total: 1, actions: [{ id: 'action1', txHash: 'old-file.csv:7', category: '', tags: [], detail: true }] }))
+
+    const dir = writePlan(state, runDir)
+    assert.ok(!existsSync(join(state, 'adopted.csv')) && !existsSync(join(state, 'overrides.json')))
+    const saved = JSON.parse(readFileSync(join(dir, 'plan.json'), 'utf8'))
+    assert.deepEqual(saved.adopted, [{ legId: 'leg-old', id: r.id }])
+
+    // A reason filled in by hand after the plan is kept when the same override is captured again
+    const own: Override = { id: r.id, leg: 'base', field: 'trade', run: 'withdrawal', summ: 'outgoingGift', seenAt: '', reason: 'mine' }
+    writeFileSync(join(state, 'overrides.json'), JSON.stringify([own]))
+    assert.deepEqual(mergeTables(state, saved.adopted, [{ ...own, reason: '' }]), ['adopted.csv'])
+    assert.equal(readFileSync(join(state, 'adopted.csv'), 'utf8'), `Leg,ID\nleg-old,${r.id}\n`)
+    assert.equal(JSON.parse(readFileSync(join(state, 'overrides.json'), 'utf8'))[0].reason, 'mine')
+    assert.deepEqual(mergeTables(state, saved.adopted, []), [])
+
+    // A value the user set again since replaces the override, still with their reason
+    assert.deepEqual(mergeTables(state, [], [{ ...own, summ: 'lost', reason: '' }]), ['overrides.json'])
+    assert.deepEqual(JSON.parse(readFileSync(join(state, 'overrides.json'), 'utf8')).map((o: Override) => [o.summ, o.reason]), [['lost', 'mine']])
 })

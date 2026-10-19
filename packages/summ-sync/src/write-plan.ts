@@ -3,7 +3,8 @@
 //   <state dir>/plans/<timestamp>/plan.json        the plan (input to apply)
 //   <state dir>/plans/<timestamp>/plan.md          the same, for review
 //   <state dir>/plans/<timestamp>/upload/<file>    per CSV file, the rows Summ lacks, for the user to upload
-//   <state dir>/adopted.csv, overrides.json        with the adoptions and overrides this plan captured
+//
+// It writes nothing else: apply adds what the plan adopted and captured to adopted.csv and overrides.json.
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -11,7 +12,7 @@ import { extraDirsOf, loadConfig } from './config.ts'
 import { type Change, makePlan, type EditEntry, type Plan } from './plan.ts'
 import { readRun, type Row, type RunFile } from './run.ts'
 import { latestSnapshot, readSnapshot } from './snapshot.ts'
-import { readAdopted, readApplyLog, readOverrides, writeAdopted, writeOverrides } from './state.ts'
+import { readAdopted, readApplyLog, readOverrides } from './state.ts'
 
 const show = (v: unknown) => (v === null || v === '' || v === undefined ? '–' : String(v))
 const cell = (v: unknown) => show(v).replaceAll('|', '\\|')
@@ -94,7 +95,7 @@ export function writePlan(stateDir: string, runDir: string): string {
     const snapshot = readSnapshot(snapshotDir)
     const { files, rows } = readRun(runDir, extraDirsOf(stateDir, config))
     const now = new Date().toISOString()
-    const { plan, adopted, overrides } = makePlan({
+    const { plan } = makePlan({
         files,
         rows,
         legs: snapshot.legs,
@@ -112,8 +113,6 @@ export function writePlan(stateDir: string, runDir: string): string {
     writeFileSync(join(dir, 'plan.json'), JSON.stringify({ snapshot: snapshot.name, run: resolve(runDir), ...plan }, null, 2) + '\n')
     writeFileSync(join(dir, 'plan.md'), renderPlan(plan, snapshot.name, resolve(runDir)) + '\n')
     for (const file of uploadFiles(plan, files, rows)) writeFileSync(join(dir, 'upload', file.name), file.text)
-    if (plan.adopted.length) writeAdopted(stateDir, adopted)
-    if (plan.overridden.some((o) => o.kind === 'captured')) writeOverrides(stateDir, overrides)
 
     console.log(Object.entries(plan.counts).map(([k, v]) => `${k}: ${v}`).join(', '))
     console.log(`Plan written to ${dir}`)

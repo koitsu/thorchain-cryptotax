@@ -3,6 +3,9 @@
 //   adopted.csv       Leg,ID: a leg uploaded with an old <file>:<n> ID, and the row it was adopted to
 //   overrides.json    values the user set in Summ, kept over the run's (spec: Drift and overrides)
 //   apply-log.jsonl   one line per call apply made; an edit's lines carry {legId, field, value, ...}
+//
+// plan only lists what it adopted and captured; apply adds those to the first two tables (mergeTables), so a
+// plan that is never applied changes nothing later plans assume.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -67,4 +70,33 @@ export function readApplyLog(stateDir: string): AppliedEdit[] {
         .filter(Boolean)
         .map((line) => JSON.parse(line))
         .filter((e) => typeof e.legId === 'string' && typeof e.field === 'string')
+}
+
+/**
+ * Adds a plan's adopted legs and captured overrides to the state dir's tables as they are now, so an edit made
+ * by hand since the plan (an override deleted, a reason filled in) is kept. Returns the tables it changed.
+ */
+export function mergeTables(stateDir: string, adoptedNow: { legId: string; id: string }[], captured: Override[]): string[] {
+    const changed: string[] = []
+    const adopted = readAdopted(stateDir)
+    const newLegs = adoptedNow.filter((a) => adopted.get(a.legId) !== a.id)
+    if (newLegs.length) {
+        for (const a of newLegs) adopted.set(a.legId, a.id)
+        writeAdopted(stateDir, adopted)
+        changed.push('adopted.csv')
+    }
+    // A capture replaces the override of its field when the user has set another value since, keeping its reason
+    let overrides = readOverrides(stateDir)
+    let overridesChanged = false
+    for (const c of captured) {
+        const old = overrides.find((o) => o.id === c.id && o.leg === c.leg && o.field === c.field)
+        if (old && String(old.summ) === String(c.summ)) continue
+        overrides = [...overrides.filter((o) => o !== old), old ? { ...c, reason: old.reason } : c]
+        overridesChanged = true
+    }
+    if (overridesChanged) {
+        writeOverrides(stateDir, overrides)
+        changed.push('overrides.json')
+    }
+    return changed
 }

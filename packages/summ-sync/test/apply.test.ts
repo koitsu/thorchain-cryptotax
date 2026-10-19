@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { applyPlan, checkFresh, type ApplyOptions, type LogLine, type PlanFile, type ToolCaller, undoHandle } from '../src/apply.ts'
+import { applyPlan, checkFresh, runApply, type ApplyOptions, type LogLine, type PlanFile, type ToolCaller, undoHandle } from '../src/apply.ts'
 import type { DeleteEntry, EditEntry } from '../src/plan.ts'
 
 // Every value below is made up.
@@ -328,4 +328,18 @@ test('a plan is refused once an apply wrote to Summ after its snapshot: pull aga
     assert.doesNotThrow(() => checkFresh(skipOnly, planFile({ snapshot: snap[0] })))
     const wrote = stateDir([snap], [JSON.stringify({ time: '2024-01-03T00:00:00.000Z', plan: 'p', call: 'edit_transaction' })])
     assert.throws(() => checkFresh(wrote, planFile({ snapshot: snap[0] })), /1 writes since snapshot/)
+})
+
+test('runApply adds the plan\'s adoptions to adopted.csv, but not on a dry run', async () => {
+    const snap: [string, string] = ['2024-01-02T00-00-00', '2024-01-02T00:00:00.000Z']
+    const plan = planFile({ snapshot: snap[0], adopted: [{ legId: 'leg-old', id: 'row-1' }] })
+    for (const dryRun of [true, false]) {
+        const dir = stateDir([snap])
+        mkdirSync(join(dir, 'plans', 'p'), { recursive: true })
+        writeFileSync(join(dir, 'plans', 'p', 'plan.json'), JSON.stringify(plan))
+        const summ = Object.assign(new FakeSumm(), { connect: async () => {} })
+        await runApply(summ, dir, join(dir, 'plans', 'p'), { ...OPTS, dryRun })
+        assert.equal(existsSync(join(dir, 'adopted.csv')), !dryRun)
+        if (!dryRun) assert.equal(readFileSync(join(dir, 'adopted.csv'), 'utf8'), 'Leg,ID\nleg-old,row-1\n')
+    }
 })
