@@ -12,6 +12,7 @@ import {interpretTcyClaim, interpretTcyDistribution, interpretTcyStake, interpre
 import type {Activity, Leg} from "../domain/Activity.ts";
 import {interpretRujira, RUJIRA_CONTRACT_TYPES} from "./midgard/rujira.ts";
 import {interpretSend} from "./midgard/send.ts";
+import {interpretFailedDeposit} from "./midgard/failed.ts";
 import {interpretViewblockSend} from "./viewblock/send.ts";
 import {interpretMayaDistribution} from "./maya/distribution.ts";
 
@@ -45,6 +46,7 @@ const REGISTRY: Record<string, Interpreter> = {
     'midgard/tcy_stake': activity(interpretTcyStake),
     'midgard/tcy_unstake': activity(interpretTcyStake),
     [`midgard/${ActionType.Send}`]: interpretSend,
+    'midgard/failed': interpretFailedDeposit,
     ...Object.fromEntries(RUJIRA_CONTRACT_TYPES.map(type => [`midgard/contract/${type}`, interpretRujira])),
     // Viewblock gives only sends from before 2022-04 that Midgard does not list (docs/specs/sends.md)
     'viewblock/send': interpretViewblockSend,
@@ -53,7 +55,7 @@ const REGISTRY: Record<string, Interpreter> = {
 };
 
 // Midgard action types handled on protocols other than THORChain (see docs/specs/maya.md)
-const NON_THORCHAIN_ACTION_TYPES: string[] = [ActionType.Swap, ActionType.AddLiquidity, ActionType.Withdraw, ActionType.Refund, ActionType.Send];
+const NON_THORCHAIN_ACTION_TYPES: string[] = [ActionType.Swap, ActionType.AddLiquidity, ActionType.Withdraw, ActionType.Refund, ActionType.Send, 'failed'];
 
 export function getBundleType(bundle: RawBundle): {type: string; subtype?: string} {
     switch (bundle.source) {

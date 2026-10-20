@@ -1,0 +1,23 @@
+id: midgard/failed.CC345107295CFDBC0BB964EAB5FF64A03FE82C25F13E37F81F34E3031172D002
+protocol: thorchain
+kind: deposit.failed
+status: failed
+time: 2025-09-29T09:16:18.654Z
+memo: =:ETH~USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3:189772253640/0/1
+legs:
+  - direction: out
+    wallet: thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3
+    asset:
+      notation: THOR.RUNE
+      kind: native
+    role: gas
+    basis: default
+    txid: CC345107295CFDBC0BB964EAB5FF64A03FE82C25F13E37F81F34E3031172D002
+    amount: "0.02"
+    decimals: 8
+prices: []
+details:
+  from: thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3
+  to: thorchain
+  failedAction: swap
+  reason: insufficient funds

@@ -129,6 +129,26 @@ function failedSendRows(activity: Activity, protocol: Protocol): SummRow[] {
     }];
 }
 
+// A failed deposit's paid native fee (docs/specs/failed.md): the shape of a failed send's row
+export function failedDepositRows(activity: Activity, protocol: Protocol): SummRow[] {
+    const gas = leg(activity, 'gas');
+    const {currency, amount} = named(gas, protocol);
+    const reason = activity.details.reason ? ` (${activity.details.reason})` : '';
+
+    return [{
+        wallet: gas.wallet,
+        timestamp: activity.time,
+        type: SummRowType.Fee,
+        baseCurrency: currency,
+        baseAmount: amount,
+        from: activity.details.from,
+        to: activity.details.to,
+        blockchain: protocol.blockchain,
+        trace: legTrace(gas),
+        description: `Fee: failed ${activity.details.failedAction}${reason}; ${gas.txid ?? ''}`,
+    }];
+}
+
 function label(coin: Leg): string {
     const ticker = assetFromStringEx(coin.asset.notation).ticker;
     return coin.asset.kind === 'synth' ? `Synth ${ticker}` : coin.asset.kind === 'trade' ? `Trade ${ticker}` : ticker;

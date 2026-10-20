@@ -1,0 +1,10 @@
+wallet: thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3
+timestamp: 2025-09-29T09:16:18.654Z
+type: fee
+baseCurrency: RUNE
+baseAmount: "0.02"
+from: thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3
+to: thorchain
+blockchain: THORChain
+description: "Fee: failed swap (insufficient funds); CC345107295CFDBC0BB964EAB5FF64A03FE82C25F13E37F81F34E3031172D002"
+id: 2025-09-29T09:16:18.654Z.gas.e35dd76ddd74
