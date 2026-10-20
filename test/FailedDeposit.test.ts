@@ -50,8 +50,13 @@ describe('interpretFailedDeposit', () => {
         }
     });
 
+    test('one the ante handler turned away may not have paid the fee: a warning, no fee', () => {
+        const {activities, issues} = interpretFailedDeposit(failed('=:x', 'insufficient funds for fee: 1rune < 2000000rune'), THORCHAIN);
+        assert.deepEqual([activities, issues.map(issue => issue.kind)], [[], ['warning']]);
+    });
+
     test('the registry maps it on THORChain and on Maya (where it is ignored), so it is never unsupported', () => {
-        assert.equal(interpret(failed('=:x', 'insufficient funds'), THORCHAIN).activities.length, 1);
+        assert.equal(interpret(failed('=:x', 'failed to execute message; message index: 0: insufficient funds'), THORCHAIN).activities.length, 1);
         assert.deepEqual(interpret(failed('=:x', 'insufficient funds', 30_000_000, 'maya'), MAYA).issues.map(issue => issue.kind), ['ignored']);
     });
 });

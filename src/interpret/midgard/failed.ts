@@ -32,9 +32,12 @@ export function depositActionName(memo: string): string {
     return DEPOSIT_ACTIONS.find(([pattern]) => pattern.test(prefix))?.[1] ?? (prefix ? `'${prefix}' deposit` : 'deposit');
 }
 
+// The Cosmos SDK's prefix of an error the message handler returned: the ante handler, which takes the fee, had run
+const MESSAGE_FAILED = /^failed to execute message; message index: \d+: /;
+
 // THORNode's error without the SDK's prefix and its generic error class, on one line
 export function failureReason(reason: string): string {
-    return reason.replace(/^failed to execute message; message index: \d+: /, '').replace(/: unknown request$/, '').replace(/\s+/g, ' ').trim();
+    return reason.replace(MESSAGE_FAILED, '').replace(/: unknown request$/, '').replace(/\s+/g, ' ').trim();
 }
 
 // A native deposit THORNode rejected (Midgard type `failed`): its coins never moved; from the protocol's
@@ -50,6 +53,12 @@ export function interpretFailedDeposit(bundle: RawBundle, protocol: Protocol): {
 
     if (!failedTxPaidFee(protocol, Number(action.height))) {
         return {activities: [], issues: [{kind: 'ignored', message: 'failed deposit that paid no native fee (before the fee moved into the ante handler, or on Maya): it moved nothing'}]};
+    }
+
+    // Midgard lists every deposit with a failing code, also one the ante handler turned away, which may not have
+    // paid the fee: only a failure of the message itself is known to have paid it
+    if (!MESSAGE_FAILED.test(failed.reason ?? '')) {
+        return {activities: [], issues: [{kind: 'warning', message: `failed deposit that did not reach its message (${failed.reason || 'no reason'}): no fee exported; check on THORNode whether the native fee was paid`}]};
     }
 
     return {

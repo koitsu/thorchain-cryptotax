@@ -36,6 +36,14 @@ rule is the one for failed sends (`sends.md`, from block 11,637,012,
 `failedTxFeeFromHeight` in `src/domain/Protocol.ts`): before it, a failed
 message paid nothing.
 
+Midgard lists every `MsgDeposit` that a block holds with a failing code
+(`processTx` in `internal/fetch/record/mux.go`), so also one the ante
+handler turned away, which may not have paid the fee. Only an error of the
+message itself is known to have paid it: the Cosmos SDK prefixes those with
+`failed to execute message; message index: N:` (`runMsgs` in `baseapp`).
+Every failed deposit seen so far has that prefix. One without it gives no
+row and a warning to check on THORNode.
+
 On Maya, `DepositAnteHandler` only tracks the funds and charges no fee
 (Mayanode `x/mayachain/handler_deposit.go`), so a failed deposit paid
 nothing, as a failed Maya send.
@@ -50,7 +58,8 @@ error without its `failed to execute message; message index: N:` prefix
 and a trailing `: unknown request`, the SDK's generic error class).
 
 No activity, only an `ignored` issue, when the wallet is not the signer,
-before the block rule, or on Maya.
+before the block rule, or on Maya; and only a `warning` when the reason
+lacks the message prefix (above).
 
 ## Rows
 
@@ -68,4 +77,5 @@ send's row (`sends.md`), and of what a refund's protocol kept (`fees.md`).
 Golden case `failed/midgard-swap-insufficient-funds`: a public trade-asset
 swap of RUNE that failed for insufficient funds; one `fee` row of 0.02 RUNE.
 Unit tests (`test/FailedDeposit.test.ts`): the action name and reason,
-a signer that is not the wallet, before the block rule, and Maya.
+a signer that is not the wallet, before the block rule, Maya, and a
+failure before the message ran.
