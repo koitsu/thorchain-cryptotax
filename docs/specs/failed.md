@@ -40,9 +40,15 @@ Midgard lists every `MsgDeposit` that a block holds with a failing code
 (`processTx` in `internal/fetch/record/mux.go`), so also one the ante
 handler turned away, which may not have paid the fee. Only an error of the
 message itself is known to have paid it: the Cosmos SDK prefixes those with
-`failed to execute message; message index: N:` (`runMsgs` in `baseapp`).
-Every failed deposit seen so far has that prefix. One without it gives no
-row and a warning to check on THORNode.
+`failed to execute message; message index: N:` (`runMsgs` in `baseapp`), and
+a message that ran out of gas fails with `out of gas…`, also after the ante
+handler. A failed deposit with neither gives no row and a warning to check
+on THORNode.
+
+The fee is THORChain's default native fee, 0.02 RUNE (basis `default`), as
+for sends and bonds: THORNode takes `GetNativeTxFee`, which the
+`NativeTransactionFee` or `EnableUSDFees` mimir could change. Midgard's own
+`failed_actions` view assumes the same 0.02 RUNE.
 
 On Maya, `DepositAnteHandler` only tracks the funds and charges no fee
 (Mayanode `x/mayachain/handler_deposit.go`), so a failed deposit paid
@@ -59,7 +65,7 @@ and a trailing `: unknown request`, the SDK's generic error class).
 
 No activity, only an `ignored` issue, when the wallet is not the signer,
 before the block rule, or on Maya; and only a `warning` when the reason
-lacks the message prefix (above).
+shows the message never ran (above).
 
 ## Rows
 

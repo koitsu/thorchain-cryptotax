@@ -9,19 +9,20 @@ import {nativeGas} from "./bond.ts";
 // What a deposit memo asked for, by its prefix, for the description (docs/specs/failed.md)
 const DEPOSIT_ACTIONS: [RegExp, string][] = [
     [/^(=|swap|s)$/i, 'swap'],
+    [/^=[<>]$/, 'limit swap'],
     [/^(\+|add|a)$/i, 'add liquidity'],
     [/^(-|wd|withdraw)$/i, 'withdraw liquidity'],
     [/^(~|n|name)$/i, 'THORName'],
     [/^pool\+$/i, 'RUNEPool deposit'],
     [/^pool-$/i, 'RUNEPool withdraw'],
-    [/^loan\+$/i, 'loan open'],
-    [/^loan-$/i, 'loan repayment'],
+    [/^(loan\+|\$\+)$/i, 'loan open'],
+    [/^(loan-|\$-)$/i, 'loan repayment'],
     [/^trade\+$/i, 'trade deposit'],
     [/^trade-$/i, 'trade withdraw'],
     [/^secure\+$/i, 'secure deposit'],
     [/^secure-$/i, 'secure withdraw'],
-    [/^bond$/i, 'bond'],
-    [/^unbond$/i, 'unbond'],
+    [/^(bond|b)$/i, 'bond'],
+    [/^(unbond|ub)$/i, 'unbond'],
     [/^tcy$/i, 'TCY claim'],
     [/^tcy\+$/i, 'TCY stake'],
     [/^tcy-$/i, 'TCY unstake'],
@@ -34,6 +35,8 @@ export function depositActionName(memo: string): string {
 
 // The Cosmos SDK's prefix of an error the message handler returned: the ante handler, which takes the fee, had run
 const MESSAGE_FAILED = /^failed to execute message; message index: \d+: /;
+// The message ran out of gas: also after the ante handler
+const OUT_OF_GAS = /^out of gas/i;
 
 // THORNode's error without the SDK's prefix and its generic error class, on one line
 export function failureReason(reason: string): string {
@@ -57,7 +60,7 @@ export function interpretFailedDeposit(bundle: RawBundle, protocol: Protocol): {
 
     // Midgard lists every deposit with a failing code, also one the ante handler turned away, which may not have
     // paid the fee: only a failure of the message itself is known to have paid it
-    if (!MESSAGE_FAILED.test(failed.reason ?? '')) {
+    if (!MESSAGE_FAILED.test(failed.reason ?? '') && !OUT_OF_GAS.test(failed.reason ?? '')) {
         return {activities: [], issues: [{kind: 'warning', message: `failed deposit that did not reach its message (${failed.reason || 'no reason'}): no fee exported; check on THORNode whether the native fee was paid`}]};
     }
 

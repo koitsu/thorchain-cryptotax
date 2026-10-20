@@ -31,19 +31,20 @@ describe('interpretFailedDeposit', () => {
     });
 
     test('names what the memo asked for, and keeps THORNode\'s reason on one line', () => {
-        assert.deepEqual(['=:x', 'SWAP:x', '+:x', '~:name', 'POOL-:0', 'tcy-:x', 'trade+:x', 'foo:x', ''].map(depositActionName),
-            ['swap', 'swap', 'add liquidity', 'THORName', 'RUNEPool withdraw', 'TCY unstake', 'trade deposit', "'foo' deposit", 'deposit']);
+        assert.deepEqual(['=:x', 'SWAP:x', '=<:x', '+:x', '~:name', 'POOL-:0', 'tcy-:x', 'trade+:x', '$+:x', 'ub:x', 'foo:x', ''].map(depositActionName),
+            ['swap', 'swap', 'limit swap', 'add liquidity', 'THORName', 'RUNEPool withdraw', 'TCY unstake', 'trade deposit', 'loan open', 'unbond', "'foo' deposit", 'deposit']);
         assert.equal(failureReason('failed to execute message; message index: 0: invalid memo: 2 errors occurred:\n\t* internal error\n\t* MEMO: x'),
             'invalid memo: 2 errors occurred: * internal error * MEMO: x');
         assert.equal(failureReason('failed to execute message; message index: 0: invalid basis points: unknown request'), 'invalid basis points');
     });
 
     test('gives nothing when the wallet is not the signer, before the fee moved into the ante handler, or on Maya', () => {
-        const other = {...failed('=:x', 'insufficient funds'), wallet: 'thor1-other-wallet-2222'};
+        const reason = 'failed to execute message; message index: 0: insufficient funds';
+        const other = {...failed('=:x', reason), wallet: 'thor1-other-wallet-2222'};
         for (const [bundle, protocol] of [
             [other, THORCHAIN],
-            [failed('=:x', 'insufficient funds', THORCHAIN.failedTxFeeFromHeight! - 1), THORCHAIN],
-            [failed('=:x', 'insufficient funds', 30_000_000, 'maya'), MAYA],
+            [failed('=:x', reason, THORCHAIN.failedTxFeeFromHeight! - 1), THORCHAIN],
+            [failed('=:x', reason, 30_000_000, 'maya'), MAYA],
         ] as const) {
             const {activities, issues} = interpretFailedDeposit(bundle, protocol);
             assert.deepEqual([activities, issues.map(issue => issue.kind)], [[], ['ignored']]);
@@ -53,10 +54,12 @@ describe('interpretFailedDeposit', () => {
     test('one the ante handler turned away may not have paid the fee: a warning, no fee', () => {
         const {activities, issues} = interpretFailedDeposit(failed('=:x', 'insufficient funds for fee: 1rune < 2000000rune'), THORCHAIN);
         assert.deepEqual([activities, issues.map(issue => issue.kind)], [[], ['warning']]);
+        // Out of gas: the message ran, after the ante handler took the fee
+        assert.equal(interpretFailedDeposit(failed('=:x', 'out of gas in location: ReadFlat; gasWanted: 1, gasUsed: 2'), THORCHAIN).activities.length, 1);
     });
 
     test('the registry maps it on THORChain and on Maya (where it is ignored), so it is never unsupported', () => {
         assert.equal(interpret(failed('=:x', 'failed to execute message; message index: 0: insufficient funds'), THORCHAIN).activities.length, 1);
-        assert.deepEqual(interpret(failed('=:x', 'insufficient funds', 30_000_000, 'maya'), MAYA).issues.map(issue => issue.kind), ['ignored']);
+        assert.deepEqual(interpret(failed('=:x', 'failed to execute message; message index: 0: insufficient funds', 30_000_000, 'maya'), MAYA).issues.map(issue => issue.kind), ['ignored']);
     });
 });
