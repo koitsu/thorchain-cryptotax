@@ -1,0 +1,32 @@
+{
+  "description": "failed success: [THOR.RUNE] -> []",
+  "source": "midgard",
+  "wallet": "thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3",
+  "data": {
+    "date": "1759137378654951498",
+    "height": "23039665",
+    "in": [
+      {
+        "address": "thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3",
+        "coins": [
+          {
+            "amount": "164736986000",
+            "asset": "THOR.RUNE"
+          }
+        ],
+        "txID": "CC345107295CFDBC0BB964EAB5FF64A03FE82C25F13E37F81F34E3031172D002"
+      }
+    ],
+    "metadata": {
+      "failed": {
+        "code": "5",
+        "memo": "=:ETH~USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48:thor1lukwlve7hayy66qrdkp4k7sh0emjqwergy7tl3:189772253640/0/1",
+        "reason": "failed to execute message; message index: 0: insufficient funds"
+      }
+    },
+    "out": [],
+    "pools": [],
+    "status": "success",
+    "type": "failed"
+  }
+}

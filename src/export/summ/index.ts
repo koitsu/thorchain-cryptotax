@@ -8,7 +8,7 @@ import {runePoolRows, switchRows} from "./switch.ts";
 import {loanOpenRows, loanRepayRows} from "./loan.ts";
 import {tcyClaimRows, tcyDistributionRows, tcyStakeRows, thornameRows} from "./tcy.ts";
 import {rujiraStakeRows, rujiraTradeRows} from "./rujira.ts";
-import {sendRows} from "./send.ts";
+import {failedDepositRows, sendRows} from "./send.ts";
 import {mayaDistributionRows} from "./maya.ts";
 import type {MayaLiquidityAuction} from "../../config/ITaxConfig.ts";
 import {type AssetNamesConfig, getProtocol, type Protocol, withAssetNames} from "../../domain/Protocol.ts";
@@ -69,6 +69,8 @@ function toRows(activity: Activity, protocol: Protocol, treatment: Treatment): S
             return loanRepayRows(activity, protocol);
         case 'send':
             return sendRows(activity, protocol, treatment.incomeFrom);
+        case 'deposit.failed':
+            return failedDepositRows(activity, protocol);
         case 'tcy.claim':
             return tcyClaimRows(activity, protocol);
         case 'tcy.stake':
