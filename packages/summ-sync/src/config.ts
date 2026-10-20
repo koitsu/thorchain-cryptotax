@@ -14,6 +14,8 @@ export interface Config {
     timezone: string
     /** Folders (relative to the state dir) of hand-made period files, e.g. manual rows; read with the run. */
     extraDirs: string[]
+    /** IDs of extra rows that are right beside the run's rows they overlap: not reported, and nothing held back. */
+    keepExtra: string[]
 }
 
 export const DEFAULTS: Config = {
@@ -22,11 +24,12 @@ export const DEFAULTS: Config = {
     filedBefore: null,
     timezone: 'UTC',
     extraDirs: [],
+    keepExtra: [],
 }
 
 export function parseConfig(text: string): Config {
     const config: Config = { ...DEFAULTS, ...JSON.parse(text) }
-    for (const key of ['managedChains', 'managedSources', 'extraDirs'] as const) {
+    for (const key of ['managedChains', 'managedSources', 'extraDirs', 'keepExtra'] as const) {
         const value: unknown = config[key]
         if (!Array.isArray(value) || !value.every((v) => typeof v === 'string')) {
             throw new Error(`summ-sync.json: ${key} must be a list of strings`)

@@ -178,14 +178,16 @@ function shapeOf(row: Row, legs: Leg[]): { base: Leg; quote?: Leg; fee?: Leg } |
 }
 
 /**
- * Extra rows (hand-made files) that a run row now exports itself: the same txids, type, currency, amount and
- * second. They are left out, so Summ's legs of the extra row become legacy legs and adopt to the run row. An extra
- * row that shares a txid with a run row and fits it in nothing else is an overlap: both kept, and neither uploaded.
+ * Extra rows (hand-made files) that a run row now exports itself: the same txids, type, currency, amount, second
+ * and wallet (the sender of an outgoing row, the receiver of an incoming one). They are left out, so Summ's legs of the extra row become legacy legs and adopt to the run row. An
+ * extra row that shares a txid with run rows moving the same currency on the same side, and fits none of them in
+ * the rest, is an overlap (unless its ID is in `keep`): it may be one of them in an older shape.
  */
-export function supersede(rows: Row[]): { rows: Row[]; superseded: { extra: Row; run: Row }[]; overlaps: { extra: Row; run: Row[] }[] } {
+export function supersede(rows: Row[], keep: string[] = []): { rows: Row[]; superseded: { extra: Row; run: Row }[]; overlaps: { extra: Row; run: Row[] }[] } {
     const own = rows.filter((r) => !r.extra)
     const superseded: { extra: Row; run: Row }[] = []
     const overlaps: { extra: Row; run: Row[] }[] = []
+    const side = (row: Row) => summType(row.type)?.side
     for (const extra of rows.filter((r) => r.extra && r.txids.length)) {
         const sharing = own.filter((r) => r.txids.some((t) => extra.txids.includes(t)))
         const same = sharing.filter(
@@ -194,10 +196,13 @@ export function supersede(rows: Row[]): { rows: Row[]; superseded: { extra: Row;
                 r.type === extra.type &&
                 sameCurrency(r.baseCurrency, extra.baseCurrency) &&
                 sameAmount(Number(r.baseAmount), Number(extra.baseAmount)) &&
-                seconds(r.timestamp) === seconds(extra.timestamp),
+                seconds(r.timestamp) === seconds(extra.timestamp) &&
+                // The wallet of the row's side; the other side is a label that changed between exports
+                (side(r) === 'outgoing' ? sameCurrency(r.from, extra.from) : sameCurrency(r.to, extra.to)),
         )
+        const alike = sharing.filter((r) => side(r) === side(extra) && sameCurrency(r.baseCurrency, extra.baseCurrency))
         if (same.length === 1) superseded.push({ extra, run: same[0] })
-        else if (sharing.length) overlaps.push({ extra, run: sharing })
+        else if (alike.length && !keep.includes(extra.id)) overlaps.push({ extra, run: alike })
     }
     const left = new Set(superseded.map((s) => s.extra))
     return { rows: rows.filter((r) => !left.has(r)), superseded, overlaps }
@@ -205,7 +210,7 @@ export function supersede(rows: Row[]): { rows: Row[]; superseded: { extra: Row;
 
 export function makePlan(input: PlanInput): PlanResult {
     const { config, now } = input
-    const { rows, superseded, overlaps } = supersede(input.rows)
+    const { rows, superseded, overlaps } = supersede(input.rows, config.keepExtra)
     const unmapped = [...new Set(rows.map((r) => r.type).filter((t) => !summType(t)))]
     if (unmapped.length) throw new Error(`No Summ type for CSV type ${unmapped.join(', ')}: add it to src/summ-types.ts`)
 
@@ -216,7 +221,9 @@ export function makePlan(input: PlanInput): PlanResult {
     const isFiled = (time: string) => config.filedBefore !== null && before(time, config.filedBefore, config.timezone)
 
     const adopted = new Map(input.adopted)
-    let overrides = [...input.overrides]
+    // An override of a superseded extra row is kept for the run row that took its place
+    const supersededBy = new Map(superseded.map((s) => [s.extra.id, s.run.id]))
+    let overrides = input.overrides.map((o) => (supersededBy.has(o.id) ? { ...o, id: supersededBy.get(o.id) as string } : o))
     const plan: Plan = {
         createdAt: now,
         managedChains: config.managedChains,
@@ -276,7 +283,7 @@ export function makePlan(input: PlanInput): PlanResult {
             filed: isFiled(extra.timestamp),
             id: extra.id,
             txids: extra.txids,
-            detail: `the extra row shares a txid with ${run.map((r) => r.id).join(', ')} but differs in type, currency, amount or time; if it is the same event, move its file out of extraDirs; none of these rows is uploaded`,
+            detail: `the extra row shares a txid and currency with ${run.map((r) => r.id).join(', ')} but differs in type, amount, time or wallet; if it is the same event, move its file out of extraDirs, else add its ID to keepExtra; none of these rows is uploaded`,
         })
     }
 
