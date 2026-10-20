@@ -47,7 +47,7 @@ test('readRun reads only the period wallet files and refuses an ID in two files'
     assert.throws(() => readRun(run), /is in .* and /)
 })
 
-test('readRun adds extra files of the run\'s periods only', () => {
+test('readRun adds extra files of the run\'s periods only, marking their rows', () => {
     const run = mkdtempSync(join(tmpdir(), 'summ-sync-run-'))
     mkdirSync(join(run, 'csv'))
     writeFileSync(join(run, 'csv', '2023-07-01_2024-06-30_THOR_abcde_Example.csv'), `${HEADER}\n${LINE}`)
@@ -61,6 +61,7 @@ test('readRun adds extra files of the run\'s periods only', () => {
     const { files, rows } = readRun(run, [extra])
     assert.deepEqual(files.map((f) => f.name), ['2023-07-01_2024-06-30_THOR_abcde_Example.csv', '2023-07-01_2024-06-30_THOR_abcde_Example_manual.csv'])
     assert.deepEqual(rows.map((r) => r.id), ['2024-03-01T10:00:00.000Z.out.aaaaaaaaaaaa', '2023-07-01_2024-06-30_THOR_abcde_Example_manual.csv:1'])
+    assert.deepEqual(rows.map((r) => r.extra), [undefined, true])
 })
 
 test('periods are whole days in the timezone', () => {

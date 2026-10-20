@@ -113,7 +113,13 @@ optional:
 - `extraDirs`: folders (relative to the state dir, searched recursively) of
   CSV files you made by hand in the run's file shape, e.g. rows the exporter
   cannot produce. A file counts only when its period is one of the run's, and
-  its rows are managed like the run's (without it, plan deletes them).
+  its rows are managed like the run's (without it, plan deletes them). An
+  extra row the run now exports itself (same txids, type, currency, amount,
+  second and wallet) is left out, and its legs in Summ adopt to the run's
+  row; one that shares a txid, side and currency but differs is reported,
+  and neither is uploaded.
+- `keepExtra`: IDs of extra rows that are right beside the run rows they
+  overlap: not reported, and uploaded as usual.
 
 ## Tests
 

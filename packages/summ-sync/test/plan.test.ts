@@ -259,6 +259,71 @@ test('an old leg with a row\'s currency and amount in the same wallet, but adopt
     }
 })
 
+test('an extra row a run row exports itself is left out, and its leg in Summ adopts to the run row', () => {
+    const r = row()
+    const extra = row({ id: 'extra-file.csv:1', description: `Hand-made; ${TX1}`, extra: true })
+    const legs = legsOf(extra)
+    const { plan: p } = plan({ rows: [r, extra], legs })
+    assert.deepEqual(p.superseded, [{ extra: extra.id, run: r.id }])
+    assert.deepEqual(p.adopted, [{ legId: legs[0].legId, id: r.id }])
+    assert.deepEqual([p.upload, p.delete, p.edit, p.report], [[], [], [], []])
+
+    // Neither in Summ yet: the run row is uploaded once
+    assert.deepEqual(plan({ rows: [r, extra] }).plan.upload.map((u) => u.ids), [[r.id]])
+    // A run without the event keeps the extra row
+    assert.deepEqual(plan({ rows: [extra] }).plan.upload.map((u) => u.ids), [[extra.id]])
+    // An extra row without a txid is never left out
+    const bare = row({ id: 'extra-file.csv:2', description: 'Hand-made', txids: [], extra: true })
+    assert.deepEqual(plan({ rows: [r, bare] }).plan.superseded, [])
+})
+
+test('an extra row sharing a txid and currency with a run row on its side, but not the same row, is reported and neither is uploaded', () => {
+    const r = row()
+    const other = row({ id: '2024-03-01T10:00:00.000Z.in.bbbbbbbbbbbb', type: 'receive', baseCurrency: 'ETH', baseAmount: '0.1', description: `Received; ${TX1}` })
+    const extra = row({ id: 'extra-file.csv:1', baseAmount: '1', description: `Hand-made; ${TX1}`, extra: true })
+    const { plan: p } = plan({ rows: [r, other, extra] })
+    assert.deepEqual(p.superseded, [])
+    assert.deepEqual(p.report.map((e) => [e.kind, e.id]), [['extra-overlap', extra.id]])
+    // The run row of the same txid in another currency is not held back
+    assert.deepEqual(p.upload.map((u) => u.ids), [[other.id]])
+
+    // Listed in keepExtra: no report, all uploaded
+    const kept = plan({ rows: [r, other, extra], config: { ...CONFIG, keepExtra: [extra.id] } }).plan
+    assert.deepEqual([kept.report, kept.upload.flatMap((u) => u.ids)], [[], [r.id, other.id, extra.id]])
+    // One on the other side, or in another currency, adds to the run's rows: no report, all uploaded
+    for (const over of [{ type: 'receive' }, { baseCurrency: 'BTC' }]) {
+        const add = plan({ rows: [r, row({ id: 'extra-file.csv:1', description: `Hand-made; ${TX1}`, extra: true, ...over })] }).plan
+        assert.deepEqual([add.report, add.upload.flatMap((u) => u.ids).length], [[], 2])
+    }
+})
+
+test('an extra row in another wallet is not superseded; both in Summ, the extra row\'s legs are deleted', () => {
+    const r = row()
+    const elsewhere = row({ id: 'extra-file.csv:1', from: 'wallet-z', description: `Hand-made; ${TX1}`, extra: true })
+    assert.deepEqual(plan({ rows: [r, elsewhere] }).plan.superseded, [])
+    // Another label for the other side is the same row
+    const relabelled = row({ id: 'extra-file.csv:1', to: 'other-label', description: `Hand-made; ${TX1}`, extra: true })
+    assert.deepEqual(plan({ rows: [r, relabelled] }).plan.superseded, [{ extra: relabelled.id, run: r.id }])
+
+    // The run row and the extra row both already in Summ: the run row matches, the extra row's legs go
+    const extra = row({ id: 'extra-file.csv:1', description: `Hand-made; ${TX1}`, extra: true })
+    const legs = [...legsOf(r), ...legsOf(extra, {}, 'action2')]
+    const { plan: p } = plan({ rows: [r, extra], legs })
+    assert.deepEqual(p.delete.map((d) => [d.summId, d.legIds]), [[extra.id, [legs[1].legId]]])
+    assert.deepEqual([p.upload, p.adopted], [[], []])
+})
+
+test('a leg adopted to an extra row, and its override, follow the run row that supersedes it', () => {
+    const r = row()
+    const extra = row({ id: 'extra-file.csv:1', description: `Hand-made; ${TX1}`, extra: true })
+    const legs = legsOf(extra, { id: 'old-file.csv:3', trade: 'outgoingGift' })
+    const override: Override = { id: extra.id, leg: 'base', field: 'trade', run: 'withdrawal', summ: 'outgoingGift', seenAt: '', reason: 'mine' }
+    const { plan: p } = plan({ rows: [r, extra], legs, adopted: new Map([[legs[0].legId, extra.id]]), overrides: [override] })
+    assert.deepEqual(p.adopted, [{ legId: legs[0].legId, id: r.id }])
+    assert.deepEqual([p.edit, p.overridden.map((o) => o.kind)], [[], []])
+    assert.ok(renderPlan(p, 'snap', 'run').includes(`| ${extra.id} | ${r.id} |`))
+})
+
 test('a field the user changed in Summ is captured as an override and kept', () => {
     const r = row()
     const legs = legsOf(r, { trade: 'outgoingGift' })

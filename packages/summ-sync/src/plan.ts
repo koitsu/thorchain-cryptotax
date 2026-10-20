@@ -62,7 +62,17 @@ export interface UploadEntry {
 }
 
 export interface ReportEntry {
-    kind: 'no-leg' | 'several-legs' | 'leg-claimed-twice' | 'not-in-snapshot' | 'fee' | 'ambiguous-adoption' | 'legacy-lookalike' | 'manual-entry' | 'other-source'
+    kind:
+        | 'no-leg'
+        | 'several-legs'
+        | 'leg-claimed-twice'
+        | 'not-in-snapshot'
+        | 'fee'
+        | 'ambiguous-adoption'
+        | 'legacy-lookalike'
+        | 'extra-overlap'
+        | 'manual-entry'
+        | 'other-source'
     filed: boolean
     id?: string
     legIds?: string[]
@@ -87,6 +97,8 @@ export interface Plan {
     periods: { from: string; to: string }[]
     counts: Record<string, number>
     adopted: { legId: string; id: string }[]
+    /** Extra rows left out because a run row is the same event: Summ's legs of the extra row adopt to the run row. */
+    superseded: { extra: string; run: string }[]
     delete: DeleteEntry[]
     edit: EditEntry[]
     upload: UploadEntry[]
@@ -165,9 +177,41 @@ function shapeOf(row: Row, legs: Leg[]): { base: Leg; quote?: Leg; fee?: Leg } |
     return { base: base[0], quote: quote[0], fee: fees[0] }
 }
 
+/**
+ * Extra rows (hand-made files) that a run row now exports itself: the same txids, type, currency, amount, second
+ * and wallet (the sender of an outgoing row, the receiver of an incoming one). They are left out, so Summ's legs of the extra row become legacy legs and adopt to the run row. An
+ * extra row that shares a txid with run rows moving the same currency on the same side, and fits none of them in
+ * the rest, is an overlap (unless its ID is in `keep`): it may be one of them in an older shape.
+ */
+export function supersede(rows: Row[], keep: string[] = []): { rows: Row[]; superseded: { extra: Row; run: Row }[]; overlaps: { extra: Row; run: Row[] }[] } {
+    const own = rows.filter((r) => !r.extra)
+    const superseded: { extra: Row; run: Row }[] = []
+    const overlaps: { extra: Row; run: Row[] }[] = []
+    const side = (row: Row) => summType(row.type)?.side
+    for (const extra of rows.filter((r) => r.extra && r.txids.length)) {
+        const sharing = own.filter((r) => r.txids.some((t) => extra.txids.includes(t)))
+        const same = sharing.filter(
+            (r) =>
+                extra.txids.every((t) => r.txids.includes(t)) &&
+                r.type === extra.type &&
+                sameCurrency(r.baseCurrency, extra.baseCurrency) &&
+                sameAmount(Number(r.baseAmount), Number(extra.baseAmount)) &&
+                seconds(r.timestamp) === seconds(extra.timestamp) &&
+                // The wallet of the row's side; the other side is a label that changed between exports
+                (side(r) === 'outgoing' ? sameCurrency(r.from, extra.from) : sameCurrency(r.to, extra.to)),
+        )
+        const alike = sharing.filter((r) => side(r) === side(extra) && sameCurrency(r.baseCurrency, extra.baseCurrency))
+        if (same.length === 1) superseded.push({ extra, run: same[0] })
+        else if (alike.length && !keep.includes(extra.id)) overlaps.push({ extra, run: alike })
+    }
+    const left = new Set(superseded.map((s) => s.extra))
+    return { rows: rows.filter((r) => !left.has(r)), superseded, overlaps }
+}
+
 export function makePlan(input: PlanInput): PlanResult {
     const { config, now } = input
-    const unmapped = [...new Set(input.rows.map((r) => r.type).filter((t) => !summType(t)))]
+    const { rows, superseded, overlaps } = supersede(input.rows, config.keepExtra)
+    const unmapped = [...new Set(rows.map((r) => r.type).filter((t) => !summType(t)))]
     if (unmapped.length) throw new Error(`No Summ type for CSV type ${unmapped.join(', ')}: add it to src/summ-types.ts`)
 
     const managedChains = new Set(config.managedChains)
@@ -177,7 +221,9 @@ export function makePlan(input: PlanInput): PlanResult {
     const isFiled = (time: string) => config.filedBefore !== null && before(time, config.filedBefore, config.timezone)
 
     const adopted = new Map(input.adopted)
-    let overrides = [...input.overrides]
+    // An override of a superseded extra row is kept for the run row that took its place
+    const supersededBy = new Map(superseded.map((s) => [s.extra.id, s.run.id]))
+    let overrides = input.overrides.map((o) => (supersededBy.has(o.id) ? { ...o, id: supersededBy.get(o.id) as string } : o))
     const plan: Plan = {
         createdAt: now,
         managedChains: config.managedChains,
@@ -187,6 +233,7 @@ export function makePlan(input: PlanInput): PlanResult {
         periods,
         counts: {},
         adopted: [],
+        superseded: [],
         delete: [],
         edit: [],
         upload: [],
@@ -226,7 +273,21 @@ export function makePlan(input: PlanInput): PlanResult {
     }
 
     // ---- Managed rows: matched by ID (or through adopted.csv), compared, else uploaded
-    const managedRows = input.rows.filter((r) => managedChains.has(r.chain))
+    plan.superseded = superseded.map((s) => ({ extra: s.extra.id, run: s.run.id }))
+    // An extra row that overlaps run rows without being the same event: none of them is uploaded
+    const overlapHeld = new Set<string>()
+    for (const { extra, run } of overlaps) {
+        for (const r of [extra, ...run]) overlapHeld.add(r.id)
+        plan.report.push({
+            kind: 'extra-overlap',
+            filed: isFiled(extra.timestamp),
+            id: extra.id,
+            txids: extra.txids,
+            detail: `the extra row shares a txid and currency with ${run.map((r) => r.id).join(', ')} but differs in type, amount, time or wallet; if it is the same event, move its file out of extraDirs, else add its ID to keepExtra; none of these rows is uploaded`,
+        })
+    }
+
+    const managedRows = rows.filter((r) => managedChains.has(r.chain))
     const rowsById = new Map(managedRows.map((r) => [r.id, r]))
     const groups = new Map<string, Leg[]>()
     for (const leg of input.legs.filter((l) => managedSources.has(l.source))) {
@@ -363,7 +424,7 @@ export function makePlan(input: PlanInput): PlanResult {
             if (elsewhere) {
                 const sources = [...new Set(elsewhere.map((l) => l.source))].join(', ')
                 plan.report.push({ kind: 'other-source', filed: isFiled(row.timestamp), id: row.id, legIds: elsewhere.map((l) => l.legId), detail: `the row is in Summ under ${sources}, not in managedSources; add the source to summ-sync.json` })
-            } else if (!heldBack.has(row.id)) toUpload.push(row)
+            } else if (!heldBack.has(row.id) && !overlapHeld.has(row.id)) toUpload.push(row)
             continue
         }
         const isAdopted = legs.some((l) => adopted.has(l.legId))
@@ -431,7 +492,7 @@ export function makePlan(input: PlanInput): PlanResult {
     const softLegs = input.legs.filter((l) => l.importType === SOFT_TRANSFER && !IGNORED.has(l.trade))
     const legClaims = new Map<string, string[]>()
     const categorised: [Row, Leg][] = []
-    for (const row of input.rows.filter((r) => !managedChains.has(r.chain))) {
+    for (const row of rows.filter((r) => !managedChains.has(r.chain))) {
         const type = typeOf(row)
         const amount = Number(row.baseAmount)
         const gross = amount + (hasFee(row) && sameCurrency(row.feeCurrency, row.baseCurrency) ? Number(row.feeAmount) : 0)
@@ -484,7 +545,7 @@ export function makePlan(input: PlanInput): PlanResult {
 
     // ---- Manual entries repeating a row's txid
     const txidRows = new Map<string, string>()
-    for (const row of input.rows) for (const t of row.txids) txidRows.set(t, row.id)
+    for (const row of rows) for (const t of row.txids) txidRows.set(t, row.id)
     for (const leg of input.legs.filter((l) => l.importType === 'manual')) {
         const text = [leg.description, ...leg.comments].join(' ')
         for (const m of text.matchAll(/[0-9a-fA-F]{64}/g)) {
@@ -494,14 +555,15 @@ export function makePlan(input: PlanInput): PlanResult {
     }
 
     // ---- Overrides whose row is gone from the run
-    const runIds = new Set(input.rows.map((r) => r.id))
+    const runIds = new Set(rows.map((r) => r.id))
     for (const override of overrides) if (!runIds.has(override.id)) plan.overridden.push({ kind: 'gone', override })
 
     if (unmappedChains.size) plan.notes.push(`Blockchain not compared (no Summ id in src/summ-types.ts): ${[...unmappedChains].join(', ')}`)
     plan.counts = {
-        rows: input.rows.length,
+        rows: rows.length,
+        supersededExtraRows: superseded.length,
         managedRows: managedRows.length,
-        categorisedRows: input.rows.length - managedRows.length,
+        categorisedRows: rows.length - managedRows.length,
         managedLegs: input.legs.filter((l) => managedSources.has(l.source)).length,
         managedLegsOutOfScope: outOfScope,
         matchedRows: matched.size,
