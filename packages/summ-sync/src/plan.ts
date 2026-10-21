@@ -536,15 +536,27 @@ export function makePlan(input: PlanInput): PlanResult {
             plan.report.push({ kind: 'no-leg', filed, id: row.id, txids: row.txids, detail: row.txids.length ? 'no leg of Summ\'s imports has the row\'s txid, side, currency and amount' : 'the row\'s description has no txid' })
         }
     }
+    const fallbacks = new Map<string, Row[]>()
+    for (const [row, leg] of byTxid) fallbacks.set(leg.legId, [...(fallbacks.get(leg.legId) ?? []), row])
     for (const [row, leg] of byTxid) {
         const filed = isFiled(row.timestamp)
         if (legClaims.has(leg.legId)) {
-            plan.report.push({ kind: 'no-leg', filed, id: row.id, txids: row.txids, detail: `the one leg with the row's txid, side and currency (${leg.quantity}) has another row's amount` })
+            plan.report.push({ kind: 'no-leg', filed, id: row.id, txids: row.txids, detail: `the one leg with the row's txid, side and currency (${leg.quantity}) fits another row exactly` })
+            continue
+        }
+        const rivals = (fallbacks.get(leg.legId) as Row[]).filter((r) => r.id !== row.id)
+        if (rivals.length) {
+            plan.report.push({ kind: 'no-leg', filed, id: row.id, txids: row.txids, legIds: [leg.legId], detail: `the one leg with the row's txid, side and currency (${leg.quantity}) is the only one for ${rivals.map((r) => r.id).join(', ')} too, at no row's amount: not guessed` })
             continue
         }
         claim(row, leg)
-        const diff = Number((leg.quantity - Number(row.baseAmount)).toFixed(12))
-        plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [leg.legId], detail: `Summ's leg holds ${leg.quantity} ${leg.currency}, the row ${row.baseAmount}${hasFee(row) ? ` (fee ${row.feeAmount} ${row.feeCurrency})` : ''}: ${diff > 0 ? '+' : ''}${diff}, matched by txid; the amount is not edited` })
+        // The difference beyond the nearer of the row's amount and its amount plus a fee in the same currency
+        const amount = Number(row.baseAmount)
+        const gross = amount + (hasFee(row) && sameCurrency(row.feeCurrency, row.baseCurrency) ? Number(row.feeAmount) : 0)
+        const near = Math.abs(leg.quantity - gross) < Math.abs(leg.quantity - amount) ? gross : amount
+        const diff = Number((leg.quantity - near).toFixed(10))
+        const of = near === amount ? `the row's ${row.baseAmount}` : `the row's ${row.baseAmount} plus its fee ${row.feeAmount}`
+        plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [leg.legId], detail: `matched by txid: Summ's leg holds ${Number(leg.quantity.toFixed(10))} ${leg.currency}, ${diff > 0 ? '+' : ''}${diff} beyond ${of}; the amount is not edited` })
     }
     for (const [row, leg] of categorised) {
         const filed = isFiled(row.timestamp)

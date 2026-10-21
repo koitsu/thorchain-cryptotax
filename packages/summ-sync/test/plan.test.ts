@@ -422,7 +422,7 @@ test('a categorised row with no leg of its amount takes the one leg with its txi
     const { plan: p } = plan({ rows: [r], legs: [gross] })
     assert.deepEqual(p.categorise.map((c) => [c.id, c.changes.map((x) => [x.field, x.desired])]), [[r.id, [['trade', 'bridgeTradeOut']]]])
     const fee = p.report.find((x) => x.kind === 'fee' && x.id === r.id)
-    assert.match(fee?.detail ?? '', /holds 0\.01017 BTC, the row 0\.01 .*\+0\.00017, matched by txid/)
+    assert.match(fee?.detail ?? '', /matched by txid: Summ's leg holds 0\.01017 BTC, \+0\.00007 beyond the row's 0\.01 plus its fee 0\.0001/)
     assert.deepEqual(p.report.filter((x) => x.kind === 'no-leg'), [])
 
     // a leg another row has exactly is not taken by a looser fit
@@ -430,6 +430,12 @@ test('a categorised row with no leg of its amount takes the one leg with its txi
     const both = plan({ rows: [r, exact], legs: [ownLeg({ quantity: 0.01017 })] }).plan
     assert.deepEqual(both.categorise.map((c) => c.id), [exact.id])
     assert.deepEqual(both.report.filter((x) => x.kind === 'no-leg').map((x) => x.id), [r.id])
+
+    // two rows that both fit the one leg only loosely: neither takes it
+    const other = btcRow({ id: '2024-03-01T10:00:00.000Z.out.dddddddddddd', type: 'failed-out', baseAmount: '0.00002', feeAmount: '', feeCurrency: '' })
+    const rivals = plan({ rows: [r, other], legs: [ownLeg({ quantity: 0.01017 })] }).plan
+    assert.deepEqual(rivals.categorise, [])
+    assert.deepEqual(rivals.report.filter((x) => x.kind === 'no-leg').map((x) => x.id).sort(), [r.id, other.id].sort())
 
     // two legs with the txid, side and currency, neither of the row's amount: not guessed
     const two = plan({ rows: [r], legs: [ownLeg({ quantity: 0.02 }), ownLeg({ quantity: 0.03, actionId: 'l2' })] }).plan
