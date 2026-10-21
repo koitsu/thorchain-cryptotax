@@ -76,7 +76,7 @@ export interface ReportEntry {
     filed: boolean
     id?: string
     legIds?: string[]
-    /** The row's txids: the inbound first, then, on an L1 payout, the one Summ's import lists. */
+    /** The row's txids: the action's first, then, on an L1 payout or the L1 side of a symmetric add, the one Summ's import lists. */
     txids?: string[]
     detail: string
 }
@@ -157,6 +157,13 @@ export function same(field: string, a: Value, b: Value): boolean {
 const sameCurrency = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 /** The wallet of the leg's side: the sender of an outgoing leg, the receiver of an incoming one. */
 const sameWallet = (leg: Leg, row: Row) => (leg.side === 'outgoing' ? sameCurrency(leg.from, row.from) : sameCurrency(leg.to, row.to))
+/** Legs of one tx where the user split a part off and ignored it: exactly one not ignored, and together the row's
+ * amount (or its amount plus its fee). */
+function isHandSplit(legs: Leg[], amount: number, gross: number): boolean {
+    const total = legs.reduce((sum, l) => sum + l.quantity, 0)
+    return legs.length > 1 && legs.filter((l) => !IGNORED.has(l.trade)).length === 1 && (sameAmount(total, amount) || sameAmount(total, gross))
+}
+
 const hasFee = (row: Row) => row.feeAmount !== '' && Number(row.feeAmount) !== 0
 
 /** Types whose amount never moves on an L1 chain: LP and savers tokens, price helpers, and what a refund kept (on an
@@ -528,8 +535,9 @@ export function makePlan(input: PlanInput): PlanResult {
         const filed = isFiled(row.timestamp)
         if (found.length === 1) claim(row, found[0])
         else if (found.length === 0 && withTxid.length === 1) byTxid.push([row, withTxid[0]])
-        // The user may have split a gas off the leg and ignored it: an ignored leg is not the row's
-        else if (found.length === 0 && withTxid.filter((l) => !IGNORED.has(l.trade)).length === 1) byTxid.push([row, withTxid.find((l) => !IGNORED.has(l.trade)) as Leg])
+        // A gas the user split off the leg by hand and ignored: the legs together hold the row's amount, and the one
+        // not ignored is the row's
+        else if (found.length === 0 && isHandSplit(withTxid, amount, gross)) byTxid.push([row, withTxid.find((l) => !IGNORED.has(l.trade)) as Leg])
         else if (found.length > 1) {
             plan.report.push({ kind: 'several-legs', filed, id: row.id, legIds: found.map((l) => l.legId), detail: `${found.length} legs of Summ's imports fit the row` })
         } else if (row.txids.length && !row.txids.some((t) => ownLegs.some((l) => normaliseTxid(l.id) === t)) && row.txids.some((t) => input.txHashes.has(t))) {

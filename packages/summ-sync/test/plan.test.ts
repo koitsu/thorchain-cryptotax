@@ -440,6 +440,9 @@ test('a categorised row with no leg of its amount takes the one leg with its txi
     // a gas the user split off and ignored is not the row's leg
     const split = plan({ rows: [r], legs: [ownLeg({ quantity: 0.0096 }), ownLeg({ quantity: 0.0005, trade: 'ignoreOut', actionId: 'l2' })] }).plan
     assert.deepEqual(split.categorise.map((c) => c.actionId), ['l1'])
+    // but not when the legs do not add up to the row: the ignored one may be the row's, ignored on purpose
+    const apart = plan({ rows: [r], legs: [ownLeg({ quantity: 0.02 }), ownLeg({ quantity: 0.007, trade: 'ignoreOut', actionId: 'l2' })] }).plan
+    assert.deepEqual([apart.categorise, apart.report.map((x) => x.kind)], [[], ['no-leg']])
 
     // two legs with the txid, side and currency, neither of the row's amount: not guessed
     const two = plan({ rows: [r], legs: [ownLeg({ quantity: 0.02 }), ownLeg({ quantity: 0.03, actionId: 'l2' })] }).plan
