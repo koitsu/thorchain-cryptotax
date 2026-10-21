@@ -437,6 +437,10 @@ test('a categorised row with no leg of its amount takes the one leg with its txi
     assert.deepEqual(rivals.categorise, [])
     assert.deepEqual(rivals.report.filter((x) => x.kind === 'no-leg').map((x) => x.id).sort(), [r.id, other.id].sort())
 
+    // a gas the user split off and ignored is not the row's leg
+    const split = plan({ rows: [r], legs: [ownLeg({ quantity: 0.0096 }), ownLeg({ quantity: 0.0005, trade: 'ignoreOut', actionId: 'l2' })] }).plan
+    assert.deepEqual(split.categorise.map((c) => c.actionId), ['l1'])
+
     // two legs with the txid, side and currency, neither of the row's amount: not guessed
     const two = plan({ rows: [r], legs: [ownLeg({ quantity: 0.02 }), ownLeg({ quantity: 0.03, actionId: 'l2' })] }).plan
     assert.deepEqual([two.categorise, two.report.map((x) => x.kind)], [[], ['no-leg']])

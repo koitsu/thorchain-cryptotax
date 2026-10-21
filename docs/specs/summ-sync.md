@@ -242,7 +242,8 @@ legs fit, is reported, and no row the leg fits at any rank is uploaded.
 txid of the row, on the row's side, with the same currency, and an amount
 equal to the row's or the row's plus its fee (Summ records the gross amount
 on some chains). Exactly one leg must match. A row with no such leg takes
-the one leg with its txid, side and currency whatever the amount (the txid
+the one leg with its txid, side and currency whatever the amount, leaving
+out a leg the user set to ignore (a gas split off by hand) (the txid
 is the key: Summ may hold the tx gross of a gas the row does not record, or
 the user may have split a fee off by hand), unless another row matched that
 leg exactly, or another row would take it the same way (then neither does);

@@ -528,6 +528,8 @@ export function makePlan(input: PlanInput): PlanResult {
         const filed = isFiled(row.timestamp)
         if (found.length === 1) claim(row, found[0])
         else if (found.length === 0 && withTxid.length === 1) byTxid.push([row, withTxid[0]])
+        // The user may have split a gas off the leg and ignored it: an ignored leg is not the row's
+        else if (found.length === 0 && withTxid.filter((l) => !IGNORED.has(l.trade)).length === 1) byTxid.push([row, withTxid.find((l) => !IGNORED.has(l.trade)) as Leg])
         else if (found.length > 1) {
             plan.report.push({ kind: 'several-legs', filed, id: row.id, legIds: found.map((l) => l.legId), detail: `${found.length} legs of Summ's imports fit the row` })
         } else if (row.txids.length && !row.txids.some((t) => ownLegs.some((l) => normaliseTxid(l.id) === t)) && row.txids.some((t) => input.txHashes.has(t))) {
