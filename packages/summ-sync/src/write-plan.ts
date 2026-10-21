@@ -38,6 +38,12 @@ function section<T extends { filed: boolean }>(title: string, entries: T[], rend
     return out
 }
 
+/** Where a file on an unmanaged chain goes: its rows have no tx of that chain (PROTOCOL_TYPES), so not into its wallet. */
+function uploadNote(plan: Plan, file: string): string {
+    const chain = file.split('_')[2]
+    return plan.managedChains.includes(chain) ? '' : ` (into the THORChain or Maya account, not the ${chain} wallet: no ${chain} tx of their own)`
+}
+
 export function renderPlan(plan: Plan, snapshot: string, run: string): string {
     const lines = [
         '# Summ sync plan',
@@ -64,7 +70,7 @@ export function renderPlan(plan: Plan, snapshot: string, run: string): string {
             ...es.map((e) => `| ${show(e.id)} | ${cell(e.summId)} | ${e.legIds.length} | ${e.otherLegs} | ${cell(e.reason)} |`),
         ]),
         ...section('Edit', plan.edit, (es) => ['| Row | Leg | Field | Summ | Desired |', '| --- | --- | --- | --- | --- |', ...changeLines(es)]),
-        ...section('Upload (files in upload/, uploaded by you)', plan.upload, (es) => es.map((e) => `- ${e.file}: ${e.ids.length} rows`)),
+        ...section('Upload (files in upload/, uploaded by you)', plan.upload, (es) => es.map((e) => `- ${e.file}: ${e.ids.length} rows${uploadNote(plan, e.file)}`)),
         ...section('Categorise', plan.categorise, (es) => ['| Row | Leg | Field | Summ | Desired |', '| --- | --- | --- | --- | --- |', ...changeLines(es)]),
         ...section('Report (for you to resolve)', plan.report, (es) => [
             '| Kind | Row | Legs | Detail |',

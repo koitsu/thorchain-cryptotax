@@ -157,6 +157,14 @@ export function same(field: string, a: Value, b: Value): boolean {
 const sameCurrency = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 /** The wallet of the leg's side: the sender of an outgoing leg, the receiver of an incoming one. */
 const sameWallet = (leg: Leg, row: Row) => (leg.side === 'outgoing' ? sameCurrency(leg.from, row.from) : sameCurrency(leg.to, row.to))
+/** Types whose amount never moves on the row's own chain: LP and savers tokens, price helpers, and what a refund kept
+ * (on an L1 file the exporter writes `fee` and `lost` only for that). No import of the chain holds them, so they are
+ * managed (uploaded into the THORChain or Maya account) whatever the file's chain. */
+export const PROTOCOL_TYPES = new Set(['receive-lp-token', 'return-lp-token', 'spam', 'fee', 'lost'])
+
+/** A row the user uploads: on a managed chain, or one no import of its chain can hold. */
+export const isManaged = (row: Row, managedChains: Set<string>) => managedChains.has(row.chain) || PROTOCOL_TYPES.has(row.type)
+
 const hasFee = (row: Row) => row.feeAmount !== '' && Number(row.feeAmount) !== 0
 const hasQuote = (row: Row, type: SummType) => type.quote !== undefined && row.quoteCurrency !== ''
 const typeOf = (row: Row) => summType(row.type) as SummType
@@ -287,7 +295,7 @@ export function makePlan(input: PlanInput): PlanResult {
         })
     }
 
-    const managedRows = rows.filter((r) => managedChains.has(r.chain))
+    const managedRows = rows.filter((r) => isManaged(r, managedChains))
     const rowsById = new Map(managedRows.map((r) => [r.id, r]))
     const groups = new Map<string, Leg[]>()
     for (const leg of input.legs.filter((l) => managedSources.has(l.source))) {
@@ -380,11 +388,13 @@ export function makePlan(input: PlanInput): PlanResult {
     }
     // An old leg no row was adopted to, while an unmatched row has its currency and amount in the same wallet within
     // LOOKALIKE_WINDOW (and its txids, if the leg names any), may be that row with another time or type: uploading
-    // the row and deleting the leg could double a disposal or lose the leg's pairing, so both are reported instead
+    // the row and deleting the leg could double a disposal or lose the leg's pairing, so both are reported instead.
+    // A price helper (spam) counts nothing, so it doubles nothing: never a lookalike
     for (const [summId, legs] of pending) {
         const txids = txidsOf(legs)
         const lookalikes = unmatchedRows.filter(
             (row) =>
+                row.type !== 'spam' &&
                 !matched.has(row.id) &&
                 txids.every((t) => row.txids.includes(t)) &&
                 legs.some(
@@ -496,7 +506,7 @@ export function makePlan(input: PlanInput): PlanResult {
     const softLegs = input.legs.filter((l) => l.importType === SOFT_TRANSFER && !IGNORED.has(l.trade))
     const legClaims = new Map<string, string[]>()
     const categorised: [Row, Leg][] = []
-    for (const row of rows.filter((r) => !managedChains.has(r.chain))) {
+    for (const row of rows.filter((r) => !isManaged(r, managedChains))) {
         const type = typeOf(row)
         const amount = Number(row.baseAmount)
         const gross = amount + (hasFee(row) && sameCurrency(row.feeCurrency, row.baseCurrency) ? Number(row.feeAmount) : 0)
