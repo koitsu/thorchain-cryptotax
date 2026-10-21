@@ -405,6 +405,14 @@ test('a row no import of its chain can hold (LP token, price helper, kept refund
     const after = plan({ rows: [lp, lost], legs: held }).plan
     assert.deepEqual([after.upload, after.delete, after.edit, after.report], [[], [], [], []])
     assert.deepEqual(categorisedTxids([lp, lost, add], CONFIG), new Set(add.txids))
+
+    // A return whose request paid L1 gas has a tx of its own (Summ's import holds the gas), so it stays categorised;
+    // and on THORChain, when the user leaves it to Summ's import, these types are on chain: not uploaded
+    const paid = btcRow({ id: '2024-03-01T10:00:00.000Z.out.333333333333', type: 'return-lp-token', baseCurrency: 'ThorLP.BTC.BTC', baseAmount: '2' })
+    const thor = row({ id: '2024-03-01T10:00:00.000Z.out.444444444444', type: 'fee', description: `Fee; ${TX2}` })
+    const left = plan({ rows: [paid, thor], config: { ...CONFIG, managedChains: ['MAYA'] } }).plan
+    assert.deepEqual(left.upload, [])
+    assert.deepEqual(left.report.map((r) => r.id).sort(), [paid.id, thor.id].sort())
 })
 
 test('a categorised row sets the type and fee of Summ\'s own leg with its txid, currency and gross amount', () => {

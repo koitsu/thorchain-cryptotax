@@ -24,11 +24,14 @@ every gain; the sync never compares or writes fiat values.
 
 Each CSV file's chain (in its name, `periods.md`) says which kind its rows
 are: chains listed in `managedChains` (default `THOR` and `MAYA`) are
-managed, all others categorised, except rows no import of their chain can
-hold, which are managed whatever the file's chain: LP and savers token
-receives and returns, price helpers (`spam`), and what a refund kept (on an
-L1 file the exporter writes `fee` and `lost` only for that). Their amount
-never moves on that chain. The user uploads them into the THORChain or Maya
+managed, all others categorised, except rows no import of their L1 chain
+can hold, which are managed: on a chain other than THORChain and Maya, LP
+and savers token receives and returns, price helpers (`spam`), and what a
+refund kept (on an L1 file the exporter writes `fee` and `lost` only for
+that). Their amount never moves on that chain. A row of these types with a
+fee stays categorised: the fee is the L1 gas of a tx Summ's import holds
+(a withdraw request). On THORChain and Maya these types are on chain, so a
+user who leaves those chains to Summ's import leaves these rows to it too. The user uploads them into the THORChain or Maya
 account, in a file named after their wallet file (plan.md says so beside the
 file). Summ keeps such a row's blockchain and resolves its L1 address to the
 user's wallet of that chain, so a `lost` or `fee` comes out of that wallet's

@@ -157,15 +157,20 @@ export function same(field: string, a: Value, b: Value): boolean {
 const sameCurrency = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 /** The wallet of the leg's side: the sender of an outgoing leg, the receiver of an incoming one. */
 const sameWallet = (leg: Leg, row: Row) => (leg.side === 'outgoing' ? sameCurrency(leg.from, row.from) : sameCurrency(leg.to, row.to))
-/** Types whose amount never moves on the row's own chain: LP and savers tokens, price helpers, and what a refund kept
- * (on an L1 file the exporter writes `fee` and `lost` only for that). No import of the chain holds them, so they are
- * managed (uploaded into the THORChain or Maya account) whatever the file's chain. */
-export const PROTOCOL_TYPES = new Set(['receive-lp-token', 'return-lp-token', 'spam', 'fee', 'lost'])
-
-/** A row the user uploads: on a managed chain, or one no import of its chain can hold. */
-export const isManaged = (row: Row, managedChains: Set<string>) => managedChains.has(row.chain) || PROTOCOL_TYPES.has(row.type)
-
 const hasFee = (row: Row) => row.feeAmount !== '' && Number(row.feeAmount) !== 0
+
+/** Types whose amount never moves on an L1 chain: LP and savers tokens, price helpers, and what a refund kept (on an
+ * L1 file the exporter writes `fee` and `lost` only for that). No import of the L1 holds them, so on an L1 file they
+ * are managed (uploaded into the THORChain or Maya account), unless the row has a fee: that is the L1 gas of a tx
+ * Summ's import holds (a withdraw request), so the row stays categorised. THORChain and Maya hold these types
+ * on chain, so a user who leaves those chains to Summ's import leaves these rows to it too. */
+export const PROTOCOL_TYPES = new Set(['receive-lp-token', 'return-lp-token', 'spam', 'fee', 'lost'])
+const NATIVE_CHAINS = new Set(['THOR', 'MAYA'])
+
+/** A row the user uploads: on a managed chain, or one no import of its L1 chain can hold. */
+export const isManaged = (row: Row, managedChains: Set<string>) =>
+    managedChains.has(row.chain) || (!NATIVE_CHAINS.has(row.chain) && PROTOCOL_TYPES.has(row.type) && !hasFee(row))
+
 const hasQuote = (row: Row, type: SummType) => type.quote !== undefined && row.quoteCurrency !== ''
 const typeOf = (row: Row) => summType(row.type) as SummType
 const txidsOf = (legs: Leg[]) => legs.flatMap((l) => [...l.description.matchAll(/[0-9a-fA-F]{64}/g)].map((m) => m[0].toLowerCase()))
