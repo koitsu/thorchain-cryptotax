@@ -334,9 +334,13 @@ In this order, stopping at the first failure:
    action sets the entry's legs in it to `ignoreIn` (incoming) or
    `ignoreOut` (outgoing, fee), and Summ moves them to an action of their
    own. Apply looks them up again (waiting a few seconds, up to five
-   times) and deletes that action. When Summ has not split them off, apply
-   stops there for that entry: the legs stay ignored (they no longer
-   count), and the skip names the edit's undo handle. Never by a
+   times, and once more after it sees them alone) and deletes that action.
+   When Summ has not split them off, apply skips the entry there: the legs
+   stay ignored (they no longer count), and the skip names the edit's undo
+   handle. A leg already ignored that still shares its action is skipped
+   (an edit to the same type would not split it). A receive or send Summ
+   made up to pair the deleted leg as a transfer (Made-up legs above) is
+   then left alone, and is ignored by its action id as in step 3. Never by a
    filter: Summ's `id` filter lists the leg's action but can list
    unrelated actions too, even with `showAssociated: 0`, so a look-up
    inspects each action it lists and keeps only the one holding the leg.
