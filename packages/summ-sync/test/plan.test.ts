@@ -152,6 +152,25 @@ test('a changed description, currency or shape deletes the legs and uploads the 
     }
 })
 
+test('a row with no fee whose Summ legs have one loses only the fee leg: a delete of it alone, no upload', () => {
+    const r = row()
+    const legs = legsOf(row({ feeCurrency: 'RUNE', feeAmount: '0.02' }))
+    const fee = legs.find((l) => l.side === 'fees') as Leg
+    const { plan: p } = plan({ rows: [r], legs })
+    assert.equal(p.delete.length, 1)
+    assert.deepEqual(p.delete[0].legIds, [fee.legId])
+    assert.equal(p.delete[0].id, r.id)
+    assert.equal(p.delete[0].otherLegs, 1)
+    assert.match(p.delete[0].reason, /fee leg lost/)
+    assert.deepEqual(p.upload, [])
+    assert.equal(p.edit.length, 0)
+    // a row that also changed otherwise is still deleted whole and uploaded
+    const moved = plan({ rows: [r], legs: legsOf(row({ feeCurrency: 'RUNE', feeAmount: '0.02' }), { description: 'Old wording' }) }).plan
+    assert.equal(moved.delete.length, 1)
+    assert.equal(moved.delete[0].legIds.length, 2)
+    assert.deepEqual(moved.upload, [{ file: THOR_FILE, filed: false, ids: [r.id] }])
+})
+
 test('a row Summ lacks is uploaded, filed years apart, with the file header and its line', () => {
     const now = row()
     const old = row({ id: '2023-08-01T00:00:00.000Z.out.bbbbbbbbbbbb', timestamp: '2023-08-01T00:00:00.000Z' })

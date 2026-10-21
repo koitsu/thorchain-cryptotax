@@ -51,6 +51,12 @@ decides the design:
   rejected). So the sync does not create rows: the operator uploads CSVs.
 - No tool groups two legs into one action: Summ pairs transfers and bridges
   itself, by time and amount.
+- No tool deletes one leg of an action: a delete takes whole actions. But a
+  leg edited alone to `ignoreIn` or `ignoreOut` is moved by Summ, in the
+  edit's own rebuild, to an action of its own; the action's other legs keep
+  every field. Seen for a fee leg (it becomes an outgoing leg) and for one
+  side of a transfer (the other side is left as a lone send or receive, not
+  re-paired).
 
 On upload, Summ skips a row whose `ID` and data equal a row it holds, and
 **imports a row with a known `ID` but different data as a second row**;
@@ -243,8 +249,11 @@ fee currency and amount, timestamp (to the second), blockchain, from and to
 (managed rows only), and the description (managed rows with a stable ID; an
 adopted leg keeps its old wording). Not price, value or gain.
 
-A changed shape (a leg on the other side, a quote or fee leg gained or
-lost), currency or description cannot be an edit (the MCP rejects custom
+A row with no fee whose legs in Summ include a fee leg (old exports put an
+own-wallet transfer's fee on both sides) loses only that leg: a delete of the
+fee leg alone, and the rest is compared as usual. Any other changed shape (a
+leg on the other side, a quote leg gained or lost, a fee leg gained),
+currency or description cannot be an edit (the MCP rejects custom
 currencies such as LP tokens, and cannot set descriptions), so such a row is
 deleted and uploaded again. The other fields are edits.
 
@@ -277,7 +286,7 @@ legs share their actions (a delete by action would remove those too).
 
 | Section | Contents | Applied as |
 | --- | --- | --- |
-| delete | managed legs with no row in the run; managed legs whose row changed in a field an edit cannot set (description, ID) or whose action shape changed | bulk delete, only with `--approve-deletes` |
+| delete | managed legs with no row in the run; managed legs whose row changed in a field an edit cannot set (description, ID) or whose action shape changed; a fee leg the row no longer has | bulk delete by action id, after splitting a leg off an action whose other legs stay; only with `--approve-deletes` |
 | edit | managed legs whose row changed only in editable fields | `edit_transaction` per action |
 | upload | rows with no leg in Summ after the deletes, per CSV file | files written to `plans/<timestamp>/upload/` (the file's header and those rows as the run wrote them; filed-year rows in `<file>_filed.csv`), uploaded by the user |
 | categorise | categorised rows whose Summ leg differs in type or fee | `edit_transaction` |
@@ -320,13 +329,20 @@ In this order, stopping at the first failure:
    and plan again).
 2. Deletes (approved). Each leg is looked up again by `_id`, and only
    actions that now hold nothing but the entry's legs are deleted, by
-   their action ids. A delete whose legs share an action with other legs
-   (in the plan or in Summ now) is skipped and reported. Never by a
+   their action ids. A leg that shares its action with other legs (in the
+   plan or in Summ now) is first split off: one `edit_transaction` per
+   action sets the entry's legs in it to `ignoreIn` (incoming) or
+   `ignoreOut` (outgoing, fee), and Summ moves them to an action of their
+   own. Apply looks them up again (waiting a few seconds, up to five
+   times) and deletes that action. When Summ has not split them off, apply
+   stops there for that entry: the legs stay ignored (they no longer
+   count), and the skip names the edit's undo handle. Never by a
    filter: Summ's `id` filter lists the leg's action but can list
    unrelated actions too, even with `showAssociated: 0`, so a look-up
    inspects each action it lists and keeps only the one holding the leg.
    Summ cannot undo a delete, so apply first saves each action as it
-   just inspected it to the store (`actions/<action id>.json`, unless the
+   just inspected it (the shared action before the split edit, the
+   split-off one before the delete) to the store (`actions/<action id>.json`, unless the
    store already holds that id), and the log line names the file. A deleted row comes back by
    uploading its CSV line again; the saved file shows what Summ held.
 3. Edits and categorisation. Before each action, look it up again by leg

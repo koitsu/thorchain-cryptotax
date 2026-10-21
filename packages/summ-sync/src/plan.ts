@@ -428,7 +428,10 @@ export function makePlan(input: PlanInput): PlanResult {
             continue
         }
         const isAdopted = legs.some((l) => adopted.has(l.legId))
-        const shape = shapeOf(row, legs)
+        // A row with no fee whose legs in Summ have one (old exports put an own-wallet transfer's fee on both
+        // sides) loses only that fee leg: deleted alone, the rest compared as usual
+        const lostFees = hasFee(row) ? [] : legs.filter((l) => l.side === 'fees')
+        const shape = shapeOf(row, legs.filter((l) => !lostFees.includes(l)))
         const remake = (reason: string) => {
             deleteGroup(legs[0].id, legs, row, reason)
             toUpload.push(row)
@@ -452,6 +455,7 @@ export function makePlan(input: PlanInput): PlanResult {
             remake('description changed')
             continue
         }
+        if (lostFees.length) deleteGroup(legs[0].id, lostFees, row, 'fee leg lost: the row has no fee')
         const type = typeOf(row)
         const chain = summBlockchain(row.blockchain)
         if (row.blockchain && !chain) unmappedChains.add(row.blockchain)

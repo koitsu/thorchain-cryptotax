@@ -2,7 +2,9 @@
 //
 //   1. refuse a plan whose snapshot is not the latest, or that Summ changed under since (apply-log.jsonl)
 //   2. deletes (--approve-deletes): each leg looked up by _id, and only actions that hold nothing but the
-//      entry's legs are deleted, by action id; a leg that shares its action with other legs is refused.
+//      entry's legs are deleted, by action id. A leg that shares its action with legs that stay is first
+//      split off: edited alone to ignoreIn/ignoreOut, which Summ moves to an action of its own; if Summ does
+//      not, apply stops there for that entry (the leg stays ignored) and reports it with the undo handle.
 //      Summ's delete has no undo, so each action is first saved as just inspected (the detail and change
 //      history) to the action store, <state dir>/actions/<action id>.json, unless the store holds that id
 //   3. edits and categorisation, each action looked up again by leg _id and checked against the plan's Summ value;
@@ -47,6 +49,8 @@ export interface LogLine {
 
 export interface ApplyResult {
     deleted: number
+    /** Edits that split a leg to delete off an action whose other legs stay. */
+    split: number
     edited: number
     /** Categorisations held back until the plan's uploads are in Summ. */
     heldBack: number
@@ -115,7 +119,7 @@ export async function applyPlan(
     /** The state dir, whose action store keeps each action before it is deleted. */
     stateDir: string | null = null,
 ): Promise<ApplyResult> {
-    const result: ApplyResult = { deleted: 0, edited: 0, heldBack: 0, skipped: [], uploads: [] }
+    const result: ApplyResult = { deleted: 0, split: 0, edited: 0, heldBack: 0, skipped: [], uploads: [] }
     const write = opts.dryRun ? null : log
     const skip = (id: string | null, reason: string, extra: Record<string, unknown> = {}): false => {
         result.skipped.push({ id, reason })
@@ -131,18 +135,52 @@ export async function applyPlan(
     for (const entry of opts.approveDeletes ? deletes : []) await applyDelete(entry)
 
     async function applyDelete(entry: DeleteEntry) {
-        if (entry.otherLegs > 0) {
-            // Whether a delete selected by leg _id keeps the other legs of the action is not yet shown
-            return skip(entry.id, `its actions hold ${entry.otherLegs} other legs`, { legIds: entry.legIds })
+        const lookUpAll = async (): Promise<Map<string, Found> | string> => {
+            const found = new Map<string, Found>()
+            for (const legId of entry.legIds) {
+                const f = await lookUp(client, legId)
+                if (!f) return `leg ${legId} is no longer in Summ`
+                found.set(legId, f)
+            }
+            return found
         }
-        const actions = new Map<string, ActionDetail>()
-        for (const legId of entry.legIds) {
-            const found = await lookUp(client, legId)
-            if (!found) return skip(entry.id, `leg ${legId} is no longer in Summ`, { legIds: entry.legIds })
-            const others = found.legs.filter((l) => !entry.legIds.includes(l.legId))
-            if (others.length) return skip(entry.id, `leg ${legId} now shares its action with ${others.length} other legs`, { legIds: entry.legIds })
-            actions.set(found.actionId, found.detail)
+        const sharing = (found: Map<string, Found>) => [...found.values()].filter((f) => f.legs.some((l) => !entry.legIds.includes(l.legId)))
+        let found = await lookUpAll()
+        if (typeof found === 'string') return skip(entry.id, found, { legIds: entry.legIds })
+
+        // A leg that shares its action with legs that stay is split off first: edited alone to an ignore type
+        // (undoable, and it no longer counts), which Summ moves to an action of its own. Never a delete by filter.
+        const shared = new Map(sharing(found).map((f) => [f.actionId, f]))
+        if (shared.size) {
+            if (!write) return say(`  would split ${entry.legIds.length} legs of ${entry.summId} off their actions, then delete them`)
+            if (!stateDir) throw new Error('apply needs the state dir to save actions to before splitting them')
+            const undos: string[] = []
+            for (const f of shared.values()) {
+                const saved = storeAction(stateDir, f.detail)
+                const legs = f.legs.filter((l) => entry.legIds.includes(l.legId))
+                const edits = legs.map((l) => ({ transactionId: l.legId, updates: { trade: l.side === 'incoming' ? 'ignoreIn' : 'ignoreOut' } }))
+                const text = await client.callTool('edit_transaction', { actionId: f.actionId, edits })
+                result.split++
+                const undo = undoHandle(text)
+                if (undo) undos.push(undo)
+                for (const [i, l] of legs.entries()) {
+                    write({ call: 'edit_transaction', kind: 'split', id: entry.id, actionId: f.actionId, legId: l.legId, field: 'trade', from: l.trade, value: edits[i].updates.trade, undo, saved })
+                }
+                write({ call: 'edit_transaction', kind: 'split', id: entry.id, actionId: f.actionId, undo, result: text })
+            }
+            for (let attempt = 0; attempt < 5; attempt++) {
+                await sleep(settleMs)
+                found = await lookUpAll()
+                if (typeof found === 'string') return skip(entry.id, `${found} after the split`, { legIds: entry.legIds })
+                if (!sharing(found).length) break
+            }
+            const still = sharing(found as Map<string, Found>)
+            if (still.length) {
+                const others = still.flatMap((f) => f.legs.filter((l) => !entry.legIds.includes(l.legId))).length
+                return skip(entry.id, `Summ did not split the legs off (still with ${others} other legs); left ignored, undo ${undos.join(', ')}`, { legIds: entry.legIds })
+            }
         }
+        const actions = new Map([...(found as Map<string, Found>).values()].map((f) => [f.actionId, f.detail]))
         // By the actions just inspected, which hold only the entry's legs: never by a filter
         const args = { actionIds: [...actions.keys()], operation: { type: 'delete' } }
         if (!write) return say(`  would delete ${entry.legIds.length} legs of ${entry.summId}`)
@@ -248,7 +286,7 @@ export async function runApply(client: ToolCaller & { connect(): Promise<void> }
 
     const uploadDir = join(dir, 'upload')
     const present = new Set(existsSync(uploadDir) ? readdirSync(uploadDir) : [])
-    console.log(`\nDeleted ${result.deleted}, edited ${result.edited}, skipped ${result.skipped.length}, held back ${result.heldBack}`)
+    console.log(`\nDeleted ${result.deleted} (split ${result.split} off shared actions first), edited ${result.edited}, skipped ${result.skipped.length}, held back ${result.heldBack}`)
     if (result.uploads.length) {
         console.log(`Upload these files in Summ (${uploadDir}):`)
         for (const u of result.uploads) console.log(`  ${u.file}: ${u.rows} rows${present.has(u.file) ? '' : ' (missing!)'}`)

@@ -50,10 +50,13 @@ class FakeSumm implements ToolCaller {
             }
             this.actions.delete(args.actionId as string)
             const next = `rebuilt${++this.n}`
-            // Like Summ: a categorised send no longer pairs with the receive it made up, which is left on its own
+            // Like Summ: a categorised send no longer pairs with the receive it made up, which is left on its own,
+            // and a leg edited to an ignore type moves to an action of its own
             const madeUp = legs.filter((l) => l.importType === 'soft-transfer')
+            const ignored = legs.filter((l) => l.trade === 'ignoreIn' || l.trade === 'ignoreOut')
             if (this.splits && madeUp.length) this.actions.set(`alone${this.n}`, madeUp)
-            this.actions.set(next, this.splits ? legs.filter((l) => !madeUp.includes(l)) : legs)
+            if (this.splits && ignored.length && ignored.length < legs.length) this.actions.set(`ignored${this.n}`, ignored)
+            this.actions.set(next, this.splits ? legs.filter((l) => !madeUp.includes(l) && !ignored.includes(l)) : legs)
             return `Edited 1 action.\n- **Bulk Edit ID**: \`undo${this.n}abcdef\`\n- **Affected Action IDs**: ${next}`
         }
         if (name === 'bulk_edit_transactions') {
@@ -255,15 +258,49 @@ test('a deleted action is first saved to the store as it was just inspected, and
     assert.equal(existsSync(join(dry.state, 'actions')), false)
 })
 
-test('a delete whose legs share an action with other legs is refused', async () => {
+test('a leg that shares its action is split off by an ignore edit, then its own action is deleted', async () => {
+    const summ = new FakeSumm()
+    summ.add('d', [{ _id: 'leg-9', trade: 'fee', quantity: '0.02' }, { _id: 'their-leg', trade: 'deposit', quantity: '1' }])
+    const { result, log, state } = await run(summ, planFile({ delete: [del({ otherLegs: 1 })] }), { approveDeletes: true })
+    assert.deepEqual([result.split, result.deleted], [1, 1])
+    const editCall = summ.calls.find((c) => c.name === 'edit_transaction')
+    assert.deepEqual(editCall?.args, { actionId: 'd', edits: [{ transactionId: 'leg-9', updates: { trade: 'ignoreIn' } }] })
+    const deleteCall = summ.calls.find((c) => c.name === 'bulk_edit_transactions')
+    assert.deepEqual(deleteCall?.args, { actionIds: ['ignored1'], operation: { type: 'delete' } })
+    // the legs that stay are untouched, in their rebuilt action
+    assert.deepEqual([...summ.actions.values()], [[{ _id: 'their-leg', trade: 'deposit', quantity: '1' }]])
+    // both actions saved: the shared one before the edit, the split-off one before the delete
+    assert.deepEqual(log.find((l) => l.legId === 'leg-9')?.saved, join(state, 'actions', 'd.json'))
+    assert.deepEqual(log.at(-1)?.saved, [join(state, 'actions', 'ignored1.json')])
+    assert.deepEqual(
+        log.filter((l) => l.field).map((l) => [l.call, l.kind, l.legId, l.field, l.from, l.value, l.undo]),
+        [['edit_transaction', 'split', 'leg-9', 'trade', 'fee', 'ignoreIn', 'undo1abcdef']],
+    )
+})
+
+test('a leg the plan saw alone but that Summ has paired since is split off too', async () => {
     const summ = new FakeSumm()
     summ.add('d', [{ _id: 'leg-9', trade: 'withdrawal', quantity: '1' }, { _id: 'their-leg', trade: 'deposit', quantity: '1' }])
-    const planned = await run(summ, planFile({ delete: [del({ otherLegs: 1 })] }), { approveDeletes: true })
-    assert.match(planned.result.skipped[0].reason, /1 other legs/)
-    // and one the plan saw alone but that Summ has paired since
-    const paired = await run(summ, planFile({ delete: [del()] }), { approveDeletes: true })
-    assert.match(paired.result.skipped[0].reason, /now shares its action/)
+    const { result } = await run(summ, planFile({ delete: [del()] }), { approveDeletes: true })
+    assert.deepEqual([result.split, result.deleted], [1, 1])
+})
+
+test('when Summ does not split the leg off, apply stops at the edit and reports the undo handle; nothing is deleted', async () => {
+    const summ = new FakeSumm()
+    summ.splits = false
+    summ.add('d', [{ _id: 'leg-9', trade: 'withdrawal', quantity: '1' }, { _id: 'their-leg', trade: 'deposit', quantity: '1' }])
+    const { result } = await run(summ, planFile({ delete: [del({ otherLegs: 1 })] }), { approveDeletes: true })
+    assert.equal(result.deleted, 0)
+    assert.match(result.skipped[0].reason, /did not split.*undo undo1abcdef/)
     assert.equal(summ.calls.some((c) => c.name === 'bulk_edit_transactions'), false)
+})
+
+test('a dry run of a shared delete edits nothing', async () => {
+    const summ = new FakeSumm()
+    summ.add('d', [{ _id: 'leg-9', trade: 'withdrawal', quantity: '1' }, { _id: 'their-leg', trade: 'deposit', quantity: '1' }])
+    const { result, log } = await run(summ, planFile({ delete: [del({ otherLegs: 1 })] }), { approveDeletes: true, dryRun: true })
+    assert.deepEqual([result.split, result.deleted, log.length], [0, 0, 0])
+    assert.equal(summ.calls.every((c) => c.name === 'query_summ_transactions' || c.name === 'inspect_transaction'), true)
 })
 
 test('a failing call stops the apply', async () => {
