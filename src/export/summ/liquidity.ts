@@ -28,6 +28,12 @@ function feeFor(activity: Activity, item: Leg, protocol: Protocol): Pick<SummRow
     return {feeCurrency: parseMidgardAsset(next.asset.notation, protocol).currency, feeAmount: formatAmount(next.amount)};
 }
 
+// A deposit that is another tx than the action's first (the L1 side of a symmetric add) names its own too: the tx a
+// wallet import of that chain lists (docs/specs/fees.md, Txids in descriptions)
+function sentNote(deposit: Leg, txId: string): string {
+    return deposit.txid && deposit.txid !== txId ? `; sent in ${deposit.txid}` : '';
+}
+
 function describe(activity: Activity, assetCount: number): string {
     return activity.kind.startsWith('savers') ? 'savers' : (assetCount === 2 ? 'symmetric' : 'asymmetric');
 }
@@ -58,7 +64,7 @@ export function addLiquidityRows(activity: Activity, protocol: Protocol): SummRo
             to: protocol.counterparty,
             blockchain: formatBlockchain(blockchain),
             trace: legTrace(deposit),
-            description: `${i + 1}/${total} - Add liquidity ${currency} to ${lpToken} (${symmetry}); ${txId}`,
+            description: `${i + 1}/${total} - Add liquidity ${currency} to ${lpToken} (${symmetry}); ${txId}${sentNote(deposit, txId)}`,
         };
     });
     const quote = priceHelper(rows[0], deposits.length);
