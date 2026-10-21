@@ -72,6 +72,18 @@ share, the key of the action's source records (run-diff explains a row by
 it), and the only link to THORChain from a row in Summ, whose own import
 already carries the outbound txid.
 
+The L1 side of a **symmetric add** is the same case the other way: the
+wallet sent its own transaction on that chain, while the action's first
+txid is the RUNE (or CACAO) deposit. Its `AddLiquidity` row keeps that
+shared txid first and adds its own as `sent in`:
+
+```text
+2/4 - Add liquidity BTC to ThorLP.BTC.BTC (symmetric); <RUNE txid>; sent in <BTC txid>
+```
+
+An asymmetric or savers add has one deposit, whose txid is the first, so
+nothing is added.
+
 | Kind | Row on the L1 wallet | Outbound |
 | --- | --- | --- |
 | swap | `BridgeTradeIn` (the `2/2` row) | the output paid to the memo's destination |
