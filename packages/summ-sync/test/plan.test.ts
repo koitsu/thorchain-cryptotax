@@ -10,6 +10,7 @@ import type { Leg } from '../src/snapshot.ts'
 import type { Override } from '../src/state.ts'
 import { mergeTables } from '../src/state.ts'
 import { renderPlan, uploadFiles, writePlan } from '../src/write-plan.ts'
+import { categorisedTxids } from '../src/pull.ts'
 
 // Every value below is made up.
 const PERIOD = { from: '2023-07-01', to: '2024-06-30' }
@@ -59,6 +60,8 @@ function legsOf(r: Row, over: Partial<Leg> = {}, actionId = 'action1'): Leg[] {
         receive: ['incoming', 'deposit'],
         sell: ['outgoing', 'sell'],
         staking: ['incoming', 'staking'],
+        lost: ['outgoing', 'lost'],
+        'receive-lp-token': ['incoming', 'receivingLiquidityProviderToken'],
     }
     const [side, trade] = sides[r.type]
     const legs: Leg[] = [{ ...common, legId: legId(), side, trade, currency: r.baseCurrency, quantity: Number(r.baseAmount), ...over }]
@@ -276,6 +279,12 @@ test('an old leg with a row\'s currency and amount in the same wallet, but adopt
         const other = plan({ rows: [r], legs: legsOf(r, { id: 'old-file.csv:7', ...over }) }).plan
         assert.deepEqual([other.report, other.delete.length, other.upload[0].ids], [[], 1, [r.id]])
     }
+
+    // A price helper counts nothing, so it doubles nothing: the old leg is deleted and the helper uploaded
+    const helper = row({ type: 'spam', description: 'no txid' })
+    const old = legsOf(row({ type: 'send', description: 'no txid' }), { id: 'old-file.csv:7', description: '', trade: 'deposit', side: 'incoming', timestamp: '2024-03-01T07:00:00.000Z' })
+    const spam = plan({ rows: [helper], legs: old }).plan
+    assert.deepEqual([spam.report, spam.delete.length, spam.upload[0].ids], [[], 1, [helper.id]])
 })
 
 test('an extra row a run row exports itself is left out, and its leg in Summ adopts to the run row', () => {
@@ -381,6 +390,30 @@ function btcRow(over: Partial<Row> = {}): Row {
 function ownLeg(over: Partial<Leg> = {}): Leg {
     return { legId: legId(), actionId: 'l1', side: 'outgoing', id: TX1, trade: 'withdrawal', currency: 'BTC', quantity: 0.0101, timestamp: '2024-03-01T10:00:00.000Z', from: '', to: '', blockchain: 'btc', description: '', source: 'btc-wallet', importType: 'wallet', comments: [], ...over }
 }
+
+test('a row no import of its chain can hold (LP token, price helper, kept refund) is managed on an L1 file: uploaded, then matched by ID', () => {
+    const lp = btcRow({ id: '2024-03-01T10:00:00.000Z.in.111111111111', type: 'receive-lp-token', baseCurrency: 'ThorLP.BTC.BTC', baseAmount: '2', feeCurrency: '', feeAmount: '' })
+    const lost = btcRow({ id: '2024-03-01T10:00:00.000Z.unreturned.222222222222', type: 'lost', feeCurrency: '', feeAmount: '' })
+    const add = btcRow({ type: 'add-liquidity' })
+    const before = plan({ rows: [lp, lost, add], legs: [ownLeg()] }).plan
+    assert.deepEqual(before.upload, [{ file: BTC_FILE, filed: false, ids: [lp.id, lost.id] }])
+    assert.deepEqual(before.report.filter((r) => r.id === lp.id || r.id === lost.id), [])
+    assert.equal(before.categorise.length, 1)
+    assert.match(renderPlan(before, 'snap', 'run'), new RegExp(`${BTC_FILE}: 2 rows \\(into the THORChain or Maya account, not the BTC wallet`))
+    // uploaded under a managed source: matched by ID, nothing planned for them (Summ lowercases an L1 address)
+    const held = [...legsOf(lp, { blockchain: 'btc' }), ...legsOf(lost, { blockchain: 'btc', from: lost.from.toLowerCase() }, 'action2')]
+    const after = plan({ rows: [lp, lost], legs: held }).plan
+    assert.deepEqual([after.upload, after.delete, after.edit, after.report], [[], [], [], []])
+    assert.deepEqual(categorisedTxids([lp, lost, add], CONFIG), new Set(add.txids))
+
+    // A return whose request paid L1 gas has a tx of its own (Summ's import holds the gas), so it stays categorised;
+    // and on THORChain, when the user leaves it to Summ's import, these types are on chain: not uploaded
+    const paid = btcRow({ id: '2024-03-01T10:00:00.000Z.out.333333333333', type: 'return-lp-token', baseCurrency: 'ThorLP.BTC.BTC', baseAmount: '2' })
+    const thor = row({ id: '2024-03-01T10:00:00.000Z.out.444444444444', type: 'fee', description: `Fee; ${TX2}` })
+    const left = plan({ rows: [paid, thor], config: { ...CONFIG, managedChains: ['MAYA'] } }).plan
+    assert.deepEqual(left.upload, [])
+    assert.deepEqual(left.report.map((r) => r.id).sort(), [paid.id, thor.id].sort())
+})
 
 test('a categorised row sets the type and fee of Summ\'s own leg with its txid, currency and gross amount', () => {
     const r = btcRow({ type: 'bridge-trade-out' })

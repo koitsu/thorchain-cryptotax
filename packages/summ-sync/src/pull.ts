@@ -11,6 +11,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { McpClient } from './mcp.ts'
+import { isManaged } from './plan.ts'
 import { type ListedAction, parseActions, parseDetail, parsePageHeader } from './parse.ts'
 import { type Config, extraDirsOf, loadConfig } from './config.ts'
 import { readRun, type Row } from './run.ts'
@@ -42,7 +43,7 @@ async function queryAll(client: Client, filter?: Record<string, unknown>): Promi
 /** The txids of the run's categorised rows: those plan matches to Summ's own imports. */
 export function categorisedTxids(rows: Row[], config: Config): Set<string> {
     const managed = new Set(config.managedChains)
-    return new Set(rows.filter((r) => !managed.has(r.chain)).flatMap((r) => r.txids))
+    return new Set(rows.filter((r) => !isManaged(r, managed)).flatMap((r) => r.txids))
 }
 
 /** The ids of the listed actions whose tx hash is one of `txids`. */
