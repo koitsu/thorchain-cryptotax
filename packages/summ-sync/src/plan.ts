@@ -505,34 +505,46 @@ export function makePlan(input: PlanInput): PlanResult {
     plan.upload = [...uploads.values()]
 
     // ---- Categorised rows: Summ's own leg with the row's txid, side and currency, and its amount or the
-    // amount plus the fee; only its type and fee are set
+    // amount plus the fee; else the one leg with its txid, side and currency whatever the amount (Summ may hold
+    // the tx gross of a gas the row does not record), the difference reported. Only its type and fee are set
     // Summ's own imports, without the legs Summ made up to pair a send as a transfer (soft-transfer)
     const ownLegs = input.legs.filter((l) => !managedSources.has(l.source) && l.importType !== 'manual' && l.importType !== SOFT_TRANSFER)
     const softLegs = input.legs.filter((l) => l.importType === SOFT_TRANSFER && !IGNORED.has(l.trade))
     const legClaims = new Map<string, string[]>()
     const categorised: [Row, Leg][] = []
+    const claim = (row: Row, leg: Leg) => {
+        categorised.push([row, leg])
+        legClaims.set(leg.legId, [...(legClaims.get(leg.legId) ?? []), row.id])
+    }
+    // Rows with no leg of their amount, and the one leg with their txid, side and currency: matched once every
+    // exact match has claimed its leg, so a looser fit never takes a leg another row has exactly
+    const byTxid: [Row, Leg][] = []
     for (const row of rows.filter((r) => !isManaged(r, managedChains))) {
         const type = typeOf(row)
         const amount = Number(row.baseAmount)
         const gross = amount + (hasFee(row) && sameCurrency(row.feeCurrency, row.baseCurrency) ? Number(row.feeAmount) : 0)
-        const found = ownLegs.filter(
-            (l) =>
-                l.side === type.side &&
-                row.txids.includes(normaliseTxid(l.id)) &&
-                sameCurrency(l.currency, row.baseCurrency) &&
-                (sameAmount(l.quantity, amount) || sameAmount(l.quantity, gross)),
-        )
+        const withTxid = ownLegs.filter((l) => l.side === type.side && row.txids.includes(normaliseTxid(l.id)) && sameCurrency(l.currency, row.baseCurrency))
+        const found = withTxid.filter((l) => sameAmount(l.quantity, amount) || sameAmount(l.quantity, gross))
         const filed = isFiled(row.timestamp)
-        if (found.length === 1) {
-            categorised.push([row, found[0]])
-            legClaims.set(found[0].legId, [...(legClaims.get(found[0].legId) ?? []), row.id])
-        } else if (found.length > 1) {
+        if (found.length === 1) claim(row, found[0])
+        else if (found.length === 0 && withTxid.length === 1) byTxid.push([row, withTxid[0]])
+        else if (found.length > 1) {
             plan.report.push({ kind: 'several-legs', filed, id: row.id, legIds: found.map((l) => l.legId), detail: `${found.length} legs of Summ's imports fit the row` })
         } else if (row.txids.length && !row.txids.some((t) => ownLegs.some((l) => normaliseTxid(l.id) === t)) && row.txids.some((t) => input.txHashes.has(t))) {
             plan.report.push({ kind: 'not-in-snapshot', filed, id: row.id, txids: row.txids, detail: 'Summ lists the txid but the snapshot has no detail for it: pull with the run dir' })
         } else {
             plan.report.push({ kind: 'no-leg', filed, id: row.id, txids: row.txids, detail: row.txids.length ? 'no leg of Summ\'s imports has the row\'s txid, side, currency and amount' : 'the row\'s description has no txid' })
         }
+    }
+    for (const [row, leg] of byTxid) {
+        const filed = isFiled(row.timestamp)
+        if (legClaims.has(leg.legId)) {
+            plan.report.push({ kind: 'no-leg', filed, id: row.id, txids: row.txids, detail: `the one leg with the row's txid, side and currency (${leg.quantity}) has another row's amount` })
+            continue
+        }
+        claim(row, leg)
+        const diff = Number((leg.quantity - Number(row.baseAmount)).toFixed(12))
+        plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [leg.legId], detail: `Summ's leg holds ${leg.quantity} ${leg.currency}, the row ${row.baseAmount}${hasFee(row) ? ` (fee ${row.feeAmount} ${row.feeCurrency})` : ''}: ${diff > 0 ? '+' : ''}${diff}, matched by txid; the amount is not edited` })
     }
     for (const [row, leg] of categorised) {
         const filed = isFiled(row.timestamp)

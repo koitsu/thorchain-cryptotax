@@ -44,7 +44,7 @@ export const SUMM_TYPES: Record<string, SummType> = {
     loan: IN('borrow'),
     borrow: IN('borrow'),
     'loan-repayment': OUT('loanRepayment'),
-    'collateral-deposit': OUT('collateralDeposit'),
+    'collateral-deposit': OUT('collateral'),
     'collateral-withdrawal': IN('collateralWithdrawal'),
     'open-position': OUT('increasePositionWithdrawal'),
     'close-position': IN('decreasePositionDeposit'),

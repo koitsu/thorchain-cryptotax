@@ -239,9 +239,14 @@ planned. A legacy leg that fits several rows, or a row that several legacy
 legs fit, is reported, and no row the leg fits at any rank is uploaded.
 
 **Categorised rows** match a leg of Summ's own imports whose tx hash is a
-txid of the row, with the same currency, and an amount equal to the row's
-or the row's plus its fee (Summ records the gross amount on some chains).
-Exactly one leg must match; none or several is reported, not guessed.
+txid of the row, on the row's side, with the same currency, and an amount
+equal to the row's or the row's plus its fee (Summ records the gross amount
+on some chains). Exactly one leg must match. A row with no such leg takes
+the one leg with its txid, side and currency whatever the amount (the txid
+is the key: Summ may hold the tx gross of a gas the row does not record, or
+the user may have split a fee off by hand), unless another row matched that
+leg exactly; the amount is not edited, and the difference is listed in the
+`fee` report. Several legs, or none, are reported, not guessed.
 
 **Made-up legs.** Summ pairs a send of its own imports with a receive
 it makes up itself (source `manual`, import type `soft-transfer`, to an

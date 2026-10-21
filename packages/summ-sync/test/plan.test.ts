@@ -11,6 +11,7 @@ import type { Override } from '../src/state.ts'
 import { mergeTables } from '../src/state.ts'
 import { renderPlan, uploadFiles, writePlan } from '../src/write-plan.ts'
 import { categorisedTxids } from '../src/pull.ts'
+import { summType } from '../src/summ-types.ts'
 
 // Every value below is made up.
 const PERIOD = { from: '2023-07-01', to: '2024-06-30' }
@@ -415,6 +416,26 @@ test('a row no import of its chain can hold (LP token, price helper, kept refund
     assert.deepEqual(left.report.map((r) => r.id).sort(), [paid.id, thor.id].sort())
 })
 
+test('a categorised row with no leg of its amount takes the one leg with its txid, side and currency, and reports the difference', () => {
+    const r = btcRow({ type: 'bridge-trade-out' })
+    const gross = ownLeg({ quantity: 0.01017 })
+    const { plan: p } = plan({ rows: [r], legs: [gross] })
+    assert.deepEqual(p.categorise.map((c) => [c.id, c.changes.map((x) => [x.field, x.desired])]), [[r.id, [['trade', 'bridgeTradeOut']]]])
+    const fee = p.report.find((x) => x.kind === 'fee' && x.id === r.id)
+    assert.match(fee?.detail ?? '', /holds 0\.01017 BTC, the row 0\.01 .*\+0\.00017, matched by txid/)
+    assert.deepEqual(p.report.filter((x) => x.kind === 'no-leg'), [])
+
+    // a leg another row has exactly is not taken by a looser fit
+    const exact = btcRow({ id: '2024-03-01T10:00:00.000Z.in.eeeeeeeeeeee', type: 'bridge-trade-out', baseAmount: '0.01017', feeAmount: '', feeCurrency: '' })
+    const both = plan({ rows: [r, exact], legs: [ownLeg({ quantity: 0.01017 })] }).plan
+    assert.deepEqual(both.categorise.map((c) => c.id), [exact.id])
+    assert.deepEqual(both.report.filter((x) => x.kind === 'no-leg').map((x) => x.id), [r.id])
+
+    // two legs with the txid, side and currency, neither of the row's amount: not guessed
+    const two = plan({ rows: [r], legs: [ownLeg({ quantity: 0.02 }), ownLeg({ quantity: 0.03, actionId: 'l2' })] }).plan
+    assert.deepEqual([two.categorise, two.report.map((x) => x.kind)], [[], ['no-leg']])
+})
+
 test('a categorised row sets the type and fee of Summ\'s own leg with its txid, currency and gross amount', () => {
     const r = btcRow({ type: 'bridge-trade-out' })
     const leg = ownLeg()
@@ -550,4 +571,10 @@ test('plan writes nothing to the state dir; mergeTables adds its adoptions and c
     // A value the user set again since replaces the override, still with their reason
     assert.deepEqual(mergeTables(state, [], [{ ...own, summ: 'lost', reason: '' }]), ['overrides.json'])
     assert.deepEqual(JSON.parse(readFileSync(join(state, 'overrides.json'), 'utf8')).map((o: Override) => [o.summ, o.reason]), [['lost', 'mine']])
+})
+
+test('CSV types map to the trade Summ holds for them', () => {
+    // Summ's enum has `collateral`, not `collateralDeposit`: a CSV collateral-deposit row is held as `collateral`
+    assert.deepEqual(summType('collateral-deposit'), { side: 'outgoing', trade: 'collateral' })
+    assert.deepEqual(summType('collateral-withdrawal'), { side: 'incoming', trade: 'collateralWithdrawal' })
 })
