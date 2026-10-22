@@ -1,7 +1,7 @@
 // plan: the differences between a run (the desired state) and a snapshot of Summ. Pure: it reads nothing and
 // calls nothing; the CLI (writePlan) reads the inputs and writes the plan. Spec: docs/specs/summ-sync.md.
 
-import type { Config } from './config.ts'
+import type { Config, Hold } from './config.ts'
 import { before, inPeriod } from './dates.ts'
 import { periodsOf, type Row, type RunFile } from './run.ts'
 import { type Leg, normaliseTxid } from './snapshot.ts'
@@ -625,8 +625,9 @@ export function makePlan(input: PlanInput): PlanResult {
     }
 
     // ---- Held: nothing is planned for a row the config holds (a decision pending outside the sync), nor for the rows
-    // of an event (rows linked by a shared txid) when a Summ action of theirs holds a manual entry: the user's own
-    // pairing, which a delete, a split, an upload or a categorise beside it could break or double. Listed instead.
+    // of an event (rows linked by a shared txid) when a Summ action of theirs holds a manual entry, or a manual entry
+    // names one of their txids: the user's own pairing or stand-in, which a delete, a split, an upload or a categorise
+    // beside it could break or double. Listed instead.
     const holdOf = new Map<string, HeldEntry>()
     const runRows = new Map(rows.map((r) => [r.id, r]))
     for (const h of config.hold) {
@@ -635,11 +636,16 @@ export function makePlan(input: PlanInput): PlanResult {
         else if (!STABLE_ID.test(h.id) || inScope(h.id.slice(0, 24))) plan.notes.push(`hold: no row ${h.id} in the run`)
     }
     const manualIn = (actionIds: string[]) => [...new Set(actionIds)].flatMap((a) => (legsByAction.get(a) ?? []).filter((l) => l.importType === 'manual'))
-    const pairingReason = (manual: Leg[]) => `a Summ action of this event holds a manual entry (${manual.map((l) => `${l.quantity} ${l.currency}`).join(', ')}): the user's pairing; resolve it in Summ`
+    const pairingReason = (manual: Leg[]) => `a manual entry is in a Summ action of this event or names its txid (${manual.map((l) => `${l.quantity} ${l.currency}`).join(', ')}): the user's pairing; resolve it in Summ`
+    const manualNaming = new Map<string, Leg[]>()
+    for (const leg of input.legs.filter((l) => l.importType === 'manual')) {
+        for (const t of new Set(txidsOf([{ ...leg, description: [leg.description, ...leg.comments].join(' ') }]))) manualNaming.set(t, [...(manualNaming.get(t) ?? []), leg])
+    }
     const legsOfRow = new Map(matched)
     for (const [row, leg] of categorised) legsOfRow.set(row.id, [...(legsOfRow.get(row.id) ?? []), leg])
     const rowsByTxid = new Map<string, Row[]>()
-    for (const r of rows) for (const t of r.txids) rowsByTxid.set(t, [...(rowsByTxid.get(t) ?? []), r])
+    // A placeholder txid (all zeros, as in some old exports' outbounds) links nothing
+    for (const r of rows) for (const t of r.txids.filter((x) => !/^0+$/.test(x))) rowsByTxid.set(t, [...(rowsByTxid.get(t) ?? []), r])
     const seen = new Set<string>()
     for (const start of rows) {
         if (seen.has(start.id)) continue
@@ -658,17 +664,23 @@ export function makePlan(input: PlanInput): PlanResult {
             ...event.flatMap((r) => (legsOfRow.get(r.id) ?? []).map((l) => l.actionId)),
             ...plan.delete.filter((d) => d.id !== null && event.some((r) => r.id === d.id)).flatMap((d) => d.actionIds),
         ]
-        const manual = manualIn(actions)
+        const named = event.flatMap((r) => r.txids.filter((t) => !/^0+$/.test(t)).flatMap((t) => manualNaming.get(t) ?? []))
+        const manual = [...new Map([...manualIn(actions), ...named].map((l) => [l.legId, l])).values()]
         if (!manual.length) continue
         for (const r of event) {
             if (!holdOf.has(r.id)) holdOf.set(r.id, { kind: 'manual-pairing', filed: isFiled(r.timestamp), id: r.id, legIds: manual.map((l) => l.legId), reason: pairingReason(manual), held: [] })
         }
     }
     const fields = (e: EditEntry) => [...e.changes.map((c) => `${c.leg} ${c.field} ${c.summ} -> ${c.desired}`), ...(e.ignore ?? []).map((l) => `ignore made-up leg ${l}`)].join('; ')
+    const holds = new Map(config.hold.map((h) => [h.id, h]))
     plan.delete = plan.delete.filter((d) => {
         const h = d.id !== null ? holdOf.get(d.id) : undefined
         if (h) h.held.push(`delete (${d.reason})`)
-        else if (d.id === null) {
+        else if (d.id === null && holds.has(d.summId)) {
+            // A held row that left the run: its legs stay until the hold is lifted
+            plan.held.push({ kind: 'hold', filed: d.filed, id: null, summId: d.summId, reason: (holds.get(d.summId) as Hold).reason, held: [`delete (${d.reason})`] })
+            return false
+        } else if (d.id === null) {
             const manual = manualIn(d.actionIds)
             if (manual.length) plan.held.push({ kind: 'manual-pairing', filed: d.filed, id: null, summId: d.summId, legIds: manual.map((l) => l.legId), reason: pairingReason(manual), held: [`delete (${d.reason})`] })
             return !manual.length

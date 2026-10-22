@@ -19,10 +19,11 @@ test('a read is retried once after a server error; a write and a client error ar
     writeFileSync(join(dir, '.auth.json'), JSON.stringify({ client_id: 'c', scope: 'mcp:read', access_token: 't', expires_at: Date.now() + 3_600_000 }))
     let statuses: number[] = []
     let calls = 0
-    t.mock.method(globalThis, 'fetch', async () => {
+    t.mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
         calls++
         const status = statuses.shift() ?? 200
-        const body = status === 200 ? JSON.stringify({ jsonrpc: '2.0', id: calls, result: { content: [{ type: 'text', text: 'ok' }] } }) : 'gateway timeout'
+        const { id } = JSON.parse(String(init.body))
+        const body = status === 200 ? JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: 'ok' }] } }) : 'gateway timeout'
         return new Response(body, { status, headers: { 'content-type': 'application/json' } })
     })
     const client = new McpClient(dir, [...READ_TOOLS, 'edit_transaction'], { retryMs: 0 })

@@ -319,7 +319,7 @@ legs share their actions (a delete by action would remove those too).
 | upload | rows with no leg in Summ after the deletes, per CSV file | files written to `plans/<timestamp>/upload/` (the file's header and those rows as the run wrote them; filed-year rows in `<file>_filed.csv`), uploaded by the user |
 | categorise | categorised rows whose Summ leg differs in type | `edit_transaction` |
 | superseded | extra rows a run row exports itself (Extra folders above) | nothing: their legs adopt to the run row |
-| report | categorised rows with no or several matching legs; extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
+| report | categorised rows with no or several matching legs, or whose fee differs from Summ's (not edited); extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
 | held | rows the plan leaves alone (Held below), with what it left out | nothing |
 | overridden | differences an override keeps, and overrides captured in this plan | nothing |
 
@@ -328,10 +328,12 @@ with the entries left out:
 
 - a row whose ID is in `hold` in `summ-sync.json`, with a reason: a
   decision outside the sync is pending (a held ID with no row in the run's
-  periods is noted);
+  periods is noted, and its legs in Summ are not deleted);
 - every row of an event, the rows linked by a shared txid, when a Summ
   action holding a leg of one of them, or one of its planned deletes, also
-  holds a manual entry (import type `manual`): the user's own pairing. A
+  holds a manual entry (import type `manual`), or a manual entry names one
+  of their txids: the user's own pairing or stand-in. A placeholder txid
+  (all zeros) links no rows. A
   delete, split or edit there could break it, and an upload or a categorise
   beside it could count the same asset twice (a manual receive standing in
   for a swap's payout, next to the import's own receive of it). Legs with no

@@ -85,7 +85,7 @@ export class McpClient {
         } catch (e) {
             // A read is safe to repeat: retried once after a server error (e.g. a gateway's 504). A write never is:
             // it may have been made before the error
-            if (!READ_TOOLS.includes(name) || !/ -> 5\d\d\b/.test((e as Error).message)) throw e
+            if (!READ_TOOLS.includes(name) || !/^tools\/call -> 5\d\d\b/.test((e as Error).message)) throw e
             await sleep(this.retryMs)
             result = await call()
         }

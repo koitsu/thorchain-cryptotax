@@ -547,6 +547,9 @@ test('a row held in summ-sync.json gets nothing planned and is listed under held
         ['hold', clean.id, []],
     ])
     assert.deepEqual(p.notes, ['hold: no row 2024-03-02T10:00:00.000Z.out.444444444444 in the run'])
+    // a held row that left the run: its legs are not deleted
+    const gone = plan({ rows: [], legs: legsOf(edited), config: { ...CONFIG, hold } }).plan
+    assert.deepEqual([gone.delete, gone.held.map((h) => [h.kind, h.id, h.summId, h.held])], [[], [['hold', null, edited.id, ['delete (no row in the run)']]]])
     assert.match(renderPlan(p, 'snap', 'run'), /## Held .*\(3\)[\s\S]*\| hold \| 2024-03-01T10:00:00.000Z.out.333333333333 \| pending a decision \| nothing to do \|/)
 })
 
@@ -569,6 +572,16 @@ test('an event whose Summ actions hold a manual entry gets nothing planned: the 
     const orphan = legsOf(row({ id: '2024-03-01T10:00:00.000Z.out.999999999999' }), {}, 'action9')
     const del = plan({ rows: [], legs: [...orphan, { ...manual, actionId: 'action9' }] }).plan
     assert.deepEqual([del.delete, del.held.map((h) => [h.kind, h.id, h.summId, h.held[0]])], [[], [['manual-pairing', null, orphan[0].id, 'delete (no row in the run)']]])
+    // A manual entry in an action of its own that names the event's txid (a stand-in for the row): the row is not uploaded
+    const named = { ...manual, actionId: 'action7', description: `Payout; ${TX1}` }
+    const standIn = plan({ rows: [send], legs: [named] }).plan
+    assert.deepEqual([standIn.upload, standIn.held.map((h) => [h.id, h.held])], [[], [[send.id, [`upload into ${THOR_FILE}`]]]])
+    // A placeholder txid (all zeros) links no rows
+    const ZERO = '0'.repeat(64)
+    const a = row({ id: '2024-03-01T10:00:00.000Z.out.aaaaaaaaaaa1', txids: [TX1, ZERO] })
+    const b = row({ id: '2024-03-01T10:00:00.000Z.out.aaaaaaaaaaa2', txids: [TX2, ZERO] })
+    const apart = plan({ rows: [a, b], legs: [{ ...manual, actionId: 'action7', description: `Payout; ${TX1}` }] }).plan
+    assert.deepEqual([apart.upload.flatMap((u) => u.ids), apart.held.map((h) => h.id)], [[b.id], [a.id]])
 })
 
 test('a row uploaded under a source not in managedSources is reported, not uploaded again', () => {
