@@ -495,6 +495,9 @@ export function makePlan(input: PlanInput): PlanResult {
             ...(chain && base.blockchain ? compare(base, 'base', 'blockchain', chain) : []),
             ...(quote ? [...compare(quote, 'quote', 'trade', type.quote as string), ...compare(quote, 'quote', 'quantity', Number(row.quoteAmount))] : []),
             ...(fee ? compare(fee, 'fee', 'quantity', Number(row.feeAmount)) : []),
+            // Every leg of the row moves with its time: Summ splits a leg left at another time into an action of its own
+            ...(quote ? compare(quote, 'quote', 'timestamp', row.timestamp) : []),
+            ...(fee ? compare(fee, 'fee', 'timestamp', row.timestamp) : []),
         ]
             .map((c) => resolve(row.id, base.actionId, c))
             .filter((c): c is Change => c !== null)

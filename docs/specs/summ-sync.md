@@ -264,7 +264,8 @@ it. A made-up leg is never matched to a categorised row.
 ## Compared fields
 
 Type, base currency and amount, quote currency and amount (buy and sell),
-fee currency and amount, timestamp (to the second), blockchain, from and to
+fee currency and amount, timestamp (to the second; on every leg of the row,
+since Summ splits a leg left at another time into an action of its own), blockchain, from and to
 (managed rows only), and the description (managed rows with a stable ID; an
 adopted leg keeps its old wording). Not price, value or gain.
 

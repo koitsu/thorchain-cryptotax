@@ -140,6 +140,14 @@ test('a categorised row matches a leg whose hash carries an output index', () =>
     assert.equal(p.categorise.length, 1)
 })
 
+test('a changed time moves every leg of the row, in one edit', () => {
+    const r = row({ feeCurrency: 'RUNE', feeAmount: '0.02' })
+    const legs = legsOf(r).map((l) => ({ ...l, timestamp: '2024-03-01T09:59:50.000Z' }))
+    const { plan: p } = plan({ rows: [r], legs })
+    assert.equal(p.edit.length, 1)
+    assert.deepEqual(p.edit[0].changes.map((c) => [c.leg, c.field, c.desired]), [['base', 'timestamp', r.timestamp], ['fee', 'timestamp', r.timestamp]])
+})
+
 test('a changed description, currency or shape deletes the legs and uploads the row', () => {
     const r = row({ feeCurrency: 'RUNE', feeAmount: '0.02' })
     for (const [legs, reason] of [
