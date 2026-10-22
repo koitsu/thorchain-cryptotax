@@ -150,7 +150,7 @@ transaction. Rows for what comes out have no fee.
 | TCY stake / unstake | the single row | 0.02 RUNE |
 | TCY claim | `Receive` | 0.02 RUNE when the claim was sent from the receiving THORChain wallet; otherwise none (it was paid on another chain) |
 | Rujira contract calls (staking, FIN, merge) | the `StakingDeposit` or `BridgeTradeOut` row | the Cosmos tx's gas in RUNE (`auth_info.fee`), blank when none; not the 0.02 RUNE native fee (`rujira.md`) |
-| Bond, unbond, Thorname | the single row | 0.02 RUNE |
+| Bond, unbond, Thorname | the single row | 0.02 RUNE; a Thorname update that pays nothing else is a `Fee` row of its own, 0.02 RUNE (Summ drops a row with no base amount) |
 | Send | the send | 0.02 RUNE, also when another coin is sent; never on the receive (`sends.md`) |
 | Failed deposit (a native swap, add, THORName… THORNode rejected) | a `Fee` row of its own, 0.02 RUNE; nothing for the coins, which never moved (`failed.md`) |
 | Send to itself, Arkeo delegation | a `Fee` row of its own, 0.02 RUNE; no `send` row (`sends.md`) |
