@@ -1,7 +1,7 @@
 // plan: the differences between a run (the desired state) and a snapshot of Summ. Pure: it reads nothing and
 // calls nothing; the CLI (writePlan) reads the inputs and writes the plan. Spec: docs/specs/summ-sync.md.
 
-import type { Config } from './config.ts'
+import type { Config, Hold } from './config.ts'
 import { before, inPeriod } from './dates.ts'
 import { periodsOf, type Row, type RunFile } from './run.ts'
 import { type Leg, normaliseTxid } from './snapshot.ts'
@@ -81,6 +81,20 @@ export interface ReportEntry {
     detail: string
 }
 
+/** A row nothing is planned for: held by the config, or in an event whose Summ actions hold a manual entry. */
+export interface HeldEntry {
+    kind: 'hold' | 'manual-pairing'
+    filed: boolean
+    /** The row, or null for legs with no row in the run (then summId names them). */
+    id: string | null
+    summId?: string
+    /** For manual-pairing: the manual legs. */
+    legIds?: string[]
+    reason: string
+    /** What the plan would have done, left out. */
+    held: string[]
+}
+
 export interface OverriddenEntry {
     kind: 'captured' | 'run-changed' | 'gone'
     override: Override
@@ -104,6 +118,7 @@ export interface Plan {
     upload: UploadEntry[]
     categorise: EditEntry[]
     report: ReportEntry[]
+    held: HeldEntry[]
     overridden: OverriddenEntry[]
     notes: string[]
 }
@@ -259,6 +274,7 @@ export function makePlan(input: PlanInput): PlanResult {
         upload: [],
         categorise: [],
         report: [],
+        held: [],
         overridden: [],
         notes: [],
     }
@@ -522,7 +538,7 @@ export function makePlan(input: PlanInput): PlanResult {
 
     // ---- Categorised rows: Summ's own leg with the row's txid, side and currency, and its amount or the
     // amount plus the fee; else the one leg with its txid, side and currency whatever the amount (Summ may hold
-    // the tx gross of a gas the row does not record), the difference reported. Only its type and fee are set
+    // the tx gross of a gas the row does not record), the difference reported. Only its type is set
     // Summ's own imports, without the legs Summ made up to pair a send as a transfer (soft-transfer)
     const ownLegs = input.legs.filter((l) => !managedSources.has(l.source) && l.importType !== 'manual' && l.importType !== SOFT_TRANSFER)
     const softLegs = input.legs.filter((l) => l.importType === SOFT_TRANSFER && !IGNORED.has(l.trade))
@@ -587,8 +603,11 @@ export function makePlan(input: PlanInput): PlanResult {
         const changes: Change[] = [...compare(leg, 'base', 'trade', typeOf(row).trade)]
         const feeLegs = (legsByAction.get(leg.actionId) ?? []).filter((l) => l.side === 'fees' && l.id === leg.id)
         if (hasFee(row)) {
-            if (feeLegs.length === 1 && sameCurrency(feeLegs[0].currency, row.feeCurrency)) changes.push(...compare(feeLegs[0], 'fee', 'quantity', Number(row.feeAmount)))
-            else plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: `the row has a fee of ${row.feeAmount} ${row.feeCurrency}; Summ has ${feeLegs.length} fee legs${feeLegs.length === 1 ? ` in ${feeLegs[0].currency}` : ''}` })
+            // Summ's import read the fee from the chain; the row's may be a source's estimate (THORNode's gas of an EVM
+            // inbound is its max fee), so a difference is reported, never edited
+            if (feeLegs.length === 1 && sameCurrency(feeLegs[0].currency, row.feeCurrency)) {
+                if (!sameAmount(feeLegs[0].quantity, Number(row.feeAmount))) plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [feeLegs[0].legId], detail: `Summ's import holds a fee of ${Number(feeLegs[0].quantity.toFixed(12))} ${feeLegs[0].currency}, the row ${row.feeAmount}; the fee is not edited` })
+            } else plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: `the row has a fee of ${row.feeAmount} ${row.feeCurrency}; Summ has ${feeLegs.length} fee legs${feeLegs.length === 1 ? ` in ${feeLegs[0].currency}` : ''}` })
         } else if (feeLegs.some((l) => l.quantity !== 0)) {
             plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: 'the row has no fee; Summ has a fee leg' })
         }
@@ -604,6 +623,83 @@ export function makePlan(input: PlanInput): PlanResult {
             plan.categorise.push({ id: row.id, filed, actionId: leg.actionId, changes: resolved, ...(ignore.length ? { ignore } : {}) })
         }
     }
+
+    // ---- Held: nothing is planned for a row the config holds (a decision pending outside the sync), nor for the rows
+    // of an event (rows linked by a shared txid) when a Summ action of theirs holds a manual entry, or a manual entry
+    // names one of their txids: the user's own pairing or stand-in, which a delete, a split, an upload or a categorise
+    // beside it could break or double. Listed instead.
+    const holdOf = new Map<string, HeldEntry>()
+    const runRows = new Map(rows.map((r) => [r.id, r]))
+    for (const h of config.hold) {
+        const row = runRows.get(h.id)
+        if (row) holdOf.set(h.id, { kind: 'hold', filed: isFiled(row.timestamp), id: h.id, reason: h.reason, held: [] })
+        else if (!STABLE_ID.test(h.id) || inScope(h.id.slice(0, 24))) plan.notes.push(`hold: no row ${h.id} in the run`)
+    }
+    const manualIn = (actionIds: string[]) => [...new Set(actionIds)].flatMap((a) => (legsByAction.get(a) ?? []).filter((l) => l.importType === 'manual'))
+    const pairingReason = (manual: Leg[]) => `a manual entry is in a Summ action of this event or names its txid (${manual.map((l) => `${l.quantity} ${l.currency}`).join(', ')}): the user's pairing; resolve it in Summ`
+    const manualNaming = new Map<string, Leg[]>()
+    for (const leg of input.legs.filter((l) => l.importType === 'manual')) {
+        for (const t of new Set(txidsOf([{ ...leg, description: [leg.description, ...leg.comments].join(' ') }]))) manualNaming.set(t, [...(manualNaming.get(t) ?? []), leg])
+    }
+    const legsOfRow = new Map(matched)
+    for (const [row, leg] of categorised) legsOfRow.set(row.id, [...(legsOfRow.get(row.id) ?? []), leg])
+    const rowsByTxid = new Map<string, Row[]>()
+    // A placeholder txid (all zeros, as in some old exports' outbounds) links nothing
+    for (const r of rows) for (const t of r.txids.filter((x) => !/^0+$/.test(x))) rowsByTxid.set(t, [...(rowsByTxid.get(t) ?? []), r])
+    const seen = new Set<string>()
+    for (const start of rows) {
+        if (seen.has(start.id)) continue
+        seen.add(start.id)
+        const event: Row[] = []
+        for (const queue = [start]; queue.length; ) {
+            const r = queue.pop() as Row
+            event.push(r)
+            for (const o of r.txids.flatMap((t) => rowsByTxid.get(t) ?? [])) {
+                if (seen.has(o.id)) continue
+                seen.add(o.id)
+                queue.push(o)
+            }
+        }
+        const actions = [
+            ...event.flatMap((r) => (legsOfRow.get(r.id) ?? []).map((l) => l.actionId)),
+            ...plan.delete.filter((d) => d.id !== null && event.some((r) => r.id === d.id)).flatMap((d) => d.actionIds),
+        ]
+        const named = event.flatMap((r) => r.txids.filter((t) => !/^0+$/.test(t)).flatMap((t) => manualNaming.get(t) ?? []))
+        const manual = [...new Map([...manualIn(actions), ...named].map((l) => [l.legId, l])).values()]
+        if (!manual.length) continue
+        for (const r of event) {
+            if (!holdOf.has(r.id)) holdOf.set(r.id, { kind: 'manual-pairing', filed: isFiled(r.timestamp), id: r.id, legIds: manual.map((l) => l.legId), reason: pairingReason(manual), held: [] })
+        }
+    }
+    const fields = (e: EditEntry) => [...e.changes.map((c) => `${c.leg} ${c.field} ${c.summ} -> ${c.desired}`), ...(e.ignore ?? []).map((l) => `ignore made-up leg ${l}`)].join('; ')
+    const holds = new Map(config.hold.map((h) => [h.id, h]))
+    plan.delete = plan.delete.filter((d) => {
+        const h = d.id !== null ? holdOf.get(d.id) : undefined
+        if (h) h.held.push(`delete (${d.reason})`)
+        else if (d.id === null && holds.has(d.summId)) {
+            // A held row that left the run: its legs stay until the hold is lifted
+            plan.held.push({ kind: 'hold', filed: d.filed, id: null, summId: d.summId, reason: (holds.get(d.summId) as Hold).reason, held: [`delete (${d.reason})`] })
+            return false
+        } else if (d.id === null) {
+            const manual = manualIn(d.actionIds)
+            if (manual.length) plan.held.push({ kind: 'manual-pairing', filed: d.filed, id: null, summId: d.summId, legIds: manual.map((l) => l.legId), reason: pairingReason(manual), held: [`delete (${d.reason})`] })
+            return !manual.length
+        }
+        return !h
+    })
+    for (const [section, label] of [['edit', 'edit'], ['categorise', 'categorise']] as const) {
+        plan[section] = plan[section].filter((e) => {
+            const h = holdOf.get(e.id)
+            if (h) h.held.push(`${label} ${fields(e)}`)
+            return !h
+        })
+    }
+    for (const u of plan.upload) {
+        for (const id of u.ids) holdOf.get(id)?.held.push(`upload into ${u.file}`)
+        u.ids = u.ids.filter((id) => !holdOf.has(id))
+    }
+    plan.upload = plan.upload.filter((u) => u.ids.length)
+    plan.held.unshift(...[...holdOf.values()].filter((h) => h.kind === 'hold' || h.held.length))
 
     // ---- Manual entries repeating a row's txid
     const txidRows = new Map<string, string>()
@@ -632,9 +728,10 @@ export function makePlan(input: PlanInput): PlanResult {
         adoptedLegs: plan.adopted.length,
         deletes: plan.delete.length,
         edits: plan.edit.length,
-        uploads: toUpload.length,
+        uploads: plan.upload.reduce((n, u) => n + u.ids.length, 0),
         categorise: plan.categorise.length,
         reports: plan.report.length,
+        held: plan.held.length,
         overridden: plan.overridden.length,
     }
     return { plan, adopted, overrides }

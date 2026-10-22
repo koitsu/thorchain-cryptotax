@@ -113,6 +113,7 @@ function planFile(over: Partial<PlanFile> = {}): PlanFile {
         upload: [],
         categorise: [],
         report: [],
+        held: [],
         overridden: [],
         notes: [],
         ...over,

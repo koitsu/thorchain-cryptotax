@@ -6,6 +6,7 @@ import { MCP_URL, accessToken } from './auth.ts'
 export const READ_TOOLS = ['query_summ_transactions', 'inspect_transaction', 'get_filter_options']
 
 const DELAY_MS = 400 // a human-level request rate
+const RETRY_MS = 10_000 // before the one retry of a read after a server error
 const CONTEXT = "The user is syncing the client's transactions with a local export."
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -31,10 +32,12 @@ export class McpClient {
     private readonly allowed: Set<string>
     private sessionId: string | undefined
     private nextId = 1
+    private readonly retryMs: number
 
-    constructor(stateDir: string, allowedTools: string[] = READ_TOOLS) {
+    constructor(stateDir: string, allowedTools: string[] = READ_TOOLS, { retryMs = RETRY_MS } = {}) {
         this.stateDir = stateDir
         this.allowed = new Set(allowedTools)
+        this.retryMs = retryMs
     }
 
     async rpc(method: string, params: unknown, { notify = false } = {}): Promise<unknown> {
@@ -75,7 +78,17 @@ export class McpClient {
     /** Calls a tool and returns its text. */
     async callTool(name: string, args: Record<string, unknown>): Promise<string> {
         if (!this.allowed.has(name)) throw new Error(`Refusing to call a tool this command may not use: ${name}`)
-        const result = (await this.rpc('tools/call', { name, arguments: { context: CONTEXT, ...args } })) as ToolResult
+        const call = async () => (await this.rpc('tools/call', { name, arguments: { context: CONTEXT, ...args } })) as ToolResult
+        let result: ToolResult
+        try {
+            result = await call()
+        } catch (e) {
+            // A read is safe to repeat: retried once after a server error (e.g. a gateway's 504). A write never is:
+            // it may have been made before the error
+            if (!READ_TOOLS.includes(name) || !/^tools\/call -> 5\d\d\b/.test((e as Error).message)) throw e
+            await sleep(this.retryMs)
+            result = await call()
+        }
         const text = (result.content ?? []).filter((c) => c.type === 'text').map((c) => c.text ?? '').join('\n')
         if (result.isError) throw new Error(`${name}: ${text.slice(0, 500)}`)
         await sleep(DELAY_MS)

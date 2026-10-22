@@ -16,6 +16,13 @@ export interface Config {
     extraDirs: string[]
     /** IDs of extra rows that are right beside the run's rows they overlap: not reported, and nothing held back. */
     keepExtra: string[]
+    /** Rows the plan leaves alone while a decision outside the sync is pending: nothing is planned for them. */
+    hold: Hold[]
+}
+
+export interface Hold {
+    id: string
+    reason: string
 }
 
 export const DEFAULTS: Config = {
@@ -25,6 +32,7 @@ export const DEFAULTS: Config = {
     timezone: 'UTC',
     extraDirs: [],
     keepExtra: [],
+    hold: [],
 }
 
 export function parseConfig(text: string): Config {
@@ -34,6 +42,9 @@ export function parseConfig(text: string): Config {
         if (!Array.isArray(value) || !value.every((v) => typeof v === 'string')) {
             throw new Error(`summ-sync.json: ${key} must be a list of strings`)
         }
+    }
+    if (!Array.isArray(config.hold) || !config.hold.every((h) => typeof h?.id === 'string' && typeof h?.reason === 'string' && h.reason.trim() !== '')) {
+        throw new Error('summ-sync.json: hold must be a list of {"id": "<row ID>", "reason": "<why>"}, each with a reason')
     }
     if (config.filedBefore !== null && !/^\d{4}-\d{2}-\d{2}$/.test(config.filedBefore)) {
         throw new Error('summ-sync.json: filedBefore must be a date (YYYY-MM-DD) or null')

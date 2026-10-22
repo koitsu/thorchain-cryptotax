@@ -19,8 +19,9 @@ every gain; the sync never compares or writes fiat values.
 - **Categorised rows** are rows the exporter writes for wallets the user
   lets Summ import itself (by default BTC, ETH and other L1 wallets): the L1
   side of a swap, an LP add or a refund. They are never uploaded. The sync finds Summ's own leg for each
-  (same on-chain txid, currency and amount) and edits its type and fee to
-  match. It never creates or deletes a leg of Summ's own imports.
+  (same on-chain txid, currency and amount) and edits its type to
+  match. It never creates or deletes a leg of Summ's own imports, and never
+  edits their amounts or fees: the import read those from the chain.
 
 Each CSV file's chain (in its name, `periods.md`) says which kind its rows
 are: chains listed in `managedChains` (default `THOR` and `MAYA`) are
@@ -251,6 +252,12 @@ leg exactly, or another row would take it the same way (then neither does);
 the amount is not edited, and the difference beyond the row's amount, or its
 amount plus its fee, is listed in the `fee` report. Several legs, or none, are reported, not guessed.
 
+The fee of a categorised row is compared with the fee leg of Summ's own
+action, and a difference is listed in the `fee` report, not edited: Summ's
+import read the fee from the chain, while the row's may be a source's
+estimate (THORNode gives an EVM inbound's gas as its max fee per gas times
+the gas used, above what the wallet paid).
+
 **Made-up legs.** Summ pairs a send of its own imports with a receive
 it makes up itself (source `manual`, import type `soft-transfer`, to an
 account such as "THORChain"), so the send is a transfer that disposes of
@@ -310,10 +317,28 @@ legs share their actions (a delete by action would remove those too).
 | delete | managed legs with no row in the run; managed legs whose row changed in a field an edit cannot set (description, ID) or whose action shape changed; a fee leg the row no longer has | bulk delete by action id, after splitting a leg off an action whose other legs stay; only with `--approve-deletes` |
 | edit | managed legs whose row changed only in editable fields | `edit_transaction` per action |
 | upload | rows with no leg in Summ after the deletes, per CSV file | files written to `plans/<timestamp>/upload/` (the file's header and those rows as the run wrote them; filed-year rows in `<file>_filed.csv`), uploaded by the user |
-| categorise | categorised rows whose Summ leg differs in type or fee | `edit_transaction` |
+| categorise | categorised rows whose Summ leg differs in type | `edit_transaction` |
 | superseded | extra rows a run row exports itself (Extra folders above) | nothing: their legs adopt to the run row |
-| report | categorised rows with no or several matching legs; extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
+| report | categorised rows with no or several matching legs, or whose fee differs from Summ's (not edited); extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
+| held | rows the plan leaves alone (Held below), with what it left out | nothing |
 | overridden | differences an override keeps, and overrides captured in this plan | nothing |
+
+**Held.** Nothing is planned for two kinds of row, which are listed instead
+with the entries left out:
+
+- a row whose ID is in `hold` in `summ-sync.json`, with a reason: a
+  decision outside the sync is pending (a held ID with no row in the run's
+  periods is noted, and its legs in Summ are not deleted);
+- every row of an event, the rows linked by a shared txid, when a Summ
+  action holding a leg of one of them, or one of its planned deletes, also
+  holds a manual entry (import type `manual`), or a manual entry names one
+  of their txids: the user's own pairing or stand-in. A placeholder txid
+  (all zeros) links no rows. A
+  delete, split or edit there could break it, and an upload or a categorise
+  beside it could count the same asset twice (a manual receive standing in
+  for a swap's payout, next to the import's own receive of it). Legs with no
+  row in the run whose action holds a manual entry are not deleted either.
+  The user resolves the pairing in Summ, or the run, and plans again.
 
 **Filed years.** An entry whose row or leg is dated before `filedBefore` is
 an amendment: listed under its own heading in each section and applied only
@@ -343,7 +368,10 @@ user to delete.
 
 ## Apply
 
-In this order, stopping at the first failure:
+In this order, stopping at the first failure (a read, query or inspect,
+that fails with a server error (5xx) is first retried once after a pause,
+in pull too; a write never is, since it may have been made before the
+error):
 
 1. Check the plan's snapshot is the latest, and that `apply-log.jsonl`
    records no write since that snapshot was taken; refuse otherwise (pull
