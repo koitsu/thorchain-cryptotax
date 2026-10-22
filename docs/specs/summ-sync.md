@@ -65,7 +65,7 @@ decides the design:
 - No tool deletes one leg of an action: a delete takes whole actions. But a
   leg edited alone to `ignoreIn` or `ignoreOut` is moved by Summ, in the
   edit's own rebuild, to an action of its own; the action's other legs keep
-  every field. Seen for a fee leg (it becomes an outgoing leg) and for one
+  every field. This holds for a fee leg (it becomes an outgoing leg) and for one
   side of a transfer (the other side is left as a lone send or receive, not
   re-paired).
 
@@ -264,15 +264,17 @@ it. A made-up leg is never matched to a categorised row.
 ## Compared fields
 
 Type, base currency and amount, quote currency and amount (buy and sell),
-fee currency and amount, timestamp (to the second), blockchain, from and to
+fee currency and amount, timestamp (to the second; on every leg of the row,
+since Summ splits a leg left at another time into an action of its own), blockchain, from and to
 (managed rows only), and the description (managed rows with a stable ID; an
 adopted leg keeps its old wording). Not price, value or gain.
 
 A row with no fee whose legs in Summ include a fee leg (old exports put an
 own-wallet transfer's fee on both sides) loses only that leg: a delete of the
 fee leg alone, and the rest is compared as usual. Any other changed shape (a
-leg on the other side, a quote leg gained or lost, a fee leg gained),
-currency or description cannot be an edit (the MCP rejects custom
+leg on the other side, a quote leg gained or lost, a fee leg gained, or
+legs Summ has split into several actions), currency or description cannot
+be an edit (the MCP rejects custom
 currencies such as LP tokens, and cannot set descriptions), so such a row is
 deleted and uploaded again. The other fields are edits.
 
