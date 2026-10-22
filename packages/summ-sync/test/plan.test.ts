@@ -528,6 +528,46 @@ test('a manual entry naming a row\'s txid is reported', () => {
     assert.deepEqual(p.report.map((e) => [e.kind, e.id]), [['manual-entry', r.id]])
 })
 
+test('a row held in summ-sync.json gets nothing planned and is listed under held', () => {
+    const edited = row({ id: '2024-03-01T10:00:00.000Z.out.111111111111' })
+    const missing = row({ id: '2024-03-01T10:00:00.000Z.in.222222222222', type: 'receive', txids: [TX2], description: `Received; ${TX2}` })
+    const clean = row({ id: '2024-03-01T10:00:00.000Z.out.333333333333', txids: [], description: 'Sent' })
+    const hold = [edited, missing, clean].map((r) => ({ id: r.id, reason: 'pending a decision' }))
+    const legs = [...legsOf(edited, { to: 'wallet-c' }), ...legsOf(clean, {}, 'action2')]
+    const free = plan({ rows: [edited, missing, clean], legs }).plan
+    assert.deepEqual([free.edit.length, free.upload.length], [1, 1])
+    const { plan: p } = plan({ rows: [edited, missing, clean], legs, config: { ...CONFIG, hold: [...hold, { id: '2024-03-02T10:00:00.000Z.out.444444444444', reason: 'gone' }] } })
+    assert.deepEqual([p.edit, p.upload, p.counts.uploads], [[], [], 0])
+    assert.deepEqual(p.held.map((h) => [h.kind, h.id, h.held.map((x) => x.split(' ')[0])]), [
+        ['hold', edited.id, ['edit']],
+        ['hold', missing.id, ['upload']],
+        ['hold', clean.id, []],
+    ])
+    assert.deepEqual(p.notes, ['hold: no row 2024-03-02T10:00:00.000Z.out.444444444444 in the run'])
+    assert.match(renderPlan(p, 'snap', 'run'), /## Held .*\(3\)[\s\S]*\| hold \| 2024-03-01T10:00:00.000Z.out.333333333333 \| pending a decision \| nothing to do \|/)
+})
+
+test('an event whose Summ actions hold a manual entry gets nothing planned: the user\'s pairing is held, every row sharing its txids too', () => {
+    // A managed send paired in Summ with the user's manual receive, and the categorised receive of the same tx
+    const send = row({ to: 'wallet-c' })
+    const manual: Leg = { ...legsOf(send)[0], legId: legId(), side: 'incoming', trade: 'bridgeTradeIn', currency: 'BTC', quantity: 0.0099, id: 'entry-manual', source: 'manual', importType: 'manual', description: '' }
+    const receive = btcRow({ type: 'bridge-trade-in', feeCurrency: '', feeAmount: '' })
+    const deposit = ownLeg({ side: 'incoming', trade: 'deposit', quantity: 0.01 })
+    const legs = [...legsOf(send, { to: 'wallet-b' }), manual, deposit]
+    const free = plan({ rows: [send, receive], legs: legs.filter((l) => l !== manual) }).plan
+    assert.deepEqual([free.edit.length, free.categorise.length], [1, 1])
+    const { plan: p } = plan({ rows: [send, receive], legs })
+    assert.deepEqual([p.edit, p.categorise], [[], []])
+    assert.deepEqual(p.held.map((h) => [h.kind, h.id, h.legIds, h.held.map((x) => x.split(' ')[0])]).sort(), [
+        ['manual-pairing', receive.id, [manual.legId], ['categorise']],
+        ['manual-pairing', send.id, [manual.legId], ['edit']],
+    ].sort())
+    // A leg with no row in the run, beside a manual entry: not deleted either
+    const orphan = legsOf(row({ id: '2024-03-01T10:00:00.000Z.out.999999999999' }), {}, 'action9')
+    const del = plan({ rows: [], legs: [...orphan, { ...manual, actionId: 'action9' }] }).plan
+    assert.deepEqual([del.delete, del.held.map((h) => [h.kind, h.id, h.summId, h.held[0]])], [[], [['manual-pairing', null, orphan[0].id, 'delete (no row in the run)']]])
+})
+
 test('a row uploaded under a source not in managedSources is reported, not uploaded again', () => {
     const r = row()
     const { plan: p } = plan({ rows: [r], legs: legsOf(r, { source: 'other-account' }) })

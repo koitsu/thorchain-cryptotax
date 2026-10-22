@@ -81,6 +81,20 @@ export interface ReportEntry {
     detail: string
 }
 
+/** A row nothing is planned for: held by the config, or in an event whose Summ actions hold a manual entry. */
+export interface HeldEntry {
+    kind: 'hold' | 'manual-pairing'
+    filed: boolean
+    /** The row, or null for legs with no row in the run (then summId names them). */
+    id: string | null
+    summId?: string
+    /** For manual-pairing: the manual legs. */
+    legIds?: string[]
+    reason: string
+    /** What the plan would have done, left out. */
+    held: string[]
+}
+
 export interface OverriddenEntry {
     kind: 'captured' | 'run-changed' | 'gone'
     override: Override
@@ -104,6 +118,7 @@ export interface Plan {
     upload: UploadEntry[]
     categorise: EditEntry[]
     report: ReportEntry[]
+    held: HeldEntry[]
     overridden: OverriddenEntry[]
     notes: string[]
 }
@@ -259,6 +274,7 @@ export function makePlan(input: PlanInput): PlanResult {
         upload: [],
         categorise: [],
         report: [],
+        held: [],
         overridden: [],
         notes: [],
     }
@@ -605,6 +621,71 @@ export function makePlan(input: PlanInput): PlanResult {
         }
     }
 
+    // ---- Held: nothing is planned for a row the config holds (a decision pending outside the sync), nor for the rows
+    // of an event (rows linked by a shared txid) when a Summ action of theirs holds a manual entry: the user's own
+    // pairing, which a delete, a split, an upload or a categorise beside it could break or double. Listed instead.
+    const holdOf = new Map<string, HeldEntry>()
+    const runRows = new Map(rows.map((r) => [r.id, r]))
+    for (const h of config.hold) {
+        const row = runRows.get(h.id)
+        if (row) holdOf.set(h.id, { kind: 'hold', filed: isFiled(row.timestamp), id: h.id, reason: h.reason, held: [] })
+        else if (!STABLE_ID.test(h.id) || inScope(h.id.slice(0, 24))) plan.notes.push(`hold: no row ${h.id} in the run`)
+    }
+    const manualIn = (actionIds: string[]) => [...new Set(actionIds)].flatMap((a) => (legsByAction.get(a) ?? []).filter((l) => l.importType === 'manual'))
+    const pairingReason = (manual: Leg[]) => `a Summ action of this event holds a manual entry (${manual.map((l) => `${l.quantity} ${l.currency}`).join(', ')}): the user's pairing; resolve it in Summ`
+    const legsOfRow = new Map(matched)
+    for (const [row, leg] of categorised) legsOfRow.set(row.id, [...(legsOfRow.get(row.id) ?? []), leg])
+    const rowsByTxid = new Map<string, Row[]>()
+    for (const r of rows) for (const t of r.txids) rowsByTxid.set(t, [...(rowsByTxid.get(t) ?? []), r])
+    const seen = new Set<string>()
+    for (const start of rows) {
+        if (seen.has(start.id)) continue
+        seen.add(start.id)
+        const event: Row[] = []
+        for (const queue = [start]; queue.length; ) {
+            const r = queue.pop() as Row
+            event.push(r)
+            for (const o of r.txids.flatMap((t) => rowsByTxid.get(t) ?? [])) {
+                if (seen.has(o.id)) continue
+                seen.add(o.id)
+                queue.push(o)
+            }
+        }
+        const actions = [
+            ...event.flatMap((r) => (legsOfRow.get(r.id) ?? []).map((l) => l.actionId)),
+            ...plan.delete.filter((d) => d.id !== null && event.some((r) => r.id === d.id)).flatMap((d) => d.actionIds),
+        ]
+        const manual = manualIn(actions)
+        if (!manual.length) continue
+        for (const r of event) {
+            if (!holdOf.has(r.id)) holdOf.set(r.id, { kind: 'manual-pairing', filed: isFiled(r.timestamp), id: r.id, legIds: manual.map((l) => l.legId), reason: pairingReason(manual), held: [] })
+        }
+    }
+    const fields = (e: EditEntry) => [...e.changes.map((c) => `${c.leg} ${c.field} ${c.summ} -> ${c.desired}`), ...(e.ignore ?? []).map((l) => `ignore made-up leg ${l}`)].join('; ')
+    plan.delete = plan.delete.filter((d) => {
+        const h = d.id !== null ? holdOf.get(d.id) : undefined
+        if (h) h.held.push(`delete (${d.reason})`)
+        else if (d.id === null) {
+            const manual = manualIn(d.actionIds)
+            if (manual.length) plan.held.push({ kind: 'manual-pairing', filed: d.filed, id: null, summId: d.summId, legIds: manual.map((l) => l.legId), reason: pairingReason(manual), held: [`delete (${d.reason})`] })
+            return !manual.length
+        }
+        return !h
+    })
+    for (const [section, label] of [['edit', 'edit'], ['categorise', 'categorise']] as const) {
+        plan[section] = plan[section].filter((e) => {
+            const h = holdOf.get(e.id)
+            if (h) h.held.push(`${label} ${fields(e)}`)
+            return !h
+        })
+    }
+    for (const u of plan.upload) {
+        for (const id of u.ids) holdOf.get(id)?.held.push(`upload into ${u.file}`)
+        u.ids = u.ids.filter((id) => !holdOf.has(id))
+    }
+    plan.upload = plan.upload.filter((u) => u.ids.length)
+    plan.held.unshift(...[...holdOf.values()].filter((h) => h.kind === 'hold' || h.held.length))
+
     // ---- Manual entries repeating a row's txid
     const txidRows = new Map<string, string>()
     for (const row of rows) for (const t of row.txids) txidRows.set(t, row.id)
@@ -632,9 +713,10 @@ export function makePlan(input: PlanInput): PlanResult {
         adoptedLegs: plan.adopted.length,
         deletes: plan.delete.length,
         edits: plan.edit.length,
-        uploads: toUpload.length,
+        uploads: plan.upload.reduce((n, u) => n + u.ids.length, 0),
         categorise: plan.categorise.length,
         reports: plan.report.length,
+        held: plan.held.length,
         overridden: plan.overridden.length,
     }
     return { plan, adopted, overrides }

@@ -120,6 +120,10 @@ optional:
   and neither is uploaded.
 - `keepExtra`: IDs of extra rows that are right beside the run rows they
   overlap: not reported, and uploaded as usual.
+- `hold`: rows to leave alone while a decision outside the sync is pending,
+  as `{"id": "<row ID>", "reason": "<why>"}`. Plan plans nothing for them
+  (no delete, edit, upload or categorise) and lists them, with what it left
+  out, under Held. A held ID with no row in the run's periods is noted.
 
 ## Tests
 

@@ -313,7 +313,23 @@ legs share their actions (a delete by action would remove those too).
 | categorise | categorised rows whose Summ leg differs in type or fee | `edit_transaction` |
 | superseded | extra rows a run row exports itself (Extra folders above) | nothing: their legs adopt to the run row |
 | report | categorised rows with no or several matching legs; extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
+| held | rows the plan leaves alone (Held below), with what it left out | nothing |
 | overridden | differences an override keeps, and overrides captured in this plan | nothing |
+
+**Held.** Nothing is planned for two kinds of row, which are listed instead
+with the entries left out:
+
+- a row whose ID is in `hold` in `summ-sync.json`, with a reason: a
+  decision outside the sync is pending (a held ID with no row in the run's
+  periods is noted);
+- every row of an event, the rows linked by a shared txid, when a Summ
+  action holding a leg of one of them, or one of its planned deletes, also
+  holds a manual entry (import type `manual`): the user's own pairing. A
+  delete, split or edit there could break it, and an upload or a categorise
+  beside it could count the same asset twice (a manual receive standing in
+  for a swap's payout, next to the import's own receive of it). Legs with no
+  row in the run whose action holds a manual entry are not deleted either.
+  The user resolves the pairing in Summ, or the run, and plans again.
 
 **Filed years.** An entry whose row or leg is dated before `filedBefore` is
 an amendment: listed under its own heading in each section and applied only

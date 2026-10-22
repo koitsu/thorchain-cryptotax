@@ -72,6 +72,11 @@ export function renderPlan(plan: Plan, snapshot: string, run: string): string {
         ...section('Edit', plan.edit, (es) => ['| Row | Leg | Field | Summ | Desired |', '| --- | --- | --- | --- | --- |', ...changeLines(es)]),
         ...section('Upload (files in upload/, uploaded by you)', plan.upload, (es) => es.map((e) => `- ${e.file}: ${e.ids.length} rows${uploadNote(plan, e.file)}`)),
         ...section('Categorise', plan.categorise, (es) => ['| Row | Leg | Field | Summ | Desired |', '| --- | --- | --- | --- | --- |', ...changeLines(es)]),
+        ...section('Held (nothing planned: held in summ-sync.json, or the user\'s manual pairing)', plan.held, (es) => [
+            '| Kind | Row | Reason | Left out |',
+            '| --- | --- | --- | --- |',
+            ...es.map((e) => `| ${e.kind} | ${show(e.id ?? e.summId)} | ${cell(e.reason)} | ${cell(e.held.join('; ') || 'nothing to do')} |`),
+        ]),
         ...section('Report (for you to resolve)', plan.report, (es) => [
             '| Kind | Row | Legs | Detail |',
             '| --- | --- | --- | --- |',

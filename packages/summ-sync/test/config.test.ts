@@ -12,7 +12,7 @@ test('a missing config gives the defaults', () => {
 test('a config overrides the defaults it names', () => {
     const dir = mkdtempSync(join(tmpdir(), 'summ-sync-'))
     writeFileSync(join(dir, 'summ-sync.json'), JSON.stringify({ managedSources: ['thorchain'], filedBefore: '2024-01-01' }))
-    assert.deepEqual(loadConfig(dir), { managedChains: ['THOR', 'MAYA'], managedSources: ['thorchain'], filedBefore: '2024-01-01', timezone: 'UTC', extraDirs: [], keepExtra: [] })
+    assert.deepEqual(loadConfig(dir), { managedChains: ['THOR', 'MAYA'], managedSources: ['thorchain'], filedBefore: '2024-01-01', timezone: 'UTC', extraDirs: [], keepExtra: [], hold: [] })
 })
 
 test('a config with wrong types is refused', () => {
@@ -20,4 +20,6 @@ test('a config with wrong types is refused', () => {
     assert.throws(() => parseConfig('{"filedBefore": "July 2025"}'), /filedBefore must be a date/)
     assert.throws(() => parseConfig('{"timezone": "Mars/Base"}'), /timezone must be an IANA name/)
     assert.throws(() => parseConfig('{"keepExtra": "x.csv:1"}'), /keepExtra must be a list/)
+    assert.throws(() => parseConfig('{"hold": ["x"]}'), /hold must be a list/)
+    assert.throws(() => parseConfig('{"hold": [{"id": "x", "reason": " "}]}'), /each with a reason/)
 })
