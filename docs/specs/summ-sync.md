@@ -366,7 +366,10 @@ user to delete.
 
 ## Apply
 
-In this order, stopping at the first failure:
+In this order, stopping at the first failure (a read, query or inspect,
+that fails with a server error (5xx) is first retried once after a pause,
+in pull too; a write never is, since it may have been made before the
+error):
 
 1. Check the plan's snapshot is the latest, and that `apply-log.jsonl`
    records no write since that snapshot was taken; refuse otherwise (pull
