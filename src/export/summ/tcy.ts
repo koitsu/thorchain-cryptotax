@@ -52,26 +52,42 @@ export function tcyStakeRows(activity: Activity, protocol: Protocol): SummRow[] 
     }];
 }
 
-// A THORName is an expense: the RUNE paid when registering or renewing, and the fee
+// A THORName is an expense: the RUNE paid when registering or renewing, and the fee. An update that pays nothing but
+// the fee is a Fee row of its own: Summ drops a row with no base amount (docs/specs/fees.md)
 export function thornameRows(activity: Activity, protocol: Protocol): SummRow[] {
     const paid = findLeg(activity, 'principal', 'out');
     const gas = leg(activity, 'gas');
     const wallet = paid?.wallet ?? gas.wallet;
-    const amount = paid ? formatAmount(paid.amount) : '';
     const time = activity.time;
 
+    if (!paid) {
+        return [{
+            wallet,
+            timestamp: time,
+            type: SummRowType.Fee,
+            baseCurrency: parseMidgardAsset(gas.asset.notation, protocol).currency,
+            baseAmount: formatAmount(gas.amount),
+            from: wallet,
+            to: protocol.counterparty,
+            blockchain: protocol.blockchain,
+            trace: legTrace(gas),
+            description: `1/1 - Update Thorname; ${gas.txid ?? ''}`,
+        }];
+    }
+
+    const amount = formatAmount(paid.amount);
     return [{
-        wallet: wallet,
+        wallet,
         timestamp: time,
         type: SummRowType.Expense,
-        baseCurrency: paid ? parseMidgardAsset(paid.asset.notation, protocol).currency : '',
+        baseCurrency: parseMidgardAsset(paid.asset.notation, protocol).currency,
         baseAmount: amount,
         ...feeIfAny(activity, protocol),
         from: wallet,
         to: protocol.counterparty,
         blockchain: protocol.blockchain,
-        trace: legTrace(paid ?? gas),
-        description: paid ? `1/1 - Register/fund Thorname with ${amount} RUNE; ${gas.txid ?? ''}` : `1/1 - Update Thorname; ${gas.txid ?? ''}`,
+        trace: legTrace(paid),
+        description: `1/1 - Register/fund Thorname with ${amount} RUNE; ${gas.txid ?? ''}`,
     }];
 }
 
