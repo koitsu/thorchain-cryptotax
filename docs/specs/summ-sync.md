@@ -261,14 +261,16 @@ the gas used, above what the wallet paid).
 **Foreign pairs.** Summ's own matcher pairs an uploaded trade with any leg
 of about its value and retypes that leg (change history: `transactionMatching`),
 e.g. a bridge receive taken for a swap's payout while the payout is still a
-plain receive, undoing a user's edit of it within a minute. A managed row
+plain receive; while the trade lacks its real partner, it can undo a user's
+edit of that leg. A managed row
 whose Summ action holds a leg of Summ's imports with an on-chain txid that no
 row of its event names (rows sharing a txid) is reported (`foreign-pair`),
 with the matcher's changes from the action's history. Not reported: an
 exchange's own record (no on-chain txid); a leg with the side, currency and
 amount of a categorised row of the event that matched no leg (a payout the
-exporter could not name, e.g. before its txid was known); a held row (Held
-below speaks for it). The event is the one Held uses. To undo it: categorise the row's own other
+exporter could not name, e.g. before its txid was known; that row is
+reported as `no-leg`); a held row (held by the config or in a manual-pairing
+event: left alone on purpose). The event is the one Held uses. To undo it: categorise the row's own other
 side first, so the matcher has the right partner, then set the leg back.
 
 **Made-up legs.** Summ pairs a send of its own imports with a receive

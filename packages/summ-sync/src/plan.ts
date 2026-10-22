@@ -707,12 +707,12 @@ export function makePlan(input: PlanInput): PlanResult {
     // ---- Foreign pairs: a managed row Summ paired with a leg of its own imports that no row of the row's event names.
     // Summ's matcher can take any leg of about the row's value (a bridge receive for a swap's payout) and retype it;
     // the plan sees nothing else wrong there (the leg is no row's), so it is reported with the matcher's changes.
-    // Not for a held row (its entry says why it is left alone), nor for a leg that is the event's own categorised
+    // Not for a held row (held by the config or in a manual-pairing event: left alone on purpose), nor for a leg that is the event's own categorised
     // row without its txid (a payout the exporter could not name): the same side, currency and amount
     const claimedRows = new Set(categorised.map(([r]) => r.id))
     for (const [id, legs] of matched) {
         if (holdOf.has(id)) continue
-        const event = eventOf.get(id) ?? [rowsById.get(id) as Row]
+        const event = eventOf.get(id) as Row[]
         const named = new Set(event.flatMap((r) => r.txids))
         const unnamed = event.filter((r) => !isManaged(r, managedChains) && !claimedRows.has(r.id))
         const actionIds = [...new Set(legs.map((l) => l.actionId))]
@@ -730,7 +730,7 @@ export function makePlan(input: PlanInput): PlanResult {
             filed: isFiled(row.timestamp),
             id,
             legIds: foreign.map((l) => l.legId),
-            txids: foreign.map((l) => normaliseTxid(l.id)),
+            txids: [...new Set(foreign.map((l) => normaliseTxid(l.id)))],
             detail: `Summ paired the row with ${foreign.map((l) => `${l.trade} ${l.quantity} ${l.currency} (tx ${l.id})`).join(', ')}, which no row of its event names${matcher.length ? `; its matcher changed: ${matcher.join('; ')}` : ''}. Categorise the row's own other side first, then set the leg back`,
         })
     }

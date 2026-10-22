@@ -600,7 +600,11 @@ test('a managed row Summ paired with a leg no row of its event names is reported
     // the event's own payout row that has no txid of the leg (the exporter could not name the payout): no foreign pair
     const unnamedPayout = btcRow({ type: 'bridge-trade-in', baseCurrency: 'ETH', baseAmount: '0.1', feeCurrency: '', feeAmount: '' })
     assert.deepEqual(plan({ rows: [send, unnamedPayout], legs: [...legsOf(send), stolen], history }).plan.report.filter((r) => r.kind === 'foreign-pair'), [])
-    // a held row: its held entry speaks for it
+    // a payout row of the event that did match its own leg does not excuse the stolen one
+    const payout = ownLeg({ id: TX1, side: 'incoming', trade: 'deposit', currency: 'ETH', quantity: 0.1, actionId: 'l9' })
+    const claimed = plan({ rows: [send, unnamedPayout], legs: [...legsOf(send), stolen, payout], history }).plan
+    assert.deepEqual(claimed.report.filter((r) => r.kind === 'foreign-pair').map((r) => r.legIds), [[stolen.legId]])
+    // a held row: left alone on purpose
     const held = plan({ rows: [send], legs: [...legsOf(send), stolen], history, config: { ...CONFIG, hold: [{ id: send.id, reason: 'pending' }] } }).plan
     assert.deepEqual(held.report.filter((r) => r.kind === 'foreign-pair'), [])
 })
