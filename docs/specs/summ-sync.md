@@ -232,11 +232,12 @@ Each rank is settled for all legacy legs before the next, so a looser fit
 of one leg never blocks or takes a row another leg fits exactly.
 
 At one rank, a row that several legacy legs claim goes to the one that is
-not ignored, when exactly one of them is not and it fits no other row there:
-the others are its ignored duplicates. They take no further part in adoption
-or the lookalike check (an ignored leg counts nothing) and are deleted. When
-that leg fits other rows too, it takes none, and all of them are reported as
-ambiguous.
+not ignored, when exactly one of them is not and it fits no other row there
+(none that another leg's ambiguity holds back): the others are its ignored
+duplicates. They take no further part in adoption or the lookalike check (an
+ignored leg counts nothing) and are deleted, even when they also fitted
+another row whose legs stay ambiguous. When that leg fits other rows too, it
+takes none, and it and its ignored duplicates are reported as ambiguous.
 
 Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
 ID); later plans match the leg through that table, so a later change of
