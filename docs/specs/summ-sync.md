@@ -216,19 +216,30 @@ all carrying the row's `ID`.
 Rows uploaded before stable IDs carry `<file>:<n>`: plan adopts each such
 leg to the one unmatched row with a leg on the same side, the same currency
 and amount and, when the leg's description holds txids (old descriptions
-often do not), the same txids. It takes the best of three fits, in order:
+often do not), the same txids. It takes the best of four fits, in order:
 
 1. the same type at the same second;
 2. the same type within `ADOPT_WINDOW` (120 s) and the same wallet (the
    sender of an outgoing leg, the receiver of an incoming one): old exports
    took some times from Viewblock's block time, the run from Midgard's
    action time;
-3. another type on the same side, within the window and in the same wallet:
-   an old type (a plain withdrawal that is now a bridge trade). The plan
-   then edits the type, so Summ keeps the leg and its pairing.
+3. another type on the same side, at the same second and in the same
+   wallet: an old type (a plain withdrawal that is now a bridge trade). The
+   plan then edits the type, so Summ keeps the leg and its pairing;
+4. another type on the same side, within the window and in the same wallet.
 
 Each rank is settled for all legacy legs before the next, so a looser fit
-of one leg never blocks or takes a row another leg fits exactly. Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
+of one leg never blocks or takes a row another leg fits exactly.
+
+At one rank, a row that several legacy legs claim goes to the one that is
+not ignored, when exactly one of them is not and it fits no other row there
+(rows held back for an ambiguous leg at a closer rank aside): the others are its ignored
+duplicates. They take no further part in adoption or the lookalike check (an
+ignored leg counts nothing) and are deleted, even when they also fitted
+another row whose legs stay ambiguous. When that leg fits other rows too, it
+takes none, and it and its ignored duplicates are reported as ambiguous.
+
+Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
 ID); later plans match the leg through that table, so a later change of
 the row is an edit, not a re-upload. An in-scope legacy leg that fits no
 row is planned for deletion like any other, unless an unmatched row has its

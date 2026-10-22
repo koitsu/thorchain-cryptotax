@@ -651,6 +651,50 @@ test('an exact fit is adopted though a looser fit of another old leg claims the 
     assert.deepEqual([tie.upload, tie.adopted, tie.delete], [[], [], []])
 })
 
+test('an old leg under another type goes to the row at its exact second before one within the window; an ignored twin yields', () => {
+    // Two rows 58 s apart, each with an old leg at its exact second under an old type: each adopts its own
+    const r1 = row({ type: 'sell', description: 'no txid', txids: [] })
+    const r2 = row({ id: '2024-03-01T10:00:58.000Z.out.bbbbbbbbbbbb', timestamp: '2024-03-01T10:00:58.000Z', type: 'sell', description: 'no txid', txids: [] })
+    const a = legsOf(row({ type: 'send' }), { id: 'old-file.csv:1', description: '' }, 'action1')
+    const b = legsOf(row({ type: 'send', timestamp: '2024-03-01T10:00:58.000Z' }), { id: 'old-file.csv:2', description: '' }, 'action2')
+    const { plan: p } = plan({ rows: [r1, r2], legs: [...a, ...b] })
+    assert.deepEqual(p.adopted.map((x) => [x.legId, x.id]).sort(), [[a[0].legId, r1.id], [b[0].legId, r2.id]].sort())
+    assert.deepEqual([p.upload, p.delete, p.report], [[], [], []])
+    assert.deepEqual(p.edit.map((e) => e.changes.map((c) => [c.field, c.desired])), [[['trade', 'sell']], [['trade', 'sell']]])
+
+    // One row, two old legs 10 s off under another type, one ignored by the user: the other is adopted, the twin deleted
+    const r = row({ type: 'staking', id: '2024-03-01T10:00:00.000Z.in.cccccccccccc', description: 'no txid', txids: [] })
+    const kept = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:3', description: '', timestamp: '2024-03-01T10:00:10.000Z' }, 'action3')
+    const twin = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:4', description: '', timestamp: '2024-03-01T10:00:10.000Z', trade: 'ignoreIn' }, 'action4')
+    const t = plan({ rows: [r], legs: [...kept, ...twin] }).plan
+    assert.deepEqual([t.adopted.map((x) => [x.legId, x.id]), t.delete.map((d) => d.legIds), t.report, t.upload], [[[kept[0].legId, r.id]], [[twin[0].legId]], [], []])
+    // the yielded twin takes no other row either, at the same rank or a looser one
+    const r60 = row({ type: 'staking', id: '2024-03-01T10:01:00.000Z.in.dddddddddddd', timestamp: '2024-03-01T10:01:00.000Z', description: 'no txid', txids: [] })
+    const kept0 = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:6', description: '' }, 'action6')
+    const twin0 = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:7', description: '', trade: 'ignoreIn' }, 'action7')
+    const later = plan({ rows: [r, r60], legs: [...kept0, ...twin0] }).plan
+    assert.deepEqual([later.adopted.map((x) => x.id), later.delete.map((d) => [d.legIds, d.reason])], [[r.id], [[[twin0[0].legId], 'old ID: an ignored duplicate of old ID old-file.csv:6']]])
+    assert.deepEqual(later.upload.flatMap((u) => u.ids), [r60.id])
+    // a kept leg that is ambiguous itself (it fits two rows) takes nothing, so its twin does not yield: both reported
+    const kept10 = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:8', description: '', timestamp: '2024-03-01T10:00:30.000Z' }, 'action8')
+    const twin10 = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:9', description: '', timestamp: '2024-03-01T10:00:30.000Z', trade: 'ignoreIn' }, 'action9')
+    const amb = plan({ rows: [r, r60], legs: [...kept10, ...twin10] }).plan
+    assert.deepEqual([amb.adopted, amb.delete, amb.report.map((x) => x.kind)], [[], [], ['ambiguous-adoption', 'ambiguous-adoption']])
+    // a twin that two kept legs each take a row from: deleted once, naming both
+    // (rows 200 s apart; each kept leg 10 s from one row, the twin 100 s from both: all at the window's rank)
+    const r200 = row({ type: 'staking', id: '2024-03-01T10:03:20.000Z.in.eeeeeeeeeeee', timestamp: '2024-03-01T10:03:20.000Z', description: 'no txid', txids: [] })
+    const k1 = legsOf(row({ type: 'receive', timestamp: '2024-03-01T10:00:10.000Z' }), { id: 'old-file.csv:10', description: '' }, 'action10')
+    const k2 = legsOf(row({ type: 'receive', timestamp: '2024-03-01T10:03:10.000Z' }), { id: 'old-file.csv:11', description: '' }, 'action11')
+    const tw = legsOf(row({ type: 'receive', timestamp: '2024-03-01T10:01:40.000Z' }), { id: 'old-file.csv:12', description: '', trade: 'ignoreIn' }, 'action12')
+    const two = plan({ rows: [r, r200], legs: [...k1, ...k2, ...tw] }).plan
+    assert.deepEqual([two.adopted.map((x) => x.id).sort(), two.delete.map((d) => d.reason)], [[r.id, r200.id].sort(), ['old ID: an ignored duplicate of old ID old-file.csv:10, old-file.csv:11']])
+    assert.deepEqual([two.report, two.upload], [[], []])
+    // both ignored, or neither: still ambiguous
+    const both = plan({ rows: [r], legs: [...legsOf(row({ type: 'receive' }), { id: 'old-file.csv:5', description: '', timestamp: '2024-03-01T10:00:10.000Z', trade: 'ignoreIn' }, 'action5'), ...twin] }).plan
+    assert.deepEqual(both.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption'])
+    assert.match(both.report[1].detail, /fits 1 rows \(2024-03-01T10:00:00.000Z.in.cccccccccccc\),/)
+})
+
 test('plan writes nothing to the state dir; mergeTables adds its adoptions and captures and keeps hand edits', () => {
     const state = mkdtempSync(join(tmpdir(), 'summ-sync-state-'))
     const runDir = mkdtempSync(join(tmpdir(), 'summ-sync-run-'))
