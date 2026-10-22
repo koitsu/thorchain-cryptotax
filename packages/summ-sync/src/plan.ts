@@ -360,8 +360,8 @@ export function makePlan(input: PlanInput): PlanResult {
     // the same type within ADOPT_WINDOW in the same wallet (old exports took some times from another source);
     // another type on the same side at the same second in the same wallet, then within the window (an old type,
     // edited to the row's). Each rank is settled before the next, so a looser fit never blocks or takes a row an
-    // exact fit claims. At one rank, a row several old legs claim goes to the one the user has not ignored, when
-    // exactly one is not: the others are the user's ignored duplicates.
+    // exact fit claims. At one rank, a row several old legs claim goes to the one not ignored, when exactly one is
+    // not: the others are its ignored duplicates, deleted, and take no part in later ranks.
     const unmatchedRows = managedRows.filter((r) => !matched.has(r.id))
     const fits = new Map<string, { row: Row; rank: number }[]>()
     for (const [summId, legs] of legacy) {
@@ -385,6 +385,8 @@ export function makePlan(input: PlanInput): PlanResult {
     const heldBack = new Set<string>()
     let pending = legacy
     const ignoredGroup = new Map(legacy.map(([summId, legs]) => [summId, legs.every((l) => IGNORED.has(l.trade))]))
+    // An ignored twin that yielded a row to its kept leg takes no further part: it is that leg's duplicate, deleted
+    const yielded = new Map<string, string>()
     for (const rank of [0, 1, 2, 3]) {
         const atRank = (summId: string) => (fits.get(summId) ?? []).filter((f) => f.rank === rank && !matched.has(f.row.id)).map((f) => f.row)
         // A row held back for an ambiguous leg is never taken by a looser fit
@@ -394,12 +396,14 @@ export function makePlan(input: PlanInput): PlanResult {
         for (const [rowId, ids] of claimants) {
             const kept = ids.filter((id) => !ignoredGroup.get(id))
             if (ids.length < 2 || kept.length !== 1) continue
-            for (const id of ids.filter((x) => ignoredGroup.get(x))) found.set(id, (found.get(id) as Row[]).filter((r) => r.id !== rowId))
-            claimants.set(rowId, kept)
+            for (const id of ids.filter((x) => ignoredGroup.get(x))) yielded.set(id, kept[0])
         }
+        for (const id of yielded.keys()) found.set(id, [])
+        for (const [rowId, ids] of claimants) claimants.set(rowId, ids.filter((id) => !yielded.has(id)))
         const claims = new Map([...claimants].map(([rowId, ids]) => [rowId, ids.length]))
         const settled = new Set<string>()
         for (const [summId, legs] of pending) {
+            if (yielded.has(summId)) continue
             const rows = found.get(summId) as Row[]
             const blocked = atRank(summId).filter((r) => heldBack.has(r.id) && !rows.includes(r))
             if (rows.length === 0 && blocked.length === 0) continue
@@ -423,7 +427,10 @@ export function makePlan(input: PlanInput): PlanResult {
                 detail: `old ID ${summId} fits ${fitted.length} rows (${fitted.map((r) => r.id).join(', ')})${rows.length <= 1 ? ', which other old IDs fit too' : ''}; these rows are not uploaded${all.length > fitted.length ? ` (nor ${all.filter((r) => !fitted.includes(r)).map((r) => r.id).join(', ')}, which it fits less well)` : ''}`,
             })
         }
-        pending = pending.filter(([summId]) => !settled.has(summId))
+        pending = pending.filter(([summId]) => !settled.has(summId) && !yielded.has(summId))
+    }
+    for (const [summId, legs] of legacy) {
+        if (yielded.has(summId)) deleteGroup(summId, legs, null, `old ID: an ignored duplicate of old ID ${yielded.get(summId)}`)
     }
     // An old leg no row was adopted to, while an unmatched row has its currency and amount in the same wallet within
     // LOOKALIKE_WINDOW (and its txids, if the leg names any), may be that row with another time or type: uploading
