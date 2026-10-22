@@ -73,6 +73,7 @@ export interface ReportEntry {
         | 'extra-overlap'
         | 'manual-entry'
         | 'other-source'
+        | 'foreign-pair'
     filed: boolean
     id?: string
     legIds?: string[]
@@ -647,6 +648,7 @@ export function makePlan(input: PlanInput): PlanResult {
     // A placeholder txid (all zeros, as in some old exports' outbounds) links nothing
     for (const r of rows) for (const t of r.txids.filter((x) => !/^0+$/.test(x))) rowsByTxid.set(t, [...(rowsByTxid.get(t) ?? []), r])
     const seen = new Set<string>()
+    const eventOf = new Map<string, Row[]>()
     for (const start of rows) {
         if (seen.has(start.id)) continue
         seen.add(start.id)
@@ -660,6 +662,7 @@ export function makePlan(input: PlanInput): PlanResult {
                 queue.push(o)
             }
         }
+        for (const r of event) eventOf.set(r.id, event)
         const actions = [
             ...event.flatMap((r) => (legsOfRow.get(r.id) ?? []).map((l) => l.actionId)),
             ...plan.delete.filter((d) => d.id !== null && event.some((r) => r.id === d.id)).flatMap((d) => d.actionIds),
@@ -700,6 +703,37 @@ export function makePlan(input: PlanInput): PlanResult {
     }
     plan.upload = plan.upload.filter((u) => u.ids.length)
     plan.held.unshift(...[...holdOf.values()].filter((h) => h.kind === 'hold' || h.held.length))
+
+    // ---- Foreign pairs: a managed row Summ paired with a leg of its own imports that no row of the row's event names.
+    // Summ's matcher can take any leg of about the row's value (a bridge receive for a swap's payout) and retype it;
+    // the plan sees nothing else wrong there (the leg is no row's), so it is reported with the matcher's changes.
+    // Not for a held row (held by the config or in a manual-pairing event: left alone on purpose), nor for a leg that is the event's own categorised
+    // row without its txid (a payout the exporter could not name): the same side, currency and amount
+    const claimedRows = new Set(categorised.map(([r]) => r.id))
+    for (const [id, legs] of matched) {
+        if (holdOf.has(id)) continue
+        const event = eventOf.get(id) as Row[]
+        const named = new Set(event.flatMap((r) => r.txids))
+        const unnamed = event.filter((r) => !isManaged(r, managedChains) && !claimedRows.has(r.id))
+        const actionIds = [...new Set(legs.map((l) => l.actionId))]
+        const foreign = actionIds
+            .flatMap((a) => legsByAction.get(a) ?? [])
+            .filter((l) => !managedSources.has(l.source) && l.importType !== 'manual' && l.importType !== SOFT_TRANSFER && !IGNORED.has(l.trade))
+            // Only a leg with an on-chain txid: an exchange's own record (no txid) pairs with a send to it and no row names it
+            .filter((l) => /^[0-9a-f]{64}$/.test(normaliseTxid(l.id)) && !/^0+$/.test(normaliseTxid(l.id)) && !named.has(normaliseTxid(l.id)))
+            .filter((l) => !unnamed.some((r) => typeOf(r).side === l.side && sameCurrency(r.baseCurrency, l.currency) && sameAmount(l.quantity, Number(r.baseAmount))))
+        if (!foreign.length) continue
+        const matcher = actionIds.flatMap((a) => input.history.get(a) ?? []).filter((h) => h.includes('transactionMatching'))
+        const row = rowsById.get(id) as Row
+        plan.report.push({
+            kind: 'foreign-pair',
+            filed: isFiled(row.timestamp),
+            id,
+            legIds: foreign.map((l) => l.legId),
+            txids: [...new Set(foreign.map((l) => normaliseTxid(l.id)))],
+            detail: `Summ paired the row with ${foreign.map((l) => `${l.trade} ${l.quantity} ${l.currency} (tx ${l.id})`).join(', ')}, which no row of its event names${matcher.length ? `; its matcher changed: ${matcher.join('; ')}` : ''}. Categorise the row's own other side first, then set the leg back`,
+        })
+    }
 
     // ---- Manual entries repeating a row's txid
     const txidRows = new Map<string, string>()

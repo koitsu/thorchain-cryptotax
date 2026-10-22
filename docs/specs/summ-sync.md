@@ -258,6 +258,21 @@ import read the fee from the chain, while the row's may be a source's
 estimate (THORNode gives an EVM inbound's gas as its max fee per gas times
 the gas used, above what the wallet paid).
 
+**Foreign pairs.** Summ's own matcher pairs an uploaded trade with any leg
+of about its value and retypes that leg (change history: `transactionMatching`),
+e.g. a bridge receive taken for a swap's payout while the payout is still a
+plain receive; while the trade lacks its real partner, it can undo a user's
+edit of that leg. A managed row
+whose Summ action holds a leg of Summ's imports with an on-chain txid that no
+row of its event names (rows sharing a txid) is reported (`foreign-pair`),
+with the matcher's changes from the action's history. Not reported: an
+exchange's own record (no on-chain txid); a leg with the side, currency and
+amount of a categorised row of the event that matched no leg (a payout the
+exporter could not name, e.g. before its txid was known; that row is
+reported as `no-leg`); a held row (held by the config or in a manual-pairing
+event: left alone on purpose). The event is the one Held uses. To undo it: categorise the row's own other
+side first, so the matcher has the right partner, then set the leg back.
+
 **Made-up legs.** Summ pairs a send of its own imports with a receive
 it makes up itself (source `manual`, import type `soft-transfer`, to an
 account such as "THORChain"), so the send is a transfer that disposes of
@@ -319,7 +334,7 @@ legs share their actions (a delete by action would remove those too).
 | upload | rows with no leg in Summ after the deletes, per CSV file | files written to `plans/<timestamp>/upload/` (the file's header and those rows as the run wrote them; filed-year rows in `<file>_filed.csv`), uploaded by the user |
 | categorise | categorised rows whose Summ leg differs in type | `edit_transaction` |
 | superseded | extra rows a run row exports itself (Extra folders above) | nothing: their legs adopt to the run row |
-| report | categorised rows with no or several matching legs, or whose fee differs from Summ's (not edited); extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); manual entries repeating a row's txid | nothing: for the user to resolve |
+| report | categorised rows with no or several matching legs, or whose fee differs from Summ's (not edited); extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); managed rows Summ paired with a leg no row of their event names (`foreign-pair`); manual entries repeating a row's txid | nothing: for the user to resolve |
 | held | rows the plan leaves alone (Held below), with what it left out | nothing |
 | overridden | differences an override keeps, and overrides captured in this plan | nothing |
 

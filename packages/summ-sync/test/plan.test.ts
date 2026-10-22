@@ -584,6 +584,31 @@ test('an event whose Summ actions hold a manual entry gets nothing planned: the 
     assert.deepEqual([apart.upload.flatMap((u) => u.ids), apart.held.map((h) => h.id)], [[b.id], [a.id]])
 })
 
+test('a managed row Summ paired with a leg no row of its event names is reported, with the matcher\'s changes', () => {
+    const TX3 = '3'.repeat(64)
+    const send = row()
+    const other = (over: Partial<Leg>): Leg => ({ ...legsOf(send)[0], legId: legId(), side: 'incoming', trade: 'bridgeTradeIn', currency: 'ETH', quantity: 0.1, source: 'eth-wallet', importType: 'wallet', description: '', ...over })
+    const history = new Map([['action1', ['1 Jan 2024 10:00 · transactionMatching · Category: Bridge In → Cross Chain Buy', '1 Jan 2024 09:00 · import (original)']]])
+    const stolen = other({ id: `0x${TX3}` })
+    const { plan: p } = plan({ rows: [send], legs: [...legsOf(send), stolen], history })
+    assert.deepEqual(p.report.map((r) => [r.kind, r.id, r.legIds, r.txids]), [['foreign-pair', send.id, [stolen.legId], [TX3]]])
+    assert.match(p.report[0].detail, /its matcher changed: 1 Jan 2024 10:00 · transactionMatching · Category: Bridge In → Cross Chain Buy\. Categorise/)
+    // the leg of a row of the same event (a payout named by the receive row), or an exchange's own record: no report
+    const receive = btcRow({ type: 'bridge-trade-in', feeCurrency: '', feeAmount: '', txids: [TX1, TX3] })
+    assert.deepEqual(plan({ rows: [send, receive], legs: [...legsOf(send), stolen], history }).plan.report.filter((r) => r.kind === 'foreign-pair'), [])
+    assert.deepEqual(plan({ rows: [send], legs: [...legsOf(send), other({ id: '1234567890', source: 'exchange' })] }).plan.report, [])
+    // the event's own payout row that has no txid of the leg (the exporter could not name the payout): no foreign pair
+    const unnamedPayout = btcRow({ type: 'bridge-trade-in', baseCurrency: 'ETH', baseAmount: '0.1', feeCurrency: '', feeAmount: '' })
+    assert.deepEqual(plan({ rows: [send, unnamedPayout], legs: [...legsOf(send), stolen], history }).plan.report.filter((r) => r.kind === 'foreign-pair'), [])
+    // a payout row of the event that did match its own leg does not excuse the stolen one
+    const payout = ownLeg({ id: TX1, side: 'incoming', trade: 'deposit', currency: 'ETH', quantity: 0.1, actionId: 'l9' })
+    const claimed = plan({ rows: [send, unnamedPayout], legs: [...legsOf(send), stolen, payout], history }).plan
+    assert.deepEqual(claimed.report.filter((r) => r.kind === 'foreign-pair').map((r) => r.legIds), [[stolen.legId]])
+    // a held row: left alone on purpose
+    const held = plan({ rows: [send], legs: [...legsOf(send), stolen], history, config: { ...CONFIG, hold: [{ id: send.id, reason: 'pending' }] } }).plan
+    assert.deepEqual(held.report.filter((r) => r.kind === 'foreign-pair'), [])
+})
+
 test('a row uploaded under a source not in managedSources is reported, not uploaded again', () => {
     const r = row()
     const { plan: p } = plan({ rows: [r], legs: legsOf(r, { source: 'other-account' }) })
