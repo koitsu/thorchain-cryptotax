@@ -467,14 +467,17 @@ test('a categorised row with no leg of its amount takes the one leg with its txi
     assert.deepEqual([two.categorise, two.report.map((x) => x.kind)], [[], ['no-leg']])
 })
 
-test('a categorised row sets the type and fee of Summ\'s own leg with its txid, currency and gross amount', () => {
+test('a categorised row sets the type of Summ\'s own leg with its txid, currency and gross amount; a fee that differs is reported, not edited', () => {
     const r = btcRow({ type: 'bridge-trade-out' })
     const leg = ownLeg()
     const fee = ownLeg({ side: 'fees', trade: 'fee', quantity: 0.0002 })
     const { plan: p } = plan({ rows: [r], legs: [leg, fee] })
     assert.equal(p.categorise.length, 1)
-    assert.deepEqual(p.categorise[0].changes.map((c) => [c.leg, c.field, c.desired]), [['base', 'trade', 'bridgeTradeOut'], ['fee', 'quantity', 0.0001]])
+    assert.deepEqual(p.categorise[0].changes.map((c) => [c.leg, c.field, c.desired]), [['base', 'trade', 'bridgeTradeOut']])
+    assert.deepEqual(p.report.map((x) => [x.kind, x.legIds, x.detail]), [['fee', [fee.legId], "Summ's import holds a fee of 0.0002 BTC, the row 0.0001; the fee is not edited"]])
     assert.equal(p.upload.length, 0)
+    // the same fee: nothing reported
+    assert.deepEqual(plan({ rows: [r], legs: [ownLeg(), ownLeg({ side: 'fees', trade: 'fee', quantity: 0.0001 })] }).plan.report, [])
 })
 
 test('the receive Summ made up to pair a categorised send as a transfer is ignored, never matched', () => {

@@ -538,7 +538,7 @@ export function makePlan(input: PlanInput): PlanResult {
 
     // ---- Categorised rows: Summ's own leg with the row's txid, side and currency, and its amount or the
     // amount plus the fee; else the one leg with its txid, side and currency whatever the amount (Summ may hold
-    // the tx gross of a gas the row does not record), the difference reported. Only its type and fee are set
+    // the tx gross of a gas the row does not record), the difference reported. Only its type is set
     // Summ's own imports, without the legs Summ made up to pair a send as a transfer (soft-transfer)
     const ownLegs = input.legs.filter((l) => !managedSources.has(l.source) && l.importType !== 'manual' && l.importType !== SOFT_TRANSFER)
     const softLegs = input.legs.filter((l) => l.importType === SOFT_TRANSFER && !IGNORED.has(l.trade))
@@ -603,8 +603,11 @@ export function makePlan(input: PlanInput): PlanResult {
         const changes: Change[] = [...compare(leg, 'base', 'trade', typeOf(row).trade)]
         const feeLegs = (legsByAction.get(leg.actionId) ?? []).filter((l) => l.side === 'fees' && l.id === leg.id)
         if (hasFee(row)) {
-            if (feeLegs.length === 1 && sameCurrency(feeLegs[0].currency, row.feeCurrency)) changes.push(...compare(feeLegs[0], 'fee', 'quantity', Number(row.feeAmount)))
-            else plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: `the row has a fee of ${row.feeAmount} ${row.feeCurrency}; Summ has ${feeLegs.length} fee legs${feeLegs.length === 1 ? ` in ${feeLegs[0].currency}` : ''}` })
+            // Summ's import read the fee from the chain; the row's may be a source's estimate (THORNode's gas of an EVM
+            // inbound is its max fee), so a difference is reported, never edited
+            if (feeLegs.length === 1 && sameCurrency(feeLegs[0].currency, row.feeCurrency)) {
+                if (!sameAmount(feeLegs[0].quantity, Number(row.feeAmount))) plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [feeLegs[0].legId], detail: `Summ's import holds a fee of ${Number(feeLegs[0].quantity.toFixed(12))} ${feeLegs[0].currency}, the row ${row.feeAmount}; the fee is not edited` })
+            } else plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: `the row has a fee of ${row.feeAmount} ${row.feeCurrency}; Summ has ${feeLegs.length} fee legs${feeLegs.length === 1 ? ` in ${feeLegs[0].currency}` : ''}` })
         } else if (feeLegs.some((l) => l.quantity !== 0)) {
             plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: 'the row has no fee; Summ has a fee leg' })
         }
