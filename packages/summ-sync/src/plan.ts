@@ -361,8 +361,8 @@ export function makePlan(input: PlanInput): PlanResult {
     // another type on the same side at the same second in the same wallet, then within the window (an old type,
     // edited to the row's). Each rank is settled before the next, so a looser fit never blocks or takes a row an
     // exact fit claims. At one rank, a row several old legs claim goes to the one not ignored, when exactly one is
-    // not and it fits no other row there that is not held back: the others are its ignored duplicates, deleted,
-    // and take no further part in adoption.
+    // not and it fits no other row there (rows held back at a closer rank aside): the others are its ignored
+    // duplicates, deleted, and take no further part in adoption or the lookalike check.
     const unmatchedRows = managedRows.filter((r) => !matched.has(r.id))
     const fits = new Map<string, { row: Row; rank: number }[]>()
     for (const [summId, legs] of legacy) {

@@ -688,6 +688,7 @@ test('an old leg under another type goes to the row at its exact second before o
     const tw = legsOf(row({ type: 'receive', timestamp: '2024-03-01T10:01:40.000Z' }), { id: 'old-file.csv:12', description: '', trade: 'ignoreIn' }, 'action12')
     const two = plan({ rows: [r, r200], legs: [...k1, ...k2, ...tw] }).plan
     assert.deepEqual([two.adopted.map((x) => x.id).sort(), two.delete.map((d) => d.reason)], [[r.id, r200.id].sort(), ['old ID: an ignored duplicate of old ID old-file.csv:10, old-file.csv:11']])
+    assert.deepEqual([two.report, two.upload], [[], []])
     // both ignored, or neither: still ambiguous
     const both = plan({ rows: [r], legs: [...legsOf(row({ type: 'receive' }), { id: 'old-file.csv:5', description: '', timestamp: '2024-03-01T10:00:10.000Z', trade: 'ignoreIn' }, 'action5'), ...twin] }).plan
     assert.deepEqual(both.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption'])

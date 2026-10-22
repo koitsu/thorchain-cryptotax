@@ -233,7 +233,7 @@ of one leg never blocks or takes a row another leg fits exactly.
 
 At one rank, a row that several legacy legs claim goes to the one that is
 not ignored, when exactly one of them is not and it fits no other row there
-(none that another leg's ambiguity holds back): the others are its ignored
+(rows held back for an ambiguous leg at a closer rank aside): the others are its ignored
 duplicates. They take no further part in adoption or the lookalike check (an
 ignored leg counts nothing) and are deleted, even when they also fitted
 another row whose legs stay ambiguous. When that leg fits other rows too, it
