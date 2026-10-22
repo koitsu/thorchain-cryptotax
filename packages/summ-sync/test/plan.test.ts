@@ -675,6 +675,11 @@ test('an old leg under another type goes to the row at its exact second before o
     const later = plan({ rows: [r, r60], legs: [...kept0, ...twin0] }).plan
     assert.deepEqual([later.adopted.map((x) => x.id), later.delete.map((d) => [d.legIds, d.reason])], [[r.id], [[[twin0[0].legId], 'old ID: an ignored duplicate of old ID old-file.csv:6']]])
     assert.deepEqual(later.upload.flatMap((u) => u.ids), [r60.id])
+    // a kept leg that is ambiguous itself (it fits two rows) takes nothing, so its twin does not yield: both reported
+    const kept10 = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:8', description: '', timestamp: '2024-03-01T10:00:30.000Z' }, 'action8')
+    const twin10 = legsOf(row({ type: 'receive' }), { id: 'old-file.csv:9', description: '', timestamp: '2024-03-01T10:00:30.000Z', trade: 'ignoreIn' }, 'action9')
+    const amb = plan({ rows: [r, r60], legs: [...kept10, ...twin10] }).plan
+    assert.deepEqual([amb.adopted, amb.delete, amb.report.map((x) => x.kind)], [[], [], ['ambiguous-adoption', 'ambiguous-adoption']])
     // both ignored, or neither: still ambiguous
     const both = plan({ rows: [r], legs: [...legsOf(row({ type: 'receive' }), { id: 'old-file.csv:5', description: '', timestamp: '2024-03-01T10:00:10.000Z', trade: 'ignoreIn' }, 'action5'), ...twin] }).plan
     assert.deepEqual(both.report.map((x) => x.kind), ['ambiguous-adoption', 'ambiguous-adoption'])

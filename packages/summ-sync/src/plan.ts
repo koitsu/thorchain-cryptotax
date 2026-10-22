@@ -386,7 +386,7 @@ export function makePlan(input: PlanInput): PlanResult {
     let pending = legacy
     const ignoredGroup = new Map(legacy.map(([summId, legs]) => [summId, legs.every((l) => IGNORED.has(l.trade))]))
     // An ignored twin that yielded a row to its kept leg takes no further part: it is that leg's duplicate, deleted
-    const yielded = new Map<string, string>()
+    const yielded = new Map<string, string[]>()
     for (const rank of [0, 1, 2, 3]) {
         const atRank = (summId: string) => (fits.get(summId) ?? []).filter((f) => f.rank === rank && !matched.has(f.row.id)).map((f) => f.row)
         // A row held back for an ambiguous leg is never taken by a looser fit
@@ -395,8 +395,9 @@ export function makePlan(input: PlanInput): PlanResult {
         for (const [summId, rows] of found) for (const row of rows) claimants.set(row.id, [...(claimants.get(row.id) ?? []), summId])
         for (const [rowId, ids] of claimants) {
             const kept = ids.filter((id) => !ignoredGroup.get(id))
-            if (ids.length < 2 || kept.length !== 1) continue
-            for (const id of ids.filter((x) => ignoredGroup.get(x))) yielded.set(id, kept[0])
+            // Only when the kept leg takes the row: it fits no other row at this rank
+            if (ids.length < 2 || kept.length !== 1 || (found.get(kept[0]) as Row[]).length !== 1) continue
+            for (const id of ids.filter((x) => ignoredGroup.get(x))) yielded.set(id, [...(yielded.get(id) ?? []), kept[0]])
         }
         for (const id of yielded.keys()) found.set(id, [])
         for (const [rowId, ids] of claimants) claimants.set(rowId, ids.filter((id) => !yielded.has(id)))
@@ -430,7 +431,7 @@ export function makePlan(input: PlanInput): PlanResult {
         pending = pending.filter(([summId]) => !settled.has(summId) && !yielded.has(summId))
     }
     for (const [summId, legs] of legacy) {
-        if (yielded.has(summId)) deleteGroup(summId, legs, null, `old ID: an ignored duplicate of old ID ${yielded.get(summId)}`)
+        if (yielded.has(summId)) deleteGroup(summId, legs, null, `old ID: an ignored duplicate of old ID ${(yielded.get(summId) as string[]).join(', ')}`)
     }
     // An old leg no row was adopted to, while an unmatched row has its currency and amount in the same wallet within
     // LOOKALIKE_WINDOW (and its txids, if the leg names any), may be that row with another time or type: uploading

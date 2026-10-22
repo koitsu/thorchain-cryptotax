@@ -229,10 +229,16 @@ often do not), the same txids. It takes the best of four fits, in order:
 4. another type on the same side, within the window and in the same wallet.
 
 Each rank is settled for all legacy legs before the next, so a looser fit
-of one leg never blocks or takes a row another leg fits exactly. At one rank, a row that several legacy legs claim goes to the one
-that is not ignored, when exactly one of them is not: the others are its
-ignored duplicates. They take no part in later ranks or the lookalike check
-(an ignored leg counts nothing) and are deleted. Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
+of one leg never blocks or takes a row another leg fits exactly.
+
+At one rank, a row that several legacy legs claim goes to the one that is
+not ignored, when exactly one of them is not and it fits no other row there:
+the others are its ignored duplicates. They take no further part in adoption
+or the lookalike check (an ignored leg counts nothing) and are deleted. When
+that leg fits other rows too, it takes none, and all of them are reported as
+ambiguous.
+
+Plan records each adopted leg in `adopted.csv` (`Leg,ID`: leg `_id`, row
 ID); later plans match the leg through that table, so a later change of
 the row is an edit, not a re-upload. An in-scope legacy leg that fits no
 row is planned for deletion like any other, unless an unmatched row has its
