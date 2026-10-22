@@ -272,8 +272,9 @@ adopted leg keeps its old wording). Not price, value or gain.
 A row with no fee whose legs in Summ include a fee leg (old exports put an
 own-wallet transfer's fee on both sides) loses only that leg: a delete of the
 fee leg alone, and the rest is compared as usual. Any other changed shape (a
-leg on the other side, a quote leg gained or lost, a fee leg gained),
-currency or description cannot be an edit (the MCP rejects custom
+leg on the other side, a quote leg gained or lost, a fee leg gained, or
+legs Summ has split into several actions), currency or description cannot
+be an edit (the MCP rejects custom
 currencies such as LP tokens, and cannot set descriptions), so such a row is
 deleted and uploaded again. The other fields are edits.
 

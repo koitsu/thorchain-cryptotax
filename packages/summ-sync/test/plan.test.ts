@@ -146,6 +146,16 @@ test('a changed time moves every leg of the row, in one edit', () => {
     const { plan: p } = plan({ rows: [r], legs })
     assert.equal(p.edit.length, 1)
     assert.deepEqual(p.edit[0].changes.map((c) => [c.leg, c.field, c.desired]), [['base', 'timestamp', r.timestamp], ['fee', 'timestamp', r.timestamp]])
+
+    // a row whose fee leg Summ already split into another action is deleted and uploaded, not edited
+    const split = legsOf(r).map((l) => (l.side === 'fees' ? { ...l, actionId: 'action2', timestamp: '2024-03-01T09:59:50.000Z' } : l))
+    const remade = plan({ rows: [r], legs: split }).plan
+    assert.deepEqual([remade.edit, remade.delete.map((d) => d.reason), remade.upload.map((u) => u.ids)], [[], ['legs in several actions'], [[r.id]]])
+
+    // a fee leg's time the user set by hand is kept (captured), not moved
+    const history = new Map([['action1', ['2 Jan 2024 · user · Date: 1 Mar 2024 10:00 → 1 Mar 2024 09:59']]])
+    const kept = plan({ rows: [r], legs: legsOf(r).map((l) => (l.side === 'fees' ? { ...l, timestamp: '2024-03-01T09:59:50.000Z' } : l)), history }).plan
+    assert.deepEqual([kept.edit, kept.overridden.map((o) => [o.kind, o.override.leg])], [[], [['captured', 'fee']]])
 })
 
 test('a changed description, currency or shape deletes the legs and uploads the row', () => {

@@ -462,6 +462,12 @@ export function makePlan(input: PlanInput): PlanResult {
             remake(shape)
             continue
         }
+        // Summ split a leg of the row into another action (e.g. after a time edit of one leg): one edit cannot
+        // reach both, and an upload puts the row back together
+        if (new Set(legs.map((l) => l.actionId)).size > 1) {
+            remake('legs in several actions')
+            continue
+        }
         const { base, quote, fee } = shape
         // An edit cannot set a description, an ID or a currency the MCP does not know (LP tokens), so a row
         // that changed in one of them is deleted and uploaded again. An adopted leg keeps its old wording.
