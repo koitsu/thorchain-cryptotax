@@ -65,7 +65,7 @@ decides the design:
 - No tool deletes one leg of an action: a delete takes whole actions. But a
   leg edited alone to `ignoreIn` or `ignoreOut` is moved by Summ, in the
   edit's own rebuild, to an action of its own; the action's other legs keep
-  every field. Seen for a fee leg (it becomes an outgoing leg) and for one
+  every field. This holds for a fee leg (it becomes an outgoing leg) and for one
   side of a transfer (the other side is left as a lone send or receive, not
   re-paired).
 
