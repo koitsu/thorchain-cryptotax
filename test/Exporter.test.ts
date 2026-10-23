@@ -1,7 +1,7 @@
 import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import { ActionTypeEnum } from '@xchainjs/xchain-midgard';
-import { getThornodeTxIds, shouldIncludeAction } from '../src/sources/Source.ts';
+import { getInboundTxs, getThornodeTxIds, shouldIncludeAction } from '../src/sources/Source.ts';
 import { unsupportedActionFile } from '../src/cli/Exporter.ts';
 import type { RawBundle } from '../src/sources/RawBundle.ts';
 
@@ -38,6 +38,24 @@ describe('Exporter thornode fetch wiring', () => {
     test('does not fetch the genesisTx placeholder', () => {
         // Old Midgard's LP positions from before its start (2022-03)
         assert.deepEqual(ids(ActionTypeEnum.AddLiquidity, [inbound('genesisTx', 'BTC.BTC')]), []);
+    });
+});
+
+describe('getInboundTxs', () => {
+    test('a savers deposit from an L1 wallet sent the L1 asset, which Midgard names as the synth', () => {
+        const action = {type: ActionTypeEnum.AddLiquidity, in: [{txID: 'tx-btc', address: 'bc1q-wallet', coins: [{asset: 'BTC/BTC', amount: '1'}]}]} as any;
+        assert.deepEqual(getInboundTxs(action), [{txId: 'tx-btc', asset: 'BTC.BTC'}]);
+    });
+
+    test('a savers deposit of a synth from a THORChain wallet is not looked up', () => {
+        const action = {type: ActionTypeEnum.AddLiquidity, in: [{txID: 'tx-synth', address: 'thor1-wallet', coins: [{asset: 'BTC/BTC', amount: '1'}]}]} as any;
+        assert.deepEqual(getInboundTxs(action), []);
+    });
+
+    test('a token deposit is sent on its L1', () => {
+        const usdc = 'ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48';
+        const action = {type: ActionTypeEnum.AddLiquidity, in: [{txID: 'tx-usdc', address: '0xwallet', coins: [{asset: usdc, amount: '1'}]}]} as any;
+        assert.deepEqual(getInboundTxs(action), [{txId: 'tx-usdc', asset: usdc}]);
     });
 });
 

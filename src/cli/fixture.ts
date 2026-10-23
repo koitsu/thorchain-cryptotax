@@ -6,6 +6,8 @@ import {ThornodeService} from "../sources/thorchain/ThornodeService.ts";
 import {RecordStore} from "../sources/store/RecordStore.ts";
 import {MayanodeService} from "../sources/maya/MayanodeService.ts";
 import {CosmosTxService} from "../sources/thorchain/CosmosTxService.ts";
+import {EvmReceipts} from "../sources/evm/EvmReceipts.ts";
+import {Viewblock} from "../sources/viewblock/index.ts";
 import {MidgardService} from "../sources/thorchain/MidgardService.ts";
 import {MidgardSource} from "../sources/Source.ts";
 import {http} from "../sources/http.ts";
@@ -80,7 +82,8 @@ async function fetchInput(txid: string, protocol: Protocol, index?: number): Pro
     const store = new RecordStore(fs.mkdtempSync(path.join(os.tmpdir(), 'tc-ct-fixture-')));
     const source = new MidgardSource(protocol, new MidgardService(store, `${protocol.id}-midgard`, protocol.midgardUrl),
         new ThornodeService(store), new CosmosTxService(store), [], undefined,
-        protocol.nodeUrl ? new MayanodeService(store, protocol.nodeUrl) : undefined);
+        protocol.nodeUrl ? new MayanodeService(store, protocol.nodeUrl) : undefined,
+        {viewblock: new Viewblock(store), evm: new EvmReceipts(store)});
     const bundle = await source.bundle(action, action.in[0]?.address ?? '');
 
     return toCaseInput(bundle, describeShape(getActionShape(action)));

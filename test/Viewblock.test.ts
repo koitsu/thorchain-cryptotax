@@ -49,6 +49,29 @@ describe('Viewblock', () => {
     });
 });
 
+describe('Viewblock.getInbound', () => {
+    const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'tc-ct-viewblock-'));
+
+    afterEach(() => {
+        mock.restoreAll();
+    });
+
+    test("keeps only the gas THORNode observed, and replays it offline", async () => {
+        const get = mock.method(http, 'get', async () => ({status: 200, data: {hash: 'H', observation: {gas: [{asset: 'BTC.BTC', amount: '5000', decimals: '0'}]}, input: {usd: '1'}}}) as any);
+        const dir = tmp();
+
+        assert.deepEqual(await new Viewblock(new RecordStore(dir)).getInbound('H'), {hash: 'H', found: true, gas: [{asset: 'BTC.BTC', amount: '5000'}]});
+        assert.equal(new URL(get.mock.calls[0].arguments[0] as string).pathname, '/thorchain/txs/H');
+        assert.deepEqual(await new Viewblock(new RecordStore(dir, {offline: true})).getInbound('H'), {hash: 'H', found: true, gas: [{asset: 'BTC.BTC', amount: '5000'}]});
+    });
+
+    test('stores a hash it does not know as not found', async () => {
+        mock.method(http, 'get', async () => ({status: 404, data: {message: 'Transaction not found.', code: 404}}) as any);
+
+        assert.deepEqual(await new Viewblock(new RecordStore(tmp())).getInbound('H'), {hash: 'H', found: false, gas: []});
+    });
+});
+
 describe('withoutCurrentValues', () => {
     test("drops Viewblock's value at today's price and keeps the value at the time of the tx", () => {
         const tx = {input: {amount: '1', usd: '10', usdNew: '12'}, outbounds: [{usd: '5', usdNew: '6'}]};

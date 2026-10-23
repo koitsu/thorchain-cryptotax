@@ -8,7 +8,8 @@ import {TcyDistributionService} from "./tcy/TcyDistributionService.ts";
 import type {MayaDistributionService} from "./maya/MayaDistributionService.ts";
 import {MAYA} from "../domain/Protocol.ts";
 import {getActionDate, needsRunePrice} from "./thorchain/MidgardUtils.ts";
-import {Viewblock} from "./viewblock/index.ts";
+import {Viewblock, type ViewblockInbound} from "./viewblock/index.ts";
+import {EvmReceipts, isEvmChain, type EvmReceipt} from "./evm/EvmReceipts.ts";
 import {failedTxPaidFee, type Protocol, THORCHAIN} from "../domain/Protocol.ts";
 import {getBundleKey, type RawBundle} from "./RawBundle.ts";
 import type {NotFinal} from "./Pending.ts";
@@ -18,31 +19,55 @@ export interface Source {
     bundlesFor(wallet: string): Promise<RawBundle[]>;
 }
 
-// The inbound txids to look up on THORNode, which is the only source of the gas the wallet paid on an
-// L1 chain (docs/specs/fees.md). A refund's is looked up to see what the wallet sent, not for its gas.
-export function getThornodeTxIds(action: Action): string[] {
+// An inbound transaction the wallet sent, and the asset it sent
+export interface InboundTx {
+    txId: string;
+    asset: string;
+}
+
+// The inbound txs to look up on THORNode, Viewblock and an EVM chain, the sources of the gas the wallet paid on an
+// L1 chain (docs/specs/fees.md). A refund's is looked up to see what the wallet sent, not only for its gas.
+// The asset is the one sent: a savers deposit from an L1 wallet sent the L1 asset, which Midgard names as the synth.
+export function getInboundTxs(action: Action, protocol: Protocol = THORCHAIN): InboundTx[] {
     const inbounds = action.in ?? [];
-    let txIds: (string | undefined)[] = [];
+    let txs: {txId?: string; asset?: string}[] = [];
+    const sent = (inbound: Action['in'][number]) => ({txId: inbound.txID, asset: sentAsset(inbound, protocol)});
 
     if (action.type === ActionTypeEnum.Swap || action.type === ActionTypeEnum.Switch || action.type === ActionTypeEnum.Refund) {
-        txIds = [inbounds[0]?.txID];
+        txs = inbounds.slice(0, 1).map(sent);
     } else if (action.type === ActionTypeEnum.AddLiquidity || action.type === ActionTypeEnum.Withdraw) {
         // Deposits and withdrawal requests sent on THORChain pay the native fee, so only L1 ones are looked up
-        txIds = inbounds.filter(inbound => isL1Asset(inbound.coins[0]?.asset)).map(inbound => inbound.txID);
+        txs = inbounds.map(sent).filter(tx => isL1Asset(tx.asset));
     }
 
     // Old Midgard reports LP positions from before its start with the placeholder txid 'genesisTx'
-    return [...new Set(txIds.filter((txId): txId is string => !!txId && txId !== 'genesisTx'))];
+    const unique = new Map<string, InboundTx>();
+    txs.filter(tx => !!tx.txId && tx.txId !== 'genesisTx')
+        .forEach(tx => unique.has(tx.txId!) || unique.set(tx.txId!, {txId: tx.txId!, asset: tx.asset ?? ''}));
+    return [...unique.values()];
 }
 
-function isL1Asset(asset?: string): boolean {
+export function getThornodeTxIds(action: Action): string[] {
+    return getInboundTxs(action).map(tx => tx.txId);
+}
+
+// Midgard reports a savers deposit's coin as the synth (BTC/BTC), but a wallet on the asset's own chain sent the
+// L1 asset (savers.md)
+function sentAsset(inbound: Action['in'][number], protocol: Protocol): string | undefined {
+    const asset = inbound.coins[0]?.asset;
+    const fromL1 = !!inbound.address && !inbound.address.toLowerCase().startsWith(protocol.nativeAddressPrefix);
+    return asset && fromL1 && asset.includes('/') ? asset.replace('/', '.') : asset;
+}
+
+// Sent on its own chain, other than THORChain: a coin or a token (e.g. ETH.USDC-0X…)
+export function isL1Asset(asset?: string): boolean {
     if (!asset) {
         return false;
     }
 
     const {chain, type} = assetFromStringEx(asset);
 
-    return chain !== 'THOR' && type === AssetType.NATIVE;
+    return chain !== 'THOR' && (type === AssetType.NATIVE || type === AssetType.TOKEN);
 }
 
 export function shouldIncludeAction(action: Action): boolean {
@@ -73,7 +98,13 @@ function isUnpaidSwap(action: Action): boolean {
         && action.in[0]?.coins[0]?.asset !== 'THOR.TOR' && !action.out.some(out => out.coins.length > 0);
 }
 
-// Midgard actions of one protocol. Only THORChain actions get their THORNode and Cosmos txs.
+// Where the gas of an L1 inbound comes from when it is not THORNode (docs/specs/fees.md)
+export interface InboundGasSources {
+    viewblock: Viewblock;
+    evm: EvmReceipts;
+}
+
+// Midgard actions of one protocol. Only THORChain actions get their THORNode, Cosmos and inbound gas txs.
 // notFinal: collects every action whose status is not 'success', exported or not, for the run summary.
 // stuckBefore: an action still pending from before this date is stuck (docs/specs/pending.md)
 export class MidgardSource implements Source {
@@ -84,9 +115,10 @@ export class MidgardSource implements Source {
     private notFinal: NotFinal[];
     private stuckBefore?: Date;
     private mayanode?: MayanodeService;
+    private inboundGas?: InboundGasSources;
     constructor(protocol: Protocol, midgard: MidgardService, thornode: ThornodeService,
                 cosmosTxs: CosmosTxService, notFinal: NotFinal[] = [], stuckBefore?: Date,
-                mayanode?: MayanodeService) {
+                mayanode?: MayanodeService, inboundGas?: InboundGasSources) {
         this.protocol = protocol;
         this.midgard = midgard;
         this.thornode = thornode;
@@ -94,6 +126,7 @@ export class MidgardSource implements Source {
         this.notFinal = notFinal;
         this.stuckBefore = stuckBefore;
         this.mayanode = mayanode;
+        this.inboundGas = inboundGas;
     }
 
     async bundlesFor(wallet: string): Promise<RawBundle[]> {
@@ -149,8 +182,33 @@ export class MidgardSource implements Source {
         const thornodeTxs = [];
         const cosmosTxs = [];
 
-        for (const txId of isThorchain ? getThornodeTxIds(action) : []) {
-            thornodeTxs.push(await this.thornode.getTxStatus(txId, getActionDate(action), Number(action.height)));
+        const viewblockInbounds: ViewblockInbound[] = [];
+        const evmReceipts: EvmReceipt[] = [];
+
+        for (const {txId, asset} of isThorchain ? getInboundTxs(action, this.protocol) : []) {
+            const status = await this.thornode.getTxStatus(txId, getActionDate(action), Number(action.height));
+            thornodeTxs.push(status);
+            const chain = isL1Asset(asset) ? assetFromStringEx(asset).chain : undefined;
+
+            if (!chain || !this.inboundGas) {
+                continue;
+            }
+
+            // An EVM chain's own receipt is what the wallet paid; THORNode's gas is the max fee. Elsewhere THORNode's
+            // gas is exact, and Viewblock keeps it for the txs THORNode has pruned (docs/specs/fees.md)
+            if (isEvmChain(chain)) {
+                const receipt = await this.inboundGas.evm.getReceipt(chain, txId, getActionDate(action));
+
+                if (receipt) {
+                    evmReceipts.push(receipt);
+                }
+            } else if (!status.tx?.gas?.length) {
+                const observed = await this.inboundGas.viewblock.getInbound(txId, getActionDate(action));
+
+                if (observed) {
+                    viewblockInbounds.push(observed);
+                }
+            }
         }
 
         for (const txId of isThorchain ? getCosmosTxIds(action) : []) {
@@ -163,6 +221,7 @@ export class MidgardSource implements Source {
         const runePriceUsd = isThorchain && needsRunePrice(action) ? (await this.midgard.getRunePrice(getActionDate(action))).runePriceUSD : undefined;
 
         return {source: 'midgard', protocol: this.protocol.id, wallet, data: action, thornodeTxs, cosmosTxs,
+            ...(viewblockInbounds.length ? {viewblockInbounds} : {}), ...(evmReceipts.length ? {evmReceipts} : {}),
             ...(nativeFee ? {nativeFee} : {}), ...(runePriceUsd ? {runePriceUsd} : {})};
     }
 }

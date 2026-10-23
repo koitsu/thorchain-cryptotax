@@ -66,5 +66,17 @@
         }
       }
     }
+  ],
+  "viewblockInbounds": [
+    {
+      "hash": "86164D22C316B687F713B4CBFB5B661C2EF9350B7E7C200BD3A985629E573BF1",
+      "found": true,
+      "gas": [
+        {
+          "asset": "BTC.BTC",
+          "amount": "5824"
+        }
+      ]
+    }
   ]
 }

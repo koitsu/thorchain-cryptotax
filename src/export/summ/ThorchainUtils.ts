@@ -1,17 +1,16 @@
-import type { TxStatusResponse } from '@xchainjs/xchain-thornode';
 import { parseMidgardAsset, parseMidgardPool } from '../../sources/thorchain/MidgardUtils.ts';
-import { inboundGas } from '../../interpret/midgard/gas.ts';
+import { type GasSources, inboundGas } from '../../interpret/midgard/gas.ts';
 import { formatAmount } from '../../domain/Amount.ts';
 import { type Protocol, THORCHAIN } from '../../domain/Protocol.ts';
 
 // The fee columns for an inbound transaction: its gas leg, named for the CSV (docs/specs/fees.md)
 export function getInboundFee(
     txId: string,
-    thornodeTxs: TxStatusResponse[],
+    sources: GasSources,
     inputAsset?: string,
     protocol: Protocol = THORCHAIN
 ): { feeCurrency: string; feeAmount: string } {
-    const gas = inboundGas(txId, thornodeTxs, '', inputAsset, protocol);
+    const gas = inboundGas(txId, sources, '', inputAsset, protocol);
 
     if (!gas) {
         return {feeCurrency: '', feeAmount: ''};

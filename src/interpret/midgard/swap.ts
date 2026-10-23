@@ -59,7 +59,7 @@ export function interpretSwap(bundle: RawBundle, protocol: Protocol): {activitie
             ...(output.txID ? {txid: output.txID} : {}),
         },
     ];
-    const gas = inboundGas(txid, bundle.thornodeTxs, input.address, inputCoin.asset, protocol);
+    const gas = inboundGas(txid, bundle, input.address, inputCoin.asset, protocol);
 
     return {
         activities: [{
@@ -93,7 +93,7 @@ function stuckSwap(bundle: RawBundle, protocol: Protocol): {activities: Activity
         direction: 'out', wallet: input.address, asset: toAsset(inputCoin.asset),
         amount: parseAmount(inputCoin.amount, protocol.decimals(inputCoin.asset)), role: 'principal', basis: 'observed', txid,
     };
-    const gas = inboundGas(txid, bundle.thornodeTxs, input.address, inputCoin.asset, protocol);
+    const gas = inboundGas(txid, bundle, input.address, inputCoin.asset, protocol);
 
     return {
         activities: [{

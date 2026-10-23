@@ -1,7 +1,8 @@
 import type {Action} from "@xchainjs/xchain-midgard";
 import type {TxStatusResponse} from "@xchainjs/xchain-thornode";
 import {type ListOptions, monthFolder, type RecordRules} from "./RecordStore.ts";
-import type {ViewblockTx} from "../viewblock/ViewblockTx.ts";
+import type {ViewblockInbound, ViewblockTx} from "../viewblock/ViewblockTx.ts";
+import type {EvmReceipt} from "../evm/EvmReceipts.ts";
 import type {TcyDistributionItem} from "../tcy/TcyDistributionService.ts";
 import {getPayoutDate, type MayaDistributionPayout} from "../maya/MayaDistributionService.ts";
 import type {CosmosTx} from "../thorchain/CosmosTxService.ts";
@@ -109,6 +110,16 @@ export const VIEWBLOCK_LIST: ListOptions<ViewblockTx> = {
     rules: {normalise: withoutCurrentValues, folderOf: tx => monthFolder(new Date(Number((tx as any).timestamp)))},
 };
 
+// Viewblock's gas for one inbound (docs/specs/fees.md): filed by the action's date; a hash it did not know may
+// be listed later, so a copy that has the tx is used over one that does not
+export const VIEWBLOCK_TX_RULES: RecordRules<ViewblockInbound> = {
+    completeness: tx => tx.found ? 1 : 0,
+};
+
+// An EVM tx's receipt, keyed by '<chain>.<hash>' (docs/specs/fees.md): final once it is returned, filed by the
+// action's date
+export const EVM_RECEIPT_RULES: RecordRules<EvmReceipt> = {};
+
 // Each TCY distribution is a record, keyed by its wallet and date (one a day): unlike an action or a tx,
 // a distribution belongs to one wallet, and several wallets are paid on the same day
 export function tcyList(wallet: string): ListOptions<TcyDistributionItem> {
@@ -152,4 +163,6 @@ export const SOURCES: {[source: string]: ListSource | {kind: 'record', rules: Re
     'thornode': {kind: 'record', rules: THORNODE_RULES},
     'thornode-cosmos': {kind: 'record', rules: COSMOS_TX_RULES},
     'midgard-rune-price': {kind: 'record', rules: RUNE_PRICE_RULES},
+    'viewblock-tx': {kind: 'record', rules: VIEWBLOCK_TX_RULES},
+    'evm-receipt': {kind: 'record', rules: EVM_RECEIPT_RULES},
 };

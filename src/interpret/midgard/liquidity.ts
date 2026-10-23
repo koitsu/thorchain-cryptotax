@@ -43,7 +43,7 @@ export function interpretAddLiquidity(bundle: RawBundle, protocol: Protocol): {a
         const sentOnL1 = position.position === 'savers' && !wallet.toLowerCase().startsWith(protocol.nativeAddressPrefix);
         const sentAsset = sentOnL1 ? coin.asset.replace('/', '.') : coin.asset;
         const txid = deposit.txID ?? '';
-        const gas = inboundGas(txid, bundle.thornodeTxs, wallet, sentAsset, protocol);
+        const gas = inboundGas(txid, bundle, wallet, sentAsset, protocol);
 
         legs.push({
             direction: 'out', wallet, asset: toAsset(sentAsset), amount: parseAmount(coin.amount, protocol.decimals(coin.asset)),
@@ -82,7 +82,7 @@ function interpretAuction(bundle: RawBundle, protocol: Protocol): {activities: A
     const deposits: Activity[] = sends.map(send => {
         const txid = send.in[0].txID ?? '';
         const wallet = send.in[0].address;
-        const gas = inboundGas(txid, [], wallet, sideCoin.asset, protocol);
+        const gas = inboundGas(txid, {thornodeTxs: []}, wallet, sideCoin.asset, protocol);
 
         return {
             id: `midgard/${midgardActionKey(send)}`,
@@ -154,7 +154,7 @@ export function interpretWithdraw(bundle: RawBundle, protocol: Protocol): {activ
     // A request sent on THORChain without a coin pays the native fee
     const requestAsset = request.coins[0]?.asset
         ?? (request.address.startsWith(protocol.nativeChain.toLowerCase()) ? protocol.nativeAsset : undefined);
-    const gas = inboundGas(requestTxid, bundle.thornodeTxs, request.address, requestAsset, protocol);
+    const gas = inboundGas(requestTxid, bundle, request.address, requestAsset, protocol);
 
     const legs: Leg[] = [
         ...action.out.map((out): Leg => ({

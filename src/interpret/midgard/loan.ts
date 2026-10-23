@@ -24,7 +24,7 @@ export function interpretLoanOpen(bundle: RawBundle, protocol: Protocol): Activi
 
     const sent = getCollateral(action, bundle);
     const output = getOutput(action, sent.memo, LOANOPEN_DESTADDR);
-    const gas = inboundGas(sent.txid, bundle.thornodeTxs, sent.wallet, sent.asset, protocol);
+    const gas = inboundGas(sent.txid, bundle, sent.wallet, sent.asset, protocol);
 
     return activity(bundle, protocol, 'loan.open', sent.memo, [
         {...leg('out', sent.wallet, sent.asset, sent.amount, sent.txid)},
@@ -50,7 +50,7 @@ export function interpretLoanRepay(bundle: RawBundle, protocol: Protocol): Activ
     }
 
     const txid = input.txID ?? '';
-    const gas = inboundGas(txid, bundle.thornodeTxs, input.address, input.coins[0].asset, protocol);
+    const gas = inboundGas(txid, bundle, input.address, input.coins[0].asset, protocol);
     const closed = action.out.length === 1 ? getOutput(action, memo, REPAYLOAN_DESTADDR) : undefined;
 
     return activity(bundle, protocol, 'loan.repay', memo, [
