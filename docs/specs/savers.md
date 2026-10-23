@@ -26,7 +26,7 @@ reports, which for savers equals the asset amount deposited.
 | Asset currency, deposit sent from an L1 wallet | the L1 asset, e.g. `BTC` | the wallet sent real BTC, not the synth (`assets.md`) |
 | Asset currency, synth deposited from a THORChain wallet | the synth, e.g. `ThorSynth.BTC.BTC` | the wallet sent the synth |
 | Position token | `ThorSavers.<chain>.<asset>`, e.g. `ThorSavers.BTC.BTC`, `ThorSavers.ETH.USDC` | savers units are not pool LP units, so it must differ from `ThorLP.BTC.BTC`; no `/`, which breaks Summ's ledger view; the same `<prefix>.<chain>.<asset>` shape as LP tokens |
-| Fee on the deposit | the deposit's inbound fee: L1 gas for an L1 wallet (blank without THORNode gas), 0.02 RUNE for a synth from a THORChain wallet | `fees.md` |
+| Fee on the deposit | the deposit's inbound fee: L1 gas for an L1 wallet (blank when neither THORNode nor Viewblock has it), 0.02 RUNE for a synth from a THORChain wallet | `fees.md` |
 
 Before October 2026 the token was `ThorLP.BTC/BTC`, a deposit sent from an L1
 wallet was exported as `BTC.BTC` (then the synth's name) and, briefly, with a

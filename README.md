@@ -6,7 +6,7 @@ Exports the activity of your THORChain and Maya Protocol wallets as CSV files
 for [Summ](https://cryptotaxcalculator.io/?via=glaj5hf5) (formerly Crypto Tax
 Calculator), in its advanced CSV format.
 
-It maps source data (Midgard, THORNode, Viewblock) to rows: what each wallet
+It maps source data (Midgard, THORNode, Viewblock, EVM receipts) to rows: what each wallet
 sent, received, deposited and withdrew, and the fee it paid. It does not
 price rows or compute gains: Summ does. Where a treatment is a tax choice
 (e.g. the Maya liquidity auction), the config makes it, and each spec says
