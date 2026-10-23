@@ -130,7 +130,7 @@ for an inbound transaction:
 5. **Otherwise blank**: an L1 inbound that neither THORNode nor Viewblock
    has, or one in a Maya action (neither is queried for Maya).
 
-THORNode, Viewblock and the receipts are fetched (`getThornodeTxIds`,
+THORNode, Viewblock and the receipts are fetched (`getInboundTxs`,
 `src/sources/Source.ts`) for THORChain actions only:
 
 - swaps and switches (including loan opens and repayments, which are swaps):
@@ -177,8 +177,10 @@ THORNode do.
 Viewblock's record comes from its single-tx endpoint
 (`api.viewblock.io/thorchain/txs/<hash>`), the unofficial API that already
 serves the old sends (`sends.md`). A hash it does not know (404) is stored
-as not found, and the fee stays blank; it is asked again on later runs until
-it is stuck (`pendingStuckDays`, `snapshots.md`).
+as not found, and the fee stays blank. It is asked again on later runs only
+while its action is newer than `pendingStuckDays` (`snapshots.md`); an older
+miss, the usual case for a tx THORNode has pruned, is asked again only by
+`--refetch-all`.
 
 Both are records in the store, like THORNode's statuses (`snapshots.md`):
 `evm-receipt/<chain>.<hash>` (trimmed to the fee fields) and

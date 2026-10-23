@@ -33,6 +33,18 @@ export function isEvmChain(chain: string): boolean {
     return chain in EVM_GAS_ASSETS;
 }
 
+// JSON-RPC errors a public endpoint gives for load (limit exceeded, request limit, internal error)
+const TRANSIENT_RPC_CODES = [-32005, -32016, -32603];
+
+function isRateLimit(error: any): boolean {
+    return TRANSIENT_RPC_CODES.includes(error?.code) || /rate|limit/i.test(error?.message ?? '');
+}
+
+// An answer withRetry retries (as a 503) when transient
+function rpcError(message: string, transient: boolean): Error {
+    return Object.assign(new Error(message), transient ? {status: 503} : {});
+}
+
 export class EvmReceipts {
     private store: RecordStore;
     private urls: Record<string, string>;
@@ -64,12 +76,13 @@ export class EvmReceipts {
         const {result, error} = response.data ?? {};
 
         if (error) {
-            throw new Error(`${chain} receipt ${hash}: ${error.message ?? JSON.stringify(error)}`);
+            throw rpcError(`${chain} receipt ${hash}: ${error.message ?? JSON.stringify(error)}`, isRateLimit(error));
         }
 
-        // A pruning node answers null, as it does for a tx it never saw: never stored, so a later run asks again
+        // A pruning node answers null, as it does for a tx it never saw. A load-balanced endpoint can briefly route to
+        // one, so it is retried; never stored, so a later run asks again.
         if (!result) {
-            throw new Error(`${chain} receipt ${hash}: not returned by ${url} (set ${chain}_RPC_URL to an endpoint that keeps old receipts)`);
+            throw rpcError(`${chain} receipt ${hash}: not returned by ${url} (set ${chain}_RPC_URL to an endpoint that keeps old receipts)`, true);
         }
 
         const {effectiveGasPrice} = result;

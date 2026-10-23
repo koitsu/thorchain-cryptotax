@@ -29,11 +29,27 @@ describe('EvmReceipts', () => {
     });
 
     test('a receipt the endpoint does not return is an error, and is not stored', async () => {
-        mock.method(http, 'post', async () => ({data: {jsonrpc: '2.0', id: 1, result: null}}) as any);
+        const post = mock.method(http, 'post', async () => ({data: {jsonrpc: '2.0', id: 1, result: null}}) as any);
+        // withRetry's waits pass at once
+        mock.method(globalThis, 'setTimeout', (resolve: () => void) => resolve());
         const dir = tmp();
 
         await assert.rejects(new EvmReceipts(new RecordStore(dir), urls).getReceipt('ETH', 'ABCD'), /not returned by .*ETH_RPC_URL/);
+        assert.equal(post.mock.callCount(), 4, 'asked again after each of the 3 retry waits');
         await assert.rejects(new EvmReceipts(new RecordStore(dir, {offline: true}), urls).getReceipt('ETH', 'ABCD'), /Offline/);
+    });
+
+    test("a rate limit or a missing receipt is retried; another RPC error is not", async () => {
+        const {isTransient} = await import('../src/sources/Retry.ts');
+        // Called directly (no store retry) to see how withRetry would classify it
+        const classify = async (data: object) => {
+            mock.method(http, 'post', async () => ({data}) as any);
+            return (new EvmReceipts(new RecordStore(tmp()), urls) as any).fetchReceipt('ETH', urls.ETH, '0xabcd').catch((error: any) => isTransient(error));
+        };
+
+        assert.equal(await classify({error: {code: -32005, message: 'limit exceeded'}}), true);
+        assert.equal(await classify({result: null}), true);
+        assert.equal(await classify({error: {code: -32602, message: 'invalid argument'}}), false);
     });
 
     test('a receipt with an OP-stack operator fee stops the run', async () => {

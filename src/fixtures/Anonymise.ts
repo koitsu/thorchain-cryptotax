@@ -38,10 +38,11 @@ const DATE_KEYS = new Set(['date']);
 const ISO_TIME_KEYS = new Set(['timestamp']);
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const HEIGHT_KEY = /height$/i;
-// An EVM receipt's block and fee quantities are hex (docs/specs/fees.md): the block is fixed, the rest are amounts
+// An EVM receipt's quantities are hex (docs/specs/fees.md): its block is fixed, and its fee (gas used × price + L1
+// fee, in wei) is ranked as one amount, at 8 decimals like the others
 const HEX_BLOCK_KEYS = new Set(['blockNumber']);
-const HEX_AMOUNT_KEYS = new Set(['gasUsed', 'effectiveGasPrice', 'l1Fee']);
 const HEX_QUANTITY = /^0x[0-9a-f]+$/i;
+const WEI_PER_BASE_UNIT = 10n ** 10n;
 const PRICE_KEY = /priceusd$/i;
 // Coins such as '100x/ruji,20rune' (contract funds, Cosmos transfer amounts and fees)
 const COINS_PATTERN = /^\d+[a-z][a-z0-9/._-]*(,\d+[a-z][a-z0-9/._-]*)*$/i;
@@ -54,6 +55,11 @@ const BLOB_KEYS = new Set(['signature', 'signatures', 'key', 'pub_key', 'public_
 const MEMO_ASSET = /^(?:THOR|MAYA|BTC|ETH|BSC|BNB|AVAX|BASE|ARB|GAIA|DOGE|LTC|BCH|DASH|KUJI|XRD|TRON|SOL|XRP|ZEC|TERRA|X)[./~-][A-Za-z0-9._~/-]+$/i;
 // CosmWasm contracts have 32-byte addresses (wallets have 20); they are public, and mappers look them up
 const CONTRACT_ADDRESS_PATTERN = /^(thor|maya)1[02-9ac-hj-np-z]{58}$/i;
+
+function isReceipt(value: any): boolean {
+    return value !== null && typeof value === 'object' && typeof value.gasUsed === 'string' && HEX_QUANTITY.test(value.gasUsed)
+        && typeof value.effectiveGasPrice === 'string' && HEX_QUANTITY.test(value.effectiveGasPrice);
+}
 
 export class Anonymiser {
     private addresses = new Map<string, string>();
@@ -93,6 +99,10 @@ export class Anonymiser {
             return {key: value.key, value: this.anonymiseString(value.value, value.key)};
         }
 
+        if (isReceipt(value)) {
+            return this.anonymiseReceipt(value);
+        }
+
         if (value !== null && typeof value === 'object') {
             return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, this.walk(v, k)]));
         }
@@ -116,6 +126,14 @@ export class Anonymiser {
         }
 
         return value;
+    }
+
+    // The fee is what the mappers read: ranked as one amount, then written back as 1 gas at that price
+    private anonymiseReceipt({gasUsed, effectiveGasPrice, l1Fee, ...rest}: any): any {
+        const wei = BigInt(gasUsed) * BigInt(effectiveGasPrice) + BigInt(l1Fee ?? 0);
+        const baseUnits = (wei + WEI_PER_BASE_UNIT - 1n) / WEI_PER_BASE_UNIT;
+        const ranked = BigInt(this.scale(baseUnits.toString())) * WEI_PER_BASE_UNIT;
+        return {...this.walk(rest, undefined), gasUsed: '0x1', effectiveGasPrice: `0x${ranked.toString(16)}`};
     }
 
     private anonymiseString(value: string, key: string | undefined): string {
@@ -154,10 +172,6 @@ export class Anonymiser {
 
         if (key && HEX_BLOCK_KEYS.has(key) && HEX_QUANTITY.test(value)) {
             return `0x${BigInt(FIXED_HEIGHT).toString(16)}`;
-        }
-
-        if (key && HEX_AMOUNT_KEYS.has(key) && HEX_QUANTITY.test(value)) {
-            return `0x${BigInt(this.scale(BigInt(value).toString())).toString(16)}`;
         }
 
         if (key && HEIGHT_KEY.test(key) && /^\d+$/.test(value)) {
