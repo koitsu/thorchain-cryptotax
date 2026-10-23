@@ -5,8 +5,8 @@ baseCurrency: BTC
 baseAmount: "1.018491"
 quoteCurrency: ThorSynth.BTC.BTC
 quoteAmount: "1.01681035"
-feeCurrency: ""
-feeAmount: ""
+feeCurrency: BTC
+feeAmount: "0.00005824"
 from: bc1q2d2ealhcljw7gxldexph8nk8zatrt0l6sfhgqa
 to: thorchain
 blockchain: BTC

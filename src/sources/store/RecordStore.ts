@@ -183,6 +183,11 @@ export class RecordStore {
         }
     }
 
+    // Replaying a run that read nothing from this source (one added since): it gives that run nothing
+    addedSinceReplay(source: string): boolean {
+        return !!this.replay && !this.replay.hasSource(source);
+    }
+
     // One record, e.g. a THORNode tx. date: when the record started (e.g. the date of the action it belongs
     // to), for filing a record with no date of its own
     async record<T>(source: string, key: string, fetch: () => Promise<Fetched<T>>, rules: RecordRules<T> = {}, date?: Date): Promise<T> {

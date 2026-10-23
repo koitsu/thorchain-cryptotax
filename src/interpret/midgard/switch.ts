@@ -19,7 +19,7 @@ export function interpretSwitch(bundle: RawBundle, protocol: Protocol): Activity
         role: 'principal', basis: 'observed', txid,
     });
     const txid = input.txID ?? '';
-    const gas = inboundGas(txid, bundle.thornodeTxs, input.address, input.coins[0].asset, protocol);
+    const gas = inboundGas(txid, bundle, input.address, input.coins[0].asset, protocol);
 
     return activity(bundle, protocol, 'switch', [
         leg('out', input.address, input.coins[0], txid),

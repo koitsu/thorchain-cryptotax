@@ -33,3 +33,13 @@ export interface ViewblockMsg {
 
 // The message types of a send, before and after the 2022-03 chain upgrade
 export const MSG_SEND_TYPES = ['/cosmos.bank.v1beta1.MsgSend', '/types.MsgSend'];
+
+// Viewblock's record of one inbound tx (api.viewblock.io/thorchain/txs/<hash>), trimmed to the gas THORNode
+// observed for it: Viewblock keeps that observation after THORNode prunes the tx (docs/specs/fees.md).
+// found: false when Viewblock does not know the hash.
+export interface ViewblockInbound {
+    hash: string;
+    found: boolean;
+    // 1e8 units, whatever Viewblock's decimals field says
+    gas: {asset: string; amount: string}[];
+}

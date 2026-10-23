@@ -43,7 +43,7 @@ export function interpretRefund(bundle: RawBundle, protocol: Protocol): {activit
             role: 'returned', basis: 'observed', ...(returnTxid ? {txid: returnTxid} : {}),
         } as Leg] : []),
     ];
-    const gas = inboundGas(txid, bundle.thornodeTxs, input.address, inputCoin.asset, protocol);
+    const gas = inboundGas(txid, bundle, input.address, inputCoin.asset, protocol);
     const reason = ((action.metadata.refund as any)?.reason ?? '').replace(/[\n\t]/g, ' ').trim();
     // The source exports a pending refund only once it is stuck (docs/specs/pending.md)
     const issues: Issue[] = action.status === 'pending'

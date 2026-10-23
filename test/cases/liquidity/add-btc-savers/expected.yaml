@@ -24,8 +24,8 @@ timestamp: 2022-11-14T16:50:22.461Z
 type: add-liquidity
 baseCurrency: BTC
 baseAmount: "1.40002825"
-feeCurrency: ""
-feeAmount: ""
+feeCurrency: BTC
+feeAmount: "0.00007"
 from: bc1qz0w77jfx0c86jjweljk98c4mafctgazhjnaf7n
 to: thorchain
 blockchain: BTC

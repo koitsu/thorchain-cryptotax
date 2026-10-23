@@ -24,6 +24,16 @@ legs:
     basis: observed
     amount: "1.01681035"
     decimals: 8
+  - direction: out
+    wallet: bc1q2d2ealhcljw7gxldexph8nk8zatrt0l6sfhgqa
+    asset:
+      notation: BTC.BTC
+      kind: native
+    role: gas
+    basis: observed
+    txid: 86164D22C316B687F713B4CBFB5B661C2EF9350B7E7C200BD3A985629E573BF1
+    amount: "0.00005824"
+    decimals: 8
 prices:
   - asset:
       notation: BTC.BTC

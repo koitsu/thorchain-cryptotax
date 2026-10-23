@@ -1,0 +1,49 @@
+id: midgard/swap.302B07400143E4264C2EB20F22745848202A630DF7C6E61BB3680A0FD31AC45A
+protocol: thorchain
+kind: swap
+status: success
+time: 2022-08-22T23:12:22.417Z
+memo: =:BTC.BTC:bc1q3n2x86ch2tadpuqv47txyvt868wy0kqtcjgedy:183566111:t:30
+legs:
+  - direction: out
+    wallet: "0x34579bf6ce7a381d84002ca85a94b8915de6a004"
+    asset:
+      notation: ETH.ETH
+      kind: native
+    role: principal
+    basis: observed
+    txid: 302B07400143E4264C2EB20F22745848202A630DF7C6E61BB3680A0FD31AC45A
+    amount: "25"
+    decimals: 8
+  - direction: in
+    wallet: bc1q3n2x86ch2tadpuqv47txyvt868wy0kqtcjgedy
+    asset:
+      notation: BTC.BTC
+      kind: native
+    role: principal
+    basis: observed
+    txid: 4924512BE30B038BEF58E906585AEC735C2C254B184EC0CADBB3CF635464042D
+    amount: "1.84937114"
+    decimals: 8
+  - direction: out
+    wallet: "0x34579bf6ce7a381d84002ca85a94b8915de6a004"
+    asset:
+      notation: ETH.ETH
+      kind: native
+    role: gas
+    basis: observed
+    txid: 302B07400143E4264C2EB20F22745848202A630DF7C6E61BB3680A0FD31AC45A
+    amount: "0.000574645413935192"
+    decimals: 18
+prices:
+  - asset:
+      notation: ETH.ETH
+      kind: native
+    usd: "1583.5680708374832"
+    source: midgard:swap.inPriceUSD
+  - asset:
+      notation: BTC.BTC
+      kind: native
+    usd: "21340.72500502222"
+    source: midgard:swap.outPriceUSD
+details: {}

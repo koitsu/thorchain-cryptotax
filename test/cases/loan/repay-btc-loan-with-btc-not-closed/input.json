@@ -37,5 +37,23 @@
     ],
     "status": "pending",
     "type": "swap"
-  }
+  },
+  "thornodeTxs": [
+    {
+      "stages": {
+        "inbound_observed": {
+          "started": false,
+          "final_count": 0,
+          "completed": false
+        }
+      }
+    }
+  ],
+  "viewblockInbounds": [
+    {
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "found": false,
+      "gas": []
+    }
+  ]
 }

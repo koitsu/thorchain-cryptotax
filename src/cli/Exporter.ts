@@ -5,6 +5,7 @@ import {type SummRow, renderRowIds, ROW_IDS_FILE, writeCsv} from "../export/summ
 import {MidgardService} from "../sources/thorchain/MidgardService.ts";
 import {ThornodeService} from "../sources/thorchain/ThornodeService.ts";
 import {CosmosTxService} from "../sources/thorchain/CosmosTxService.ts";
+import {EvmReceipts} from "../sources/evm/EvmReceipts.ts";
 import {MayanodeService} from "../sources/maya/MayanodeService.ts";
 import {TcyDistributionService} from "../sources/tcy/TcyDistributionService.ts";
 import type {ITaxConfig} from "../config/ITaxConfig.ts";
@@ -49,6 +50,7 @@ export class Exporter {
     otherMidgards: {protocol: Protocol, midgard: MidgardService, node?: MayanodeService, distribution?: MayaDistributionService}[];
     thornode: ThornodeService;
     cosmosTxs: CosmosTxService;
+    evmReceipts: EvmReceipts;
     tcyDistribution: TcyDistributionService;
     // What the run printed that is worth keeping, written to its folder as summary.md
     report = new RunSummary();
@@ -86,6 +88,7 @@ export class Exporter {
         this.midgard = new MidgardService(store);
         this.thornode = new ThornodeService(store);
         this.cosmosTxs = new CosmosTxService(store);
+        this.evmReceipts = new EvmReceipts(store);
         this.tcyDistribution = new TcyDistributionService(store);
         this.thorchain = withAssetNames(THORCHAIN, this.config.assets);
         this.otherMidgards = (this.config.protocols ?? ['thorchain'])
@@ -105,7 +108,8 @@ export class Exporter {
     sources(): Source[] {
         return [
             ...(this.config.fromDate < VIEWBLOCK_SENDS_BEFORE ? [new ViewblockSource(this.viewblock)] : []),
-            new MidgardSource(this.thorchain, this.midgard, this.thornode, this.cosmosTxs, this.notFinal, this.stuckBefore()),
+            new MidgardSource(this.thorchain, this.midgard, this.thornode, this.cosmosTxs, this.notFinal, this.stuckBefore(), undefined,
+                {viewblock: this.viewblock, evm: this.evmReceipts}),
             ...this.otherMidgards.map(({protocol, midgard, node}) => new MidgardSource(protocol, midgard, this.thornode, this.cosmosTxs, this.notFinal, this.stuckBefore(), node)),
             new TcySource(this.tcyDistribution),
             ...this.otherMidgards.flatMap(({midgard, distribution}) => distribution ? [new MayaDistributionSource(midgard, distribution)] : []),

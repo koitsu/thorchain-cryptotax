@@ -51,7 +51,8 @@ not.
    and every USD price to 1; blanks a refund's `reason`; and replaces every
    number (including those in coin strings, memos and JSON inside strings) by
    its rank among the case's amounts (the smallest becomes 10, the next 20,
-   …). Each original value can identify a transaction on-chain on its own,
+   …). An EVM receipt's fee (gas used × price, plus any L1 fee) is ranked
+   as one amount and written back as 1 gas at that price. Each original value can identify a transaction on-chain on its own,
    but the mappers depend on amounts only through equality and order, which
    ranks keep: every golden case and the owner's private fixtures give the
    same rows once anonymised.

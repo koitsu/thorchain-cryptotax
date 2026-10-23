@@ -110,23 +110,84 @@ nothing is added.
 `getInboundFee` (`src/export/summ/ThorchainUtils.ts`) gives the fee
 for an inbound transaction:
 
-1. **THORNode gas**, when the matching THORNode transaction (by inbound txid)
-   has gas: `thornodeTx.tx.gas[0]`, in that gas asset. THORNode is fetched
-   (`getThornodeTxIds`, `src/sources/Source.ts`) for:
-   - swaps and switches (including loan opens and repayments, which are swaps):
-     the inbound transaction
-   - add liquidity and withdraw liquidity: each inbound transaction sent on an
-     L1 chain. Ones sent on THORChain use the default below.
-   - refunds: the inbound transaction, for its gas and to see what the wallet
-     sent (see Refunds of an affiliate's cut).
-2. **Otherwise, a default for native transactions**:
+1. **An EVM chain's receipt**, for an inbound sent on ETH, AVAX, BSC or BASE:
+   `gasUsed × effectiveGasPrice`, plus `l1Fee` on BASE (the L1 data fee an
+   OP-stack chain charges), in wei of the chain's gas coin (ETH, AVAX, BNB,
+   ETH). This is what the wallet paid; it is the fee a wallet import shows,
+   to all 18 decimals (`swap/eth-to-btc`).
+2. **THORNode gas**, when the matching THORNode transaction (by inbound txid)
+   has gas: `thornodeTx.tx.gas[0]`, in that gas asset, in 1e8 units.
+3. **Viewblock's observation**, when THORNode has no gas: `observation.gas[0]`
+   of Viewblock's record of the inbound, in 1e8 units (its `decimals` field
+   says `0` and is ignored). It is THORNode's own observation, kept by
+   Viewblock after THORNode pruned it; it equals the chain's fee on UTXO and
+   Cosmos chains (`swap/btc-to-synth`, `swap/doge-to-rune`).
+4. **Otherwise, a default for native transactions**:
    - an asset on THORChain (`THOR.*`, e.g. RUNE, TCY, KUJI on THORChain), or a
      synth, trade or secured asset: **0.02 RUNE**, THORChain's native
      transaction fee
    - on Maya, CACAO: **Maya's native fee at the action's height** (0.2 CACAO now; it has changed, see `maya.md`, Fees)
-3. **Otherwise blank.** Gas for L1 inputs (BTC, ETH, tokens, …) is only known
-   from THORNode, so an L1 row is blank only when THORNode has no record of the
-   inbound transaction, or on Maya, where THORNode is not queried.
+5. **Otherwise blank**: an L1 inbound that neither THORNode nor Viewblock
+   has, or one in a Maya action (neither is queried for Maya).
+
+THORNode, Viewblock and the receipts are fetched (`getInboundTxs`,
+`src/sources/Source.ts`) for THORChain actions only:
+
+- swaps and switches (including loan opens and repayments, which are swaps):
+  the inbound transaction
+- add liquidity and withdraw liquidity: each inbound transaction sent on an
+  L1 chain, a coin or a token (`ETH.USDC-0X…`); a savers deposit from an L1
+  wallet counts, although Midgard names its coin as the synth (`BTC/BTC`).
+  Ones sent on THORChain use the default above.
+- refunds: the inbound transaction, for its gas and to see what the wallet
+  sent (see Refunds of an affiliate's cut).
+
+Of those, Viewblock is fetched only for an inbound sent on an L1 chain other
+than an EVM one whose THORNode status has no gas, and a receipt for every
+inbound sent on an EVM chain.
+
+### Why not THORNode's gas on EVM chains
+
+On an EVM chain THORNode's `tx.gas` is not what the wallet paid. For an
+EIP-1559 tx (every ETH, AVAX and BASE inbound since 2021–22) it is
+`maxFeePerGas × gasUsed`, rounded up to 1e-8: the most the wallet allowed,
+1.1 to several times the fee charged. On BASE it also leaves out the L1
+data fee. Viewblock's observation is the same value. So an EVM inbound's fee
+comes from its receipt, and no other value is used: a receipt the RPC does
+not return stops the run with an error, rather than falling back to the
+upper bound.
+
+### Endpoints and the store
+
+Receipts come from `eth_getTransactionReceipt` on a public JSON-RPC
+endpoint per chain. The defaults serve receipts from the chain's start;
+many public endpoints prune old ones (an ETH receipt from 2021 is missing
+on most). Each can be replaced by an environment variable:
+
+| Chain | Default | Variable |
+| --- | --- | --- |
+| ETH | `https://eth.drpc.org` | `ETH_RPC_URL` |
+| AVAX | `https://api.avax.network/ext/bc/C/rpc` | `AVAX_RPC_URL` |
+| BSC | `https://bsc-dataseed.bnbchain.org` | `BSC_RPC_URL` |
+| BASE | `https://mainnet.base.org` | `BASE_RPC_URL` |
+
+The endpoint learns the inbound txids it is asked for, as Midgard and
+THORNode do.
+
+Viewblock's record comes from its single-tx endpoint
+(`api.viewblock.io/thorchain/txs/<hash>`), the unofficial API that already
+serves the old sends (`sends.md`). A hash it does not know (404) is stored
+as not found, and the fee stays blank. It is asked again on later runs only
+while its action is newer than `pendingStuckDays` (`snapshots.md`); an older
+miss, the usual case for a tx THORNode has pruned, is asked again only by
+`--refetch-all`.
+
+Both are records in the store, like THORNode's statuses (`snapshots.md`):
+`evm-receipt/<chain>.<hash>` (trimmed to the fee fields) and
+`viewblock-tx/<hash>` (trimmed to `observation.gas`). A receipt is final,
+so it is fetched once; `--offline` reads the stored copy, and a missing one
+is an error, as for every other record. `--replay` of a run made before
+these sources were read gives none, so it maps as that run did.
 
 Never use Midgard `networkFees` (outbound), `liquidityFee`, `affiliateFee` or
 affiliate outputs as a fee.
@@ -219,8 +280,8 @@ outbound fee is deducted.
   not exported while it may still be paid out. Once stuck (`pending.md`), it
   is exported with what was not returned as `Lost` instead of `Fee`.
 - A partially filled swap's refund (see Partially filled swaps).
-- Old L1 refunds for which THORNode has no record of the inbound: the
-  `FailedOut` fee is blank, per the inbound fee rule.
+- Old L1 refunds for which neither THORNode nor Viewblock has a record of
+  the inbound: the `FailedOut` fee is blank, per the inbound fee rule.
 
 ### Refunds of an affiliate's cut
 
@@ -258,6 +319,9 @@ returned, including the outbound fee on the returned part, and its
 - Unit tests for `getInboundFee` and each mapper's fee, including:
   - THORNode gas is preferred over any default
   - a missing THORNode tx gives the native default, or blank for L1 inputs
+  - THORNode with no gas falls back to Viewblock's observation (non-EVM L1)
+  - an EVM inbound takes its receipt's fee (plus `l1Fee` on BASE), never
+    THORNode's or Viewblock's, and a missing receipt is an error
   - L1 liquidity deposits use the THORNode gas
     (`liquidity/add-btc-rune-symmetric`)
   - a refund is one `FailedIn` row with the outbound network fee

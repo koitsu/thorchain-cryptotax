@@ -66,5 +66,17 @@
         }
       }
     }
+  ],
+  "viewblockInbounds": [
+    {
+      "hash": "BA6C60ED809F3CFED3CCB9E119A582024520A8D23C64B487AD0A44C83D3054EF",
+      "found": true,
+      "gas": [
+        {
+          "asset": "DOGE.DOGE",
+          "amount": "13370160"
+        }
+      ]
+    }
   ]
 }

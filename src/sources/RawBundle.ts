@@ -1,6 +1,7 @@
 import type {Action} from "@xchainjs/xchain-midgard";
 import type {TxStatusResponse} from "@xchainjs/xchain-thornode";
-import type {ViewblockTx} from "./viewblock/index.ts";
+import type {ViewblockInbound, ViewblockTx} from "./viewblock/index.ts";
+import type {EvmReceipt} from "./evm/EvmReceipts.ts";
 import {getDistributionDate, type TcyDistributionItem} from "./tcy/TcyDistributionService.ts";
 import type {CosmosTx} from "./thorchain/CosmosTxService.ts";
 import {getActionDate} from "./thorchain/MidgardUtils.ts";
@@ -24,6 +25,10 @@ export interface RawBundle {
     thornodeTxs: TxStatusResponse[];
     // The Cosmos tx of a contract action
     cosmosTxs: CosmosTx[];
+    // Viewblock's gas for the L1 inbounds (other than EVM) whose THORNode status has none (docs/specs/fees.md)
+    viewblockInbounds?: ViewblockInbound[];
+    // The receipts of the inbounds sent on an EVM chain: their fee (docs/specs/fees.md)
+    evmReceipts?: EvmReceipt[];
     // The protocol's native fee at the action's height, in base units, when it is not constant (Maya); it replaces
     // the protocol's default gas (docs/specs/maya.md, Fees)
     nativeFee?: string;

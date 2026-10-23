@@ -1,0 +1,29 @@
+wallet: "0x34579bf6ce7a381d84002ca85a94b8915de6a004"
+timestamp: 2022-08-22T23:12:22.417Z
+type: bridge-trade-out
+baseCurrency: ETH
+baseAmount: "25"
+quoteCurrency: BTC
+quoteAmount: "1.84937114"
+feeCurrency: ETH
+feeAmount: "0.000574645413935192"
+from: "0x34579bf6ce7a381d84002ca85a94b8915de6a004"
+to: thorchain
+blockchain: ETH
+referencePricePerUnit: "1583.5680708374832"
+referencePriceCurrency: USD
+description: 1/2 - Swap 25 ETH to 1.84937114 BTC; 302B07400143E4264C2EB20F22745848202A630DF7C6E61BB3680A0FD31AC45A
+id: 2022-08-22T23:12:22.417Z.out.b61748adc6ed
+---
+wallet: bc1q3n2x86ch2tadpuqv47txyvt868wy0kqtcjgedy
+timestamp: 2022-08-22T23:12:32.417Z
+type: bridge-trade-in
+baseCurrency: BTC
+baseAmount: "1.84937114"
+from: thorchain
+to: bc1q3n2x86ch2tadpuqv47txyvt868wy0kqtcjgedy
+blockchain: BTC
+referencePricePerUnit: "21340.72500502222"
+referencePriceCurrency: USD
+description: 2/2 - Swap 25 ETH to 1.84937114 BTC; 302B07400143E4264C2EB20F22745848202A630DF7C6E61BB3680A0FD31AC45A; paid out in 4924512BE30B038BEF58E906585AEC735C2C254B184EC0CADBB3CF635464042D
+id: 2022-08-22T23:12:22.417Z.in.d26c68918c15

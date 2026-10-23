@@ -91,6 +91,23 @@ describe('Anonymiser', () => {
         assert.equal(anon.metadata.swap.memo, '=:THOR.RUNE:thor1-anon-wallet-2');
     });
 
+    test("fixes an EVM receipt's block, ranks its fee as one amount, and keeps its hash matching the txid", () => {
+        // Fee 0x7a12 × 0x2540be400 wei = 0.0003125 ETH: between the 0.0001 and 1 amounts
+        const input = {data: {in: [{txID: TXID.toUpperCase(), coins: [{amount: '100000000'}]}], fees: ['10000']},
+            evmReceipts: [{chain: 'ETH', transactionHash: `0x${TXID.toLowerCase()}`, blockNumber: '0xabc123', status: '0x1',
+                gasUsed: '0x7a12', effectiveGasPrice: '0x2540be400', l1Fee: '0x0'}]};
+        const out = new Anonymiser().anonymise(input);
+        const receipt = out.evmReceipts[0];
+        const fee = (receipt: any) => BigInt(receipt.gasUsed) * BigInt(receipt.effectiveGasPrice);
+        const toWei = (baseUnits: string) => BigInt(baseUnits) * 10n ** 10n;
+
+        assert.equal(receipt.blockNumber, `0x${BigInt(10000000).toString(16)}`);
+        assert.equal(receipt.status, '0x1');
+        assert.equal(receipt.l1Fee, undefined);
+        assert.ok(fee(receipt) > toWei(out.data.fees[0]) && fee(receipt) < toWei(out.data.in[0].coins[0].amount), 'ranked among the amounts');
+        assert.equal(receipt.transactionHash.toLowerCase(), `0x${out.data.in[0].txID.toLowerCase()}`);
+    });
+
     test('maps the same value to the same placeholder', () => {
         const again = new Anonymiser().anonymise({a: THOR, b: THOR.toUpperCase(), t1: TXID, t2: TXID.toLowerCase()});
 

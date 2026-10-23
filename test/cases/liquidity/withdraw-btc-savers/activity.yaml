@@ -26,6 +26,16 @@ legs:
     txid: 6B6CE48A0D6F32494BF6015330FC601572338E149C65218CD08018E0CD70AE3B
     amount: "0.02979099"
     decimals: 8
+  - direction: out
+    wallet: bc1qmrwdgkzdtzugfa5xqtjrxzgj5chzqrgf2c9wku
+    asset:
+      notation: BTC.BTC
+      kind: native
+    role: gas
+    basis: observed
+    txid: 6B6CE48A0D6F32494BF6015330FC601572338E149C65218CD08018E0CD70AE3B
+    amount: "0.00002268"
+    decimals: 8
 prices: []
 details:
   pool: BTC/BTC

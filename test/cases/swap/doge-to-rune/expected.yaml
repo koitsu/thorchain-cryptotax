@@ -5,8 +5,8 @@ baseCurrency: DOGE
 baseAmount: "102.07047"
 quoteCurrency: RUNE
 quoteAmount: "2.700208"
-feeCurrency: ""
-feeAmount: ""
+feeCurrency: DOGE
+feeAmount: "0.1337016"
 from: D5qdyiTXkt1MEfoPpimXvjgUCMzV6YtbsM
 to: thorchain
 blockchain: DOGE

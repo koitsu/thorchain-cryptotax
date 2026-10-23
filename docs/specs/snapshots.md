@@ -1,7 +1,7 @@
 # Source data snapshots
 
-A tax return rests on what Midgard, THORNode, Viewblock and the TCY endpoint
-returned when the data was fetched. That changes after the fact:
+A tax return rests on what Midgard, THORNode, Viewblock, the TCY endpoint and
+the EVM chains' RPC endpoints returned when the data was fetched. That changes after the fact:
 
 - THORNode prunes old txs, so a later fetch can come back without the tx or
   its gas.
@@ -61,6 +61,8 @@ lists/midgard/<wallet>.0.json                      the record keys one fetch of 
 | `thornode-cosmos` | a Cosmos tx (contract calls) | txid |
 | `midgard-rune-price` | RUNE's USD price over a Midgard 5-minute bucket (liquid bonds of bRUNE, `rujira.md`) | the bucket's start (Unix seconds) |
 | `viewblock` | a tx | its hash |
+| `viewblock-tx` | the gas THORNode observed for an inbound, from Viewblock's single-tx endpoint (`fees.md`) | txid |
+| `evm-receipt` | an EVM inbound's receipt, its fee fields (`fees.md`) | `<chain>.<0x hash>` |
 | `tcy` | a distribution | `<wallet>.<date>` (one a day; several wallets are paid on the same day) |
 
 An action or tx is shared: a swap between two wallets is stored once, and
