@@ -14,6 +14,16 @@ legs:
     txid: D4C3AA19D45F04C000FDF50F93CD70B8282A9B59D94E1D0E9B19A700A5D30DD1
     amount: "1.40002825"
     decimals: 8
+  - direction: out
+    wallet: bc1qz0w77jfx0c86jjweljk98c4mafctgazhjnaf7n
+    asset:
+      notation: BTC.BTC
+      kind: native
+    role: gas
+    basis: observed
+    txid: D4C3AA19D45F04C000FDF50F93CD70B8282A9B59D94E1D0E9B19A700A5D30DD1
+    amount: "0.00007"
+    decimals: 8
   - direction: in
     wallet: bc1qz0w77jfx0c86jjweljk98c4mafctgazhjnaf7n
     asset:

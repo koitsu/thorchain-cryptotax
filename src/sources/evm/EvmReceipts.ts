@@ -72,10 +72,17 @@ export class EvmReceipts {
             throw new Error(`${chain} receipt ${hash}: not returned by ${url} (set ${chain}_RPC_URL to an endpoint that keeps old receipts)`);
         }
 
-        const effectiveGasPrice = result.effectiveGasPrice ?? result.gasPrice;
+        const {effectiveGasPrice} = result;
 
+        // Every receipt has it since London (2021), old txs included; an endpoint that leaves it out can't be used
         if (!result.gasUsed || !effectiveGasPrice) {
             throw new Error(`${chain} receipt ${hash}: no gasUsed or effectiveGasPrice`);
+        }
+
+        // An OP-stack operator fee (Isthmus) is charged on top; its formula has changed between upgrades, and Base
+        // charges none (2026-10): a receipt with one stops the run rather than leave that fee out
+        if (BigInt(result.operatorFeeScalar ?? 0) > 0n || BigInt(result.operatorFeeConstant ?? 0) > 0n) {
+            throw new Error(`${chain} receipt ${hash}: has an operator fee, which receiptFee does not add yet`);
         }
 
         return {

@@ -177,7 +177,8 @@ THORNode do.
 Viewblock's record comes from its single-tx endpoint
 (`api.viewblock.io/thorchain/txs/<hash>`), the unofficial API that already
 serves the old sends (`sends.md`). A hash it does not know (404) is stored
-as not found, and the fee stays blank.
+as not found, and the fee stays blank; it is asked again on later runs until
+it is stuck (`pendingStuckDays`, `snapshots.md`).
 
 Both are records in the store, like THORNode's statuses (`snapshots.md`):
 `evm-receipt/<chain>.<hash>` (trimmed to the fee fields) and

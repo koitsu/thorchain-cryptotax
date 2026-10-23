@@ -91,6 +91,20 @@ describe('Anonymiser', () => {
         assert.equal(anon.metadata.swap.memo, '=:THOR.RUNE:thor1-anon-wallet-2');
     });
 
+    test("fixes an EVM receipt's block, ranks its hex fee quantities, and keeps its hash matching the txid", () => {
+        const input = {data: {in: [{txID: TXID.toUpperCase()}]}, evmReceipts: [{chain: 'ETH', transactionHash: `0x${TXID.toLowerCase()}`,
+            blockNumber: '0xabc123', status: '0x1', gasUsed: '0x7a12', effectiveGasPrice: '0x2540be400'}]};
+        const out = new Anonymiser().anonymise(input);
+        const receipt = out.evmReceipts[0];
+
+        assert.equal(receipt.blockNumber, `0x${BigInt(10000000).toString(16)}`);
+        assert.equal(receipt.status, '0x1');
+        assert.match(receipt.gasUsed, /^0x[0-9a-f]+$/);
+        assert.ok(BigInt(receipt.gasUsed) < BigInt(receipt.effectiveGasPrice), 'ranks keep the order');
+        assert.notEqual(receipt.gasUsed, '0x7a12');
+        assert.equal(receipt.transactionHash.toLowerCase(), `0x${out.data.in[0].txID.toLowerCase()}`);
+    });
+
     test('maps the same value to the same placeholder', () => {
         const again = new Anonymiser().anonymise({a: THOR, b: THOR.toUpperCase(), t1: TXID, t2: TXID.toLowerCase()});
 

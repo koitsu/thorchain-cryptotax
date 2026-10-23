@@ -110,9 +110,11 @@ export const VIEWBLOCK_LIST: ListOptions<ViewblockTx> = {
     rules: {normalise: withoutCurrentValues, folderOf: tx => monthFolder(new Date(Number((tx as any).timestamp)))},
 };
 
-// Viewblock's gas for one inbound (docs/specs/fees.md): filed by the action's date; a hash it did not know may
-// be listed later, so a copy that has the tx is used over one that does not
+// Viewblock's gas for one inbound (docs/specs/fees.md), filed by the action's date. A hash it did not know may
+// be indexed later: it is fetched again until it is stuck (pendingStuckDays), and a copy that has the tx is
+// used over one that does not.
 export const VIEWBLOCK_TX_RULES: RecordRules<ViewblockInbound> = {
+    isPending: tx => !tx.found,
     completeness: tx => tx.found ? 1 : 0,
 };
 

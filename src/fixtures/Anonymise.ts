@@ -38,6 +38,10 @@ const DATE_KEYS = new Set(['date']);
 const ISO_TIME_KEYS = new Set(['timestamp']);
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const HEIGHT_KEY = /height$/i;
+// An EVM receipt's block and fee quantities are hex (docs/specs/fees.md): the block is fixed, the rest are amounts
+const HEX_BLOCK_KEYS = new Set(['blockNumber']);
+const HEX_AMOUNT_KEYS = new Set(['gasUsed', 'effectiveGasPrice', 'l1Fee']);
+const HEX_QUANTITY = /^0x[0-9a-f]+$/i;
 const PRICE_KEY = /priceusd$/i;
 // Coins such as '100x/ruji,20rune' (contract funds, Cosmos transfer amounts and fees)
 const COINS_PATTERN = /^\d+[a-z][a-z0-9/._-]*(,\d+[a-z][a-z0-9/._-]*)*$/i;
@@ -146,6 +150,14 @@ export class Anonymiser {
 
         if ((key && ISO_TIME_KEYS.has(key) && !isNaN(Date.parse(value))) || ISO_TIME.test(value)) {
             return FIXED_TIME.toISOString().replace(/\.000Z$/, 'Z');
+        }
+
+        if (key && HEX_BLOCK_KEYS.has(key) && HEX_QUANTITY.test(value)) {
+            return `0x${BigInt(FIXED_HEIGHT).toString(16)}`;
+        }
+
+        if (key && HEX_AMOUNT_KEYS.has(key) && HEX_QUANTITY.test(value)) {
+            return `0x${BigInt(this.scale(BigInt(value).toString())).toString(16)}`;
         }
 
         if (key && HEIGHT_KEY.test(key) && /^\d+$/.test(value)) {

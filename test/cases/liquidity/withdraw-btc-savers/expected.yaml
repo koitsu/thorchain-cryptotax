@@ -26,8 +26,8 @@ timestamp: 2023-01-06T13:21:34.216Z
 type: return-lp-token
 baseCurrency: ThorSavers.BTC.BTC
 baseAmount: "0.02979099"
-feeCurrency: ""
-feeAmount: ""
+feeCurrency: BTC
+feeAmount: "0.00002268"
 from: bc1qmrwdgkzdtzugfa5xqtjrxzgj5chzqrgf2c9wku
 to: thorchain
 blockchain: THORChain

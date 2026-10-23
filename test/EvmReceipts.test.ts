@@ -36,6 +36,12 @@ describe('EvmReceipts', () => {
         await assert.rejects(new EvmReceipts(new RecordStore(dir, {offline: true}), urls).getReceipt('ETH', 'ABCD'), /Offline/);
     });
 
+    test('a receipt with an OP-stack operator fee stops the run', async () => {
+        mock.method(http, 'post', async () => ({data: {jsonrpc: '2.0', id: 1, result: {...result, l1Fee: '0x10', operatorFeeScalar: '0x1', operatorFeeConstant: '0x0'}}}) as any);
+
+        await assert.rejects(new EvmReceipts(new RecordStore(tmp()), urls).getReceipt('BASE', 'ABCD'), /operator fee/);
+    });
+
     test('replaying a run made before receipts were read gives none', async () => {
         const dir = tmp();
         const manifest = path.join(dir, 'run');
