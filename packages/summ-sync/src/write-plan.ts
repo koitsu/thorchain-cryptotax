@@ -111,7 +111,7 @@ export function writePlan(stateDir: string, runDir: string): string {
     const snapshot = readSnapshot(snapshotDir)
     const { files, rows } = readRun(runDir, extraDirsOf(stateDir, config))
     const now = new Date().toISOString()
-    const { plan } = makePlan({
+    const { plan, rows: planned } = makePlan({
         files,
         rows,
         legs: snapshot.legs,
@@ -128,7 +128,7 @@ export function writePlan(stateDir: string, runDir: string): string {
     mkdirSync(join(dir, 'upload'), { recursive: true })
     writeFileSync(join(dir, 'plan.json'), JSON.stringify({ snapshot: snapshot.name, run: resolve(runDir), ...plan }, null, 2) + '\n')
     writeFileSync(join(dir, 'plan.md'), renderPlan(plan, snapshot.name, resolve(runDir)) + '\n')
-    for (const file of uploadFiles(plan, files, rows)) writeFileSync(join(dir, 'upload', file.name), file.text)
+    for (const file of uploadFiles(plan, files, planned)) writeFileSync(join(dir, 'upload', file.name), file.text)
 
     console.log(Object.entries(plan.counts).map(([k, v]) => `${k}: ${v}`).join(', '))
     console.log(`Plan written to ${dir}`)

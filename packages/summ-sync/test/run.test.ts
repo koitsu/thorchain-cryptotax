@@ -62,6 +62,14 @@ test('readRun adds extra files of the run\'s periods only, marking their rows', 
     assert.deepEqual(files.map((f) => f.name), ['2023-07-01_2024-06-30_THOR_abcde_Example.csv', '2023-07-01_2024-06-30_THOR_abcde_Example_manual.csv'])
     assert.deepEqual(rows.map((r) => r.id), ['2024-03-01T10:00:00.000Z.out.aaaaaaaaaaaa', '2023-07-01_2024-06-30_THOR_abcde_Example_manual.csv:1'])
     assert.deepEqual(rows.map((r) => r.extra), [undefined, true])
+    // an extra file with a run file's name is uploaded with it, under one header: another header is refused
+    const same = mkdtempSync(join(tmpdir(), 'summ-sync-extra-'))
+    const name = '2023-07-01_2024-06-30_THOR_abcde_Example.csv'
+    const other = manual.replace('.csv:1', '.csv:2')
+    writeFileSync(join(same, name), `${HEADER}\n${other}`)
+    assert.equal(readRun(run, [same]).rows.length, 2)
+    writeFileSync(join(same, name), `${HEADER.replace('Type,', 'Type,Note,')}\n${other.replace(',send,', ',send,x,')}`)
+    assert.throws(() => readRun(run, [same]), /the same name as another wallet file, with another header/)
 })
 
 test('periods are whole days in the timezone', () => {

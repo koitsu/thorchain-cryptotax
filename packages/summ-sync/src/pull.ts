@@ -4,14 +4,14 @@
 //   <state dir>/actions/<id>.json       the full JSON and change history of each action the plan needs: every
 //                                       action of a managed source (config.managedSources) and, given a run dir,
 //                                       each action whose tx hash is a txid of a categorised row (a chain not in
-//                                       managedChains). Fetched only when the store lacks the id: Summ gives an
+//                                       managedChains) or of a protocol row with its request's gas. Fetched only when the store lacks the id: Summ gives an
 //                                       action a new id whenever it changes. --full fetches them all again and
 //                                       reports any stored id whose legs or history differ
 
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { McpClient } from './mcp.ts'
-import { isManaged } from './plan.ts'
+import { matchesOwnLegs } from './plan.ts'
 import { type ListedAction, parseActions, parseDetail, parsePageHeader } from './parse.ts'
 import { type Config, extraDirsOf, loadConfig } from './config.ts'
 import { readRun, type Row } from './run.ts'
@@ -40,10 +40,11 @@ async function queryAll(client: Client, filter?: Record<string, unknown>): Promi
     return pages
 }
 
-/** The txids of the run's categorised rows: those plan matches to Summ's own imports. */
+/** The txids of the run's rows plan matches to Summ's own imports: categorised rows, and protocol rows whose fee is
+ * the gas of a request. */
 export function categorisedTxids(rows: Row[], config: Config): Set<string> {
     const managed = new Set(config.managedChains)
-    return new Set(rows.filter((r) => !isManaged(r, managed)).flatMap((r) => r.txids))
+    return new Set(rows.filter((r) => matchesOwnLegs(r, managed)).flatMap((r) => r.txids))
 }
 
 /** The ids of the listed actions whose tx hash is one of `txids`. */
