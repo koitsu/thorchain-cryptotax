@@ -30,8 +30,9 @@ can hold, which are managed: on a chain other than THORChain and Maya, LP
 and savers token receives and returns, price helpers (`spam`), and what a
 refund kept (on an L1 file the exporter writes `fee` and `lost` only for
 that). Their amount never moves on that chain. A row of these types with a
-fee stays categorised: the fee is the L1 gas of a tx Summ's import holds
-(a withdraw request). On THORChain and Maya these types are on chain, so a
+fee (the L1 gas of a withdraw request, a tx Summ's import of the wallet
+holds with its gas) is managed without the fee, in its match and its
+upload file, so the gas is counted once. On THORChain and Maya these types are on chain, so a
 user who leaves those chains to Summ's import leaves these rows to it too. The user uploads them into the THORChain or Maya
 account, in a file named after their wallet file (plan.md says so beside the
 file). Summ keeps such a row's blockchain and resolves its L1 address to the
@@ -261,13 +262,22 @@ is the key: Summ may hold the tx gross of a gas the row does not record, or
 the user may have split a fee off by hand), unless another row matched that
 leg exactly, or another row would take it the same way (then neither does);
 the amount is not edited, and the difference beyond the row's amount, or its
-amount plus its fee, is listed in the `fee` report. Several legs, or none, are reported, not guessed.
+amount plus its fee, is listed in the `fee` report. Several legs, or none, are reported, not guessed,
+except when Summ holds the tx twice (a later import of the wallet, its time
+off by an hour, holding the gas inside the amount): of the legs that fit,
+the one with the row's shape is the row's, first the row's amount with a fee
+leg of the row's fee, then the amount plus the fee with no fee leg, and each
+other leg not ignored is reported (`duplicate-leg`) for the user to resolve
+in Summ, since it may count the tx twice.
 
 The fee of a categorised row is compared with the fee leg of Summ's own
 action, and a difference is listed in the `fee` report, not edited: Summ's
 import read the fee from the chain, while the row's may be a source's
 estimate (THORNode gives an EVM inbound's gas as its max fee per gas times
-the gas used, above what the wallet paid).
+the gas used, above what the wallet paid). A leg holding the row's amount
+plus its fee, in the currency sent, with no fee leg is Summ's shape of the
+same tx (Bitcoin-style imports keep the gas inside the amount sent): not
+reported.
 
 **Foreign pairs.** Summ's own matcher pairs an uploaded trade with any leg
 of about its value and retypes that leg (change history: `transactionMatching`),
@@ -345,7 +355,7 @@ legs share their actions (a delete by action would remove those too).
 | upload | rows with no leg in Summ after the deletes, per CSV file | files written to `plans/<timestamp>/upload/` (the file's header and those rows as the run wrote them; filed-year rows in `<file>_filed.csv`), uploaded by the user |
 | categorise | categorised rows whose Summ leg differs in type | `edit_transaction` |
 | superseded | extra rows a run row exports itself (Extra folders above) | nothing: their legs adopt to the run row |
-| report | categorised rows with no or several matching legs, or whose fee differs from Summ's (not edited); extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); managed rows Summ paired with a leg no row of their event names (`foreign-pair`); manual entries repeating a row's txid | nothing: for the user to resolve |
+| report | categorised rows with no or several matching legs, or whose fee differs from Summ's (not edited); legs of a tx Summ holds twice beside the one a row matched (`duplicate-leg`); extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); managed rows Summ paired with a leg no row of their event names (`foreign-pair`); manual entries repeating a row's txid | nothing: for the user to resolve |
 | held | rows the plan leaves alone (Held below), with what it left out | nothing |
 | overridden | differences an override keeps, and overrides captured in this plan | nothing |
 
@@ -460,6 +470,3 @@ upload adds once done.
   report entry (Summ's `unmatchedTransfer` warning).
 - Prices and gains.
 
-## Open
-
-- Whether a categorised leg's amount is gross or net of the fee, per chain.

@@ -3,7 +3,7 @@
 
 import type { Config, Hold } from './config.ts'
 import { before, inPeriod } from './dates.ts'
-import { periodsOf, type Row, type RunFile } from './run.ts'
+import { parseCsvLine, periodsOf, type Row, type RunFile } from './run.ts'
 import { type Leg, normaliseTxid } from './snapshot.ts'
 import type { AppliedEdit, LegRole, Override, Value } from './state.ts'
 import { type SummType, summBlockchain, summType } from './summ-types.ts'
@@ -65,6 +65,7 @@ export interface ReportEntry {
     kind:
         | 'no-leg'
         | 'several-legs'
+        | 'duplicate-leg'
         | 'leg-claimed-twice'
         | 'not-in-snapshot'
         | 'fee'
@@ -130,6 +131,8 @@ export interface PlanResult {
     adopted: Map<string, string>
     /** overrides.json after this plan: the input's plus the ones captured now. */
     overrides: Override[]
+    /** The run's rows as planned, for upload files: a protocol row on an L1 file without its fee. */
+    rows: Row[]
 }
 
 const SOFT_TRANSFER = 'soft-transfer'
@@ -184,15 +187,27 @@ const hasFee = (row: Row) => row.feeAmount !== '' && Number(row.feeAmount) !== 0
 
 /** Types whose amount never moves on an L1 chain: LP and savers tokens, price helpers, and what a refund kept (on an
  * L1 file the exporter writes `fee` and `lost` only for that). No import of the L1 holds them, so on an L1 file they
- * are managed (uploaded into the THORChain or Maya account), unless the row has a fee: that is the L1 gas of a tx
- * Summ's import holds (a withdraw request), so the row stays categorised. THORChain and Maya hold these types
- * on chain, so a user who leaves those chains to Summ's import leaves these rows to it too. */
+ * are managed (uploaded into the THORChain or Maya account). THORChain and Maya hold these types on chain, so a
+ * user who leaves those chains to Summ's import leaves these rows to it too. */
 export const PROTOCOL_TYPES = new Set(['receive-lp-token', 'return-lp-token', 'spam', 'fee', 'lost'])
 const NATIVE_CHAINS = new Set(['THOR', 'MAYA'])
 
+const isProtocolRow = (row: Row, managedChains: Set<string>) => !managedChains.has(row.chain) && !NATIVE_CHAINS.has(row.chain) && PROTOCOL_TYPES.has(row.type)
+
 /** A row the user uploads: on a managed chain, or one no import of its L1 chain can hold. */
-export const isManaged = (row: Row, managedChains: Set<string>) =>
-    managedChains.has(row.chain) || (!NATIVE_CHAINS.has(row.chain) && PROTOCOL_TYPES.has(row.type) && !hasFee(row))
+export const isManaged = (row: Row, managedChains: Set<string>) => managedChains.has(row.chain) || isProtocolRow(row, managedChains)
+
+const FEE_COLUMNS = ['Fee Currency (Optional)', 'Fee Amount (Optional)']
+const csvField = (value: string) => (/[",]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value)
+
+/** A protocol row's fee is the L1 gas of its request (a withdraw sent from the L1 wallet): Summ's import of that
+ * wallet holds the tx and its gas, so the row is matched and uploaded without it, or the gas would count twice. */
+function withoutFee(row: Row, header: string): Row {
+    const names = parseCsvLine(header)
+    const values = parseCsvLine(row.line)
+    for (const column of FEE_COLUMNS) if (names.includes(column)) values[names.indexOf(column)] = ''
+    return { ...row, feeCurrency: '', feeAmount: '', line: values.map(csvField).join(',') }
+}
 
 const hasQuote = (row: Row, type: SummType) => type.quote !== undefined && row.quoteCurrency !== ''
 const typeOf = (row: Row) => summType(row.type) as SummType
@@ -246,11 +261,15 @@ export function supersede(rows: Row[], keep: string[] = []): { rows: Row[]; supe
 
 export function makePlan(input: PlanInput): PlanResult {
     const { config, now } = input
-    const { rows, superseded, overlaps } = supersede(input.rows, config.keepExtra)
+    const managedChains = new Set(config.managedChains)
+    const headers = new Map(input.files.map((f) => [f.name, f.header]))
+    const { rows, superseded, overlaps } = supersede(
+        input.rows.map((r) => (isProtocolRow(r, managedChains) && hasFee(r) ? withoutFee(r, headers.get(r.file) ?? '') : r)),
+        config.keepExtra,
+    )
     const unmapped = [...new Set(rows.map((r) => r.type).filter((t) => !summType(t)))]
     if (unmapped.length) throw new Error(`No Summ type for CSV type ${unmapped.join(', ')}: add it to src/summ-types.ts`)
 
-    const managedChains = new Set(config.managedChains)
     const managedSources = new Set(config.managedSources)
     const periods = periodsOf(input.files)
     const inScope = (time: string) => periods.some((p) => inPeriod(time, p, config.timezone))
@@ -562,6 +581,23 @@ export function makePlan(input: PlanInput): PlanResult {
     // Summ's own imports, without the legs Summ made up to pair a send as a transfer (soft-transfer)
     const ownLegs = input.legs.filter((l) => !managedSources.has(l.source) && l.importType !== 'manual' && l.importType !== SOFT_TRANSFER)
     const softLegs = input.legs.filter((l) => l.importType === SOFT_TRANSFER && !IGNORED.has(l.trade))
+    const feeLegsOf = (leg: Leg) => (legsByAction.get(leg.actionId) ?? []).filter((l) => l.side === 'fees' && l.id === leg.id)
+    /** How a leg of Summ's import holds a row with a fee in the currency sent: the amount and a fee leg of the row's
+     * fee, or (Bitcoin-style imports) the amount plus the fee and no fee leg. */
+    const shapeRank = (row: Row, leg: Leg): number => {
+        if (!hasFee(row) || !sameCurrency(row.feeCurrency, row.baseCurrency)) return 0
+        const fees = feeLegsOf(leg)
+        const amount = Number(row.baseAmount)
+        const fee = Number(row.feeAmount)
+        if (sameAmount(leg.quantity, amount) && fees.length === 1 && sameAmount(fees[0].quantity, fee)) return 2
+        if (sameAmount(leg.quantity, amount + fee) && fees.length === 0) return 1
+        return 0
+    }
+    /** The one leg among several that fit whose shape ranks first, or undefined when none does or two tie. */
+    const bestShape = (row: Row, legs: Leg[]): Leg | undefined => {
+        const ranked = legs.map((l) => ({ l, rank: IGNORED.has(l.trade) ? -1 : shapeRank(row, l) })).sort((a, b) => b.rank - a.rank)
+        return ranked[0].rank > 0 && ranked[0].rank > ranked[1].rank ? ranked[0].l : undefined
+    }
     const legClaims = new Map<string, string[]>()
     const categorised: [Row, Leg][] = []
     const claim = (row: Row, leg: Leg) => {
@@ -578,8 +614,17 @@ export function makePlan(input: PlanInput): PlanResult {
         const withTxid = ownLegs.filter((l) => l.side === type.side && row.txids.includes(normaliseTxid(l.id)) && sameCurrency(l.currency, row.baseCurrency))
         const found = withTxid.filter((l) => sameAmount(l.quantity, amount) || sameAmount(l.quantity, gross))
         const filed = isFiled(row.timestamp)
+        // Summ may hold the tx twice (a later import of the wallet, with the gas inside the amount): the leg with the
+        // row's shape is the row's, the other reported
+        const best = found.length > 1 ? bestShape(row, found) : undefined
         if (found.length === 1) claim(row, found[0])
-        else if (found.length === 0 && withTxid.length === 1) byTxid.push([row, withTxid[0]])
+        else if (best) {
+            claim(row, best)
+            const others = found.filter((l) => l !== best && !IGNORED.has(l.trade))
+            if (others.length) {
+                plan.report.push({ kind: 'duplicate-leg', filed, id: row.id, legIds: others.map((l) => l.legId), detail: `Summ's imports hold the tx ${others.length + 1} times: the leg with the row's shape (${best.quantity} ${best.currency}${feeLegsOf(best).length ? ' and a fee leg' : ', no fee leg'}) is the row's; ${others.map((l) => `${l.quantity} ${l.currency} (${l.trade})`).join(', ')} may count it twice: resolve it in Summ` })
+            }
+        } else if (found.length === 0 && withTxid.length === 1) byTxid.push([row, withTxid[0]])
         // A gas the user split off the leg by hand and ignored: the legs together hold the row's amount, and the one
         // not ignored is the row's
         else if (found.length === 0 && isHandSplit(withTxid, amount, gross)) byTxid.push([row, withTxid.find((l) => !IGNORED.has(l.trade)) as Leg])
@@ -621,10 +666,11 @@ export function makePlan(input: PlanInput): PlanResult {
             continue
         }
         const changes: Change[] = [...compare(leg, 'base', 'trade', typeOf(row).trade)]
-        const feeLegs = (legsByAction.get(leg.actionId) ?? []).filter((l) => l.side === 'fees' && l.id === leg.id)
-        if (hasFee(row)) {
+        const feeLegs = feeLegsOf(leg)
+        if (hasFee(row) && shapeRank(row, leg) !== 1) {
             // Summ's import read the fee from the chain; the row's may be a source's estimate (THORNode's gas of an EVM
-            // inbound is its max fee), so a difference is reported, never edited
+            // inbound is its max fee), so a difference is reported, never edited. A leg of the amount plus the fee
+            // with no fee leg (a Bitcoin-style import) holds the row's fee: nothing to report
             if (feeLegs.length === 1 && sameCurrency(feeLegs[0].currency, row.feeCurrency)) {
                 if (!sameAmount(feeLegs[0].quantity, Number(row.feeAmount))) plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [feeLegs[0].legId], detail: `Summ's import holds a fee of ${Number(feeLegs[0].quantity.toFixed(12))} ${feeLegs[0].currency}, the row ${row.feeAmount}; the fee is not edited` })
             } else plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: `the row has a fee of ${row.feeAmount} ${row.feeCurrency}; Summ has ${feeLegs.length} fee legs${feeLegs.length === 1 ? ` in ${feeLegs[0].currency}` : ''}` })
@@ -787,5 +833,5 @@ export function makePlan(input: PlanInput): PlanResult {
         held: plan.held.length,
         overridden: plan.overridden.length,
     }
-    return { plan, adopted, overrides }
+    return { plan, adopted, overrides, rows }
 }
