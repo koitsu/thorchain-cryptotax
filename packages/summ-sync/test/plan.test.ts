@@ -446,7 +446,22 @@ test('a return whose withdraw request paid L1 gas is managed without its fee: Su
     // uploaded: matched by ID with no fee leg, nothing planned
     const unpaid = { ...paid, feeCurrency: '', feeAmount: '' }
     const after = plan({ rows: [paid], legs: [...request, ...legsOf(unpaid, { blockchain: 'btc' }, 'action2')], files }).plan
-    assert.deepEqual([after.upload, after.delete, after.edit, after.report], [[], [], [], []])
+    assert.deepEqual([after.upload, after.delete, after.edit, after.report], [[], [], [], []])    // the snapshot fetches the request's action
+    assert.deepEqual(categorisedTxids([paid], CONFIG), new Set(paid.txids))
+
+    // Summ's imports hold no leg of the request: the gas left out counts nowhere, reported
+    const missing = plan({ rows: [paid], files }).plan
+    assert.deepEqual([missing.upload.map((u) => u.ids), missing.report.map((e) => [e.kind, e.id])], [[[id]], [['fee', id]]])
+    assert.match(missing.report[0].detail, /fee of 0\.0001 BTC is its request's gas, uploaded without it, but no leg of Summ's imports has its txid in BTC/)
+    // Summ lists the request but the snapshot lacks its detail
+    assert.deepEqual(plan({ rows: [paid], files, txHashes: new Set(paid.txids) }).plan.report.map((e) => e.kind), ['not-in-snapshot'])
+
+    // only the fee columns change, whatever the other fields hold
+    const quoted = 'Timestamp (UTC),Type,Description (Optional),Fee Currency (Optional),Fee Amount (Optional),ID (Optional)'
+    const described = { ...paid, line: `2024-03-01T10:00:00.000Z,return-lp-token,"Return, ""LP""; ${TX1}",BTC,0.0001,${id}` }
+    const withDescription = FILES.map((f) => (f.name === BTC_FILE ? { ...f, header: quoted } : f))
+    const out = plan({ rows: [described], legs: request, files: withDescription })
+    assert.equal(uploadFiles(out.plan, withDescription, out.rows)[0].text, `${quoted}\n2024-03-01T10:00:00.000Z,return-lp-token,"Return, ""LP""; ${TX1}",,,${id}\n`)
 })
 
 test('a categorised row with no leg of its amount takes the one leg with its txid, side and currency, and reports the difference', () => {
@@ -552,7 +567,22 @@ test('a tx Summ holds twice, once with a fee leg and once gross: the leg with th
     assert.deepEqual([alone.categorise.length, alone.report], [1, []])
     // the user ignored the other leg: nothing reported
     const ignored = plan({ rows: [r], legs: [net, fee, { ...gross, trade: 'ignoreOut' }] }).plan
-    assert.deepEqual([ignored.categorise.map((c) => c.changes[0].legId), ignored.report], [[net.legId], []])
+    assert.deepEqual([ignored.categorise.map((c) => c.changes[0].legId), ignored.report], [[net.legId], []])    // the other leg is another row's exactly (a second send of the gross amount in the tx): not a duplicate
+    const second = btcRow({ id: '2024-03-01T10:00:00.000Z.out.cccccccccccc', type: 'bridge-trade-out', baseAmount: '0.0101', feeCurrency: '', feeAmount: '' })
+    const both = plan({ rows: [r, second], legs: [net, fee, gross] }).plan
+    assert.deepEqual(both.categorise.map((c) => [c.id, c.actionId]), [[r.id, 'l1'], [second.id, 'l2']])
+    assert.deepEqual(both.report.filter((e) => e.kind === 'duplicate-leg'), [])
+})
+
+test('a leg of the amount alone, with no fee leg, does not hold the row\'s fee: reported', () => {
+    const r = btcRow({ type: 'bridge-trade-out' })
+    const p = plan({ rows: [r], legs: [ownLeg({ quantity: 0.01 })] }).plan
+    assert.equal(p.categorise.length, 1)
+    assert.deepEqual(p.report.map((e) => [e.kind, e.detail]), [['fee', 'the row has a fee of 0.0001 BTC; Summ has 0 fee legs']])
+    // a fee within the amount's tolerance cannot be told from no fee: still reported, not taken as held in the amount
+    const large = btcRow({ type: 'bridge-trade-out', baseAmount: '2000000', feeAmount: '0.01' })
+    const q = plan({ rows: [large], legs: [ownLeg({ quantity: 2000000 })] }).plan
+    assert.deepEqual(q.report.map((e) => [e.kind, e.detail]), [['fee', 'the row has a fee of 0.01 BTC; Summ has 0 fee legs']])
 })
 
 test('a manual entry naming a row\'s txid is reported', () => {

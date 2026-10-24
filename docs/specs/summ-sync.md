@@ -32,7 +32,11 @@ refund kept (on an L1 file the exporter writes `fee` and `lost` only for
 that). Their amount never moves on that chain. A row of these types with a
 fee (the L1 gas of a withdraw request, a tx Summ's import of the wallet
 holds with its gas) is managed without the fee, in its match and its
-upload file, so the gas is counted once. On THORChain and Maya these types are on chain, so a
+upload file, so the gas is counted once. When no leg of Summ's imports
+has the row's txid in the fee's currency, the request is missing from
+Summ and the gas would count nowhere: the row is listed in the `fee`
+report (`not-in-snapshot` when Summ lists the txid but the snapshot lacks
+its detail). On THORChain and Maya these types are on chain, so a
 user who leaves those chains to Summ's import leaves these rows to it too. The user uploads them into the THORChain or Maya
 account, in a file named after their wallet file (plan.md says so beside the
 file). Summ keeps such a row's blockchain and resolves its L1 address to the
@@ -150,7 +154,9 @@ the same shape and naming, e.g. rows the exporter cannot produce, uploaded
 like the run's. Their rows are part of the desired state; without them, plan
 would delete those rows as old IDs. Only a file whose period is one of the
 run's counts: another period would widen the plan's scope to a year the run
-does not hold.
+does not hold. An extra file named like a run file goes into the same
+upload file, so it must have the same header; plan refuses one that does
+not.
 
 An extra row can be overtaken: an amendment made while the exporter could
 not map an event, which the run now exports itself under a stable ID. Plan
@@ -182,7 +188,8 @@ on-chain txids are the 64-character hex strings in its description (as
 **Snapshot** (written by `pull`, State dir above): every listed action,
 and the detail of each action the plan needs: every action of a managed
 source, and, when pull is given the run dir, every action whose tx hash is
-a txid of a categorised row. Pull fetches only the details the store lacks.
+a txid of a categorised row or of a managed row with a request's gas
+(above). Pull fetches only the details the store lacks.
 `pull --full` fetches every needed detail again and reports each stored id
 whose legs or change history entries differ from Summ's (which would
 disprove the store's premise); it then replaces that store file. A snapshot
@@ -263,12 +270,13 @@ the user may have split a fee off by hand), unless another row matched that
 leg exactly, or another row would take it the same way (then neither does);
 the amount is not edited, and the difference beyond the row's amount, or its
 amount plus its fee, is listed in the `fee` report. Several legs, or none, are reported, not guessed,
-except when Summ holds the tx twice (a later import of the wallet, its time
-off by an hour, holding the gas inside the amount): of the legs that fit,
+except when Summ holds the tx twice (seen as a later import of the wallet,
+an hour off, holding the gas inside the amount; the time is not compared): of the legs that fit,
 the one with the row's shape is the row's, first the row's amount with a fee
 leg of the row's fee, then the amount plus the fee with no fee leg, and each
-other leg not ignored is reported (`duplicate-leg`) for the user to resolve
-in Summ, since it may count the tx twice.
+other leg not ignored, and not taken by another row, is reported
+(`duplicate-leg`) for the user to resolve in Summ, since it may count the
+tx twice.
 
 The fee of a categorised row is compared with the fee leg of Summ's own
 action, and a difference is listed in the `fee` report, not edited: Summ's
@@ -277,7 +285,9 @@ estimate (THORNode gives an EVM inbound's gas as its max fee per gas times
 the gas used, above what the wallet paid). A leg holding the row's amount
 plus its fee, in the currency sent, with no fee leg is Summ's shape of the
 same tx (Bitcoin-style imports keep the gas inside the amount sent): not
-reported.
+reported. A fee within the amount's tolerance (a tiny fee on a large
+amount) cannot be told from no fee, so a leg without a fee leg is
+reported then.
 
 **Foreign pairs.** Summ's own matcher pairs an uploaded trade with any leg
 of about its value and retypes that leg (change history: `transactionMatching`),

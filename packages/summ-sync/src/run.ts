@@ -132,6 +132,9 @@ export function readRun(runDir: string, extraDirs: string[] = []): { files: RunF
     const seen = new Map<string, string>()
     const add = (path: string, name: string, extra = false) => {
         const parsed = parseWalletFile(name, readFileSync(path, 'utf8'))
+        // Rows are grouped by file name for upload, under one header
+        const same = files.find((f) => f.name === name)
+        if (same && same.header !== parsed.file.header) throw new Error(`${path}: the same name as another wallet file, with another header: give it its own name`)
         if (extra) for (const row of parsed.rows) row.extra = true
         files.push(parsed.file)
         for (const row of parsed.rows) {

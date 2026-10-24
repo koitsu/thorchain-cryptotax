@@ -192,7 +192,7 @@ const hasFee = (row: Row) => row.feeAmount !== '' && Number(row.feeAmount) !== 0
 export const PROTOCOL_TYPES = new Set(['receive-lp-token', 'return-lp-token', 'spam', 'fee', 'lost'])
 const NATIVE_CHAINS = new Set(['THOR', 'MAYA'])
 
-const isProtocolRow = (row: Row, managedChains: Set<string>) => !managedChains.has(row.chain) && !NATIVE_CHAINS.has(row.chain) && PROTOCOL_TYPES.has(row.type)
+export const isProtocolRow = (row: Row, managedChains: Set<string>) => !managedChains.has(row.chain) && !NATIVE_CHAINS.has(row.chain) && PROTOCOL_TYPES.has(row.type)
 
 /** A row the user uploads: on a managed chain, or one no import of its L1 chain can hold. */
 export const isManaged = (row: Row, managedChains: Set<string>) => managedChains.has(row.chain) || isProtocolRow(row, managedChains)
@@ -201,13 +201,17 @@ const FEE_COLUMNS = ['Fee Currency (Optional)', 'Fee Amount (Optional)']
 const csvField = (value: string) => (/[",]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value)
 
 /** A protocol row's fee is the L1 gas of its request (a withdraw sent from the L1 wallet): Summ's import of that
- * wallet holds the tx and its gas, so the row is matched and uploaded without it, or the gas would count twice. */
-function withoutFee(row: Row, header: string): Row {
-    const names = parseCsvLine(header)
+ * wallet holds the tx and its gas, so the row is matched and uploaded without it, or the gas would count twice.
+ * `columns` are the indices of the fee columns in the row's file. */
+function withoutFee(row: Row, columns: number[]): Row {
     const values = parseCsvLine(row.line)
-    for (const column of FEE_COLUMNS) if (names.includes(column)) values[names.indexOf(column)] = ''
+    for (const i of columns) if (i >= 0) values[i] = ''
     return { ...row, feeCurrency: '', feeAmount: '', line: values.map(csvField).join(',') }
 }
+
+/** Rows plan matches to Summ's own imports: categorised rows, and protocol rows whose fee is the gas of a request
+ * Summ's import holds. */
+export const matchesOwnLegs = (row: Row, managedChains: Set<string>) => !isManaged(row, managedChains) || (isProtocolRow(row, managedChains) && hasFee(row))
 
 const hasQuote = (row: Row, type: SummType) => type.quote !== undefined && row.quoteCurrency !== ''
 const typeOf = (row: Row) => summType(row.type) as SummType
@@ -262,9 +266,10 @@ export function supersede(rows: Row[], keep: string[] = []): { rows: Row[]; supe
 export function makePlan(input: PlanInput): PlanResult {
     const { config, now } = input
     const managedChains = new Set(config.managedChains)
-    const headers = new Map(input.files.map((f) => [f.name, f.header]))
+    const feeColumns = new Map(input.files.map((f) => [f.name, FEE_COLUMNS.map((c) => parseCsvLine(f.header).indexOf(c))]))
+    const requestGas = input.rows.filter((r) => isProtocolRow(r, managedChains) && hasFee(r))
     const { rows, superseded, overlaps } = supersede(
-        input.rows.map((r) => (isProtocolRow(r, managedChains) && hasFee(r) ? withoutFee(r, headers.get(r.file) ?? '') : r)),
+        input.rows.map((r) => (requestGas.includes(r) ? withoutFee(r, feeColumns.get(r.file) ?? []) : r)),
         config.keepExtra,
     )
     const unmapped = [...new Set(rows.map((r) => r.type).filter((t) => !summType(t)))]
@@ -590,7 +595,8 @@ export function makePlan(input: PlanInput): PlanResult {
         const amount = Number(row.baseAmount)
         const fee = Number(row.feeAmount)
         if (sameAmount(leg.quantity, amount) && fees.length === 1 && sameAmount(fees[0].quantity, fee)) return 2
-        if (sameAmount(leg.quantity, amount + fee) && fees.length === 0) return 1
+        // A fee within the amount's tolerance cannot be told from no fee
+        if (sameAmount(leg.quantity, amount + fee) && !sameAmount(amount, amount + fee) && fees.length === 0) return 1
         return 0
     }
     /** The one leg among several that fit whose shape ranks first, or undefined when none does or two tie. */
@@ -607,6 +613,7 @@ export function makePlan(input: PlanInput): PlanResult {
     // Rows with no leg of their amount, and the one leg with their txid, side and currency: matched once every
     // exact match has claimed its leg, so a looser fit never takes a leg another row has exactly
     const byTxid: [Row, Leg][] = []
+    const duplicates: { row: Row; best: Leg; others: Leg[] }[] = []
     for (const row of rows.filter((r) => !isManaged(r, managedChains))) {
         const type = typeOf(row)
         const amount = Number(row.baseAmount)
@@ -620,10 +627,7 @@ export function makePlan(input: PlanInput): PlanResult {
         if (found.length === 1) claim(row, found[0])
         else if (best) {
             claim(row, best)
-            const others = found.filter((l) => l !== best && !IGNORED.has(l.trade))
-            if (others.length) {
-                plan.report.push({ kind: 'duplicate-leg', filed, id: row.id, legIds: others.map((l) => l.legId), detail: `Summ's imports hold the tx ${others.length + 1} times: the leg with the row's shape (${best.quantity} ${best.currency}${feeLegsOf(best).length ? ' and a fee leg' : ', no fee leg'}) is the row's; ${others.map((l) => `${l.quantity} ${l.currency} (${l.trade})`).join(', ')} may count it twice: resolve it in Summ` })
-            }
+            duplicates.push({ row, best, others: found.filter((l) => l !== best && !IGNORED.has(l.trade)) })
         } else if (found.length === 0 && withTxid.length === 1) byTxid.push([row, withTxid[0]])
         // A gas the user split off the leg by hand and ignored: the legs together hold the row's amount, and the one
         // not ignored is the row's
@@ -657,6 +661,24 @@ export function makePlan(input: PlanInput): PlanResult {
         const diff = Number((leg.quantity - near).toFixed(10))
         const of = near === amount ? `the row's ${row.baseAmount}` : `the row's ${row.baseAmount} plus its fee ${row.feeAmount}`
         plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [leg.legId], detail: `matched by txid: Summ's leg holds ${Number(leg.quantity.toFixed(10))} ${leg.currency}, ${diff > 0 ? '+' : ''}${diff} beyond ${of}; the amount is not edited` })
+    }
+    // Reported once every row has claimed its leg: a leg another row takes is that row's, not a duplicate
+    for (const { row, best, others } of duplicates) {
+        const unclaimed = others.filter((l) => !legClaims.has(l.legId))
+        if (!unclaimed.length) continue
+        plan.report.push({ kind: 'duplicate-leg', filed: isFiled(row.timestamp), id: row.id, legIds: unclaimed.map((l) => l.legId), detail: `Summ's imports hold the tx ${unclaimed.length + 1} times: the leg with the row's shape (${best.quantity} ${best.currency}${feeLegsOf(best).length ? ' and a fee leg' : ', no fee leg'}) is the row's; ${unclaimed.map((l) => `${l.quantity} ${l.currency} (${l.trade})`).join(', ')} may count it twice: resolve it in Summ` })
+    }
+    // A protocol row's fee left out counts only where Summ's import holds its request: reported when no leg of the
+    // imports has the row's txid in the fee's currency
+    const kept = new Set(rows.map((r) => r.id))
+    for (const row of requestGas.filter((r) => kept.has(r.id))) {
+        const filed = isFiled(row.timestamp)
+        if (ownLegs.some((l) => row.txids.includes(normaliseTxid(l.id)) && sameCurrency(l.currency, row.feeCurrency))) continue
+        if (row.txids.some((t) => input.txHashes.has(t))) {
+            plan.report.push({ kind: 'not-in-snapshot', filed, id: row.id, txids: row.txids, detail: 'Summ lists the txid but the snapshot has no detail for it: pull with the run dir' })
+        } else {
+            plan.report.push({ kind: 'fee', filed, id: row.id, txids: row.txids, detail: `the row's fee of ${row.feeAmount} ${row.feeCurrency} is its request's gas, uploaded without it, but no leg of Summ's imports has its txid in ${row.feeCurrency}: the gas is counted nowhere` })
+        }
     }
     for (const [row, leg] of categorised) {
         const filed = isFiled(row.timestamp)
