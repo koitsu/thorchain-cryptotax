@@ -1,0 +1,15 @@
+root = true
+
+# Matches Prettier's output (npm run format)
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Saved API responses and reference files: leave as fetched
+[{docs/reference/**,test/cases/**/input.json}]
+insert_final_newline = unset
+trim_trailing_whitespace = unset
