@@ -5,6 +5,10 @@ import axiosThrottle from "axios-request-throttle";
 // too. The public gateways (Liquify, Maya's Midgard) return occasional 502/504s and sometimes hang: a request
 // that hangs fails after the timeout instead of stalling the run, and the throttle keeps under their rate
 // limits. Retries are withRetry's, around each store fetch.
-export const http = axios.create({timeout: 60_000});
+// Typed as axios's CommonJS declarations, which the xchainjs clients and the throttle (CommonJS packages) name;
+// this module gets the ES module ones, a separate but identical type. It is the same instance either way.
+export const http = axios.create({timeout: 60_000}) as unknown as CjsAxiosInstance;
+
+type CjsAxiosInstance = import("axios", {with: {"resolution-mode": "require"}}).AxiosInstance;
 
 axiosThrottle.use(http, {requestsPerSecond: 1});
