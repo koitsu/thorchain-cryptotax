@@ -30,7 +30,7 @@ reports, which for savers is close to the synth minted.
 | --- | --- | --- |
 | Asset currency, deposit sent from an L1 wallet | the L1 asset, e.g. `BTC` | the wallet sent real BTC, not the synth (`assets.md`) |
 | Asset currency, synth deposited from a THORChain wallet | the synth, e.g. `ThorSynth.BTC.BTC` | the wallet sent the synth |
-| Asset amount, deposit sent from an L1 wallet | the L1 amount sent: THORNode's inbound coin; Midgard's coin (the synth minted), with a warning, when THORNode has no status for the tx | the wallet disposed of what it sent; the swap's fee into the synth is netted off inside the protocol, as every protocol fee is (`fees.md`), so it lowers the position's units, not the amount sent |
+| Asset amount, deposit sent from an L1 wallet | the L1 amount sent: THORNode's inbound coin; Midgard's coin (the synth minted), with a warning, when THORNode has no inbound for the tx or its inbound has no coin of the sent asset | the wallet disposed of what it sent; the swap's fee into the synth is netted off inside the protocol, as every protocol fee is (`fees.md`), so it lowers the position's units, not the amount sent |
 | Asset amount, synth deposited from a THORChain wallet | Midgard's coin | the synth sent is the synth deposited |
 | Position token | `ThorSavers.<chain>.<asset>`, e.g. `ThorSavers.BTC.BTC`, `ThorSavers.ETH.USDC` | savers units are not pool LP units, so it must differ from `ThorLP.BTC.BTC`; no `/`, which breaks Summ's ledger view; the same `<prefix>.<chain>.<asset>` shape as LP tokens |
 | Fee on the deposit | the deposit's inbound fee: L1 gas for an L1 wallet (blank when neither THORNode nor Viewblock has it), 0.02 RUNE for a synth from a THORChain wallet | `fees.md` |
@@ -46,11 +46,10 @@ the synth minted.
 An affiliate named in the deposit's memo gets its share as an add of its own,
 in the affiliate's name (THORNode's add-liquidity handler). That add is not the
 wallet's, so the wallet has one row for the whole amount sent, and the share
-leaves inside the protocol, like any protocol fee. Until February 2024
-(THORNode 1.128) the affiliate was looked up on THORChain, where a savers add
-takes no address, so a deposit naming a THORChain affiliate or THORName failed
-and was refunded (`fees.md`, Refunds); only an affiliate on the asset's own chain
-was split.
+leaves inside the protocol, like any protocol fee. Before THORNode 1.128 an
+affiliate given as a THORChain address or a bare THORName could not take an
+add of the asset (it needs an address on the asset's own chain), so such a
+deposit failed: Midgard reports a refund, not an add.
 
 Maya has the same fields with `MayaSavers` as the prefix. Its inbounds are not
 looked up on a node, so a Maya savers deposit from an L1 wallet keeps Midgard's

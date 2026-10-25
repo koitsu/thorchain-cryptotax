@@ -51,7 +51,7 @@ export function interpretAddLiquidity(bundle: RawBundle, protocol: Protocol): {a
 
         if (sentOnL1 && !sent) {
             const reason = protocol.id !== THORCHAIN.id ? `${protocol.id} inbounds are not looked up on a node`
-                : status?.tx ? `THORNode's inbound has no ${sentAsset} coin` : 'THORNode has not observed the inbound';
+                : status ? `THORNode's inbound has no ${sentAsset} coin` : 'THORNode has no inbound for the tx';
             issues.push({kind: 'warning', message: `savers deposit ${txid}: ${reason}, so the amount is the synth minted, not the ${sentAsset} sent`});
         }
 

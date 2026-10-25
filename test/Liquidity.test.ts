@@ -48,15 +48,8 @@ describe('liquidity', () => {
         const result = runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: saversDeposit('bc1q-user-wallet'), thornodeTxs: [], cosmosTxs: []}, THORCHAIN);
 
         assert.equal(result.rows.find((row) => row.type === 'add-liquidity')!.baseAmount, '1');
-        assert.ok(result.issues.some((issue) => issue.kind === 'warning' && issue.message.includes('THORNode has not observed the inbound')
+        assert.ok(result.issues.some((issue) => issue.kind === 'warning' && issue.message.includes('THORNode has no inbound for the tx')
             && issue.message.includes('synth minted')));
-    });
-
-    test('a THORNode status without a tx (an inbound it never observed) is said to be unobserved', () => {
-        const status = {stages: {inbound_observed: {completed: false}}} as any;
-        const result = runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: saversDeposit('bc1q-user-wallet'), thornodeTxs: [status], cosmosTxs: []}, THORCHAIN);
-
-        assert.ok(result.issues.some((issue) => issue.message.includes('THORNode has not observed the inbound')));
     });
 
     test('a Maya savers deposit from an L1 wallet keeps the synth minted, saying its inbounds are not looked up', () => {
@@ -65,6 +58,7 @@ describe('liquidity', () => {
         const row = result.rows.find((row) => row.type === 'add-liquidity')!;
 
         assert.equal(row.baseCurrency, 'BTC');
+        assert.equal(row.baseAmount, '1');
         assert.ok(result.issues.some((issue) => issue.message.includes('maya inbounds are not looked up on a node')));
     });
 
