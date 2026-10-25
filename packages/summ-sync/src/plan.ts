@@ -591,13 +591,14 @@ export function makePlan(input: PlanInput): PlanResult {
      * Summ moved to an action of its own). */
     const inlineFeeOf = (leg: Leg) => (leg.feeQuantity !== undefined && feeLegsOf(leg).length === 0 ? { quantity: leg.feeQuantity, currency: leg.feeCurrency ?? '' } : undefined)
     /** How a leg of Summ's import holds a row with a fee in the currency sent: the amount and a fee leg of the row's
-     * fee, or (Bitcoin-style imports) the amount plus the fee and no fee leg. */
+     * fee, then the amount with the row's fee on the leg itself, then (Bitcoin-style imports) the amount plus the fee
+     * and no fee leg. */
     const shapeRank = (row: Row, leg: Leg): number => {
         if (!hasFee(row) || !sameCurrency(row.feeCurrency, row.baseCurrency)) return 0
         const fees = feeLegsOf(leg)
         const amount = Number(row.baseAmount)
         const fee = Number(row.feeAmount)
-        if (sameAmount(leg.quantity, amount) && fees.length === 1 && sameAmount(fees[0].quantity, fee)) return 2
+        if (sameAmount(leg.quantity, amount) && fees.length === 1 && sameAmount(fees[0].quantity, fee)) return 3
         const inline = inlineFeeOf(leg)
         if (sameAmount(leg.quantity, amount) && inline && sameCurrency(inline.currency, row.feeCurrency) && sameAmount(inline.quantity, fee)) return 2
         // A fee within the amount's tolerance cannot be told from no fee
@@ -671,7 +672,7 @@ export function makePlan(input: PlanInput): PlanResult {
     for (const { row, best, others } of duplicates) {
         const unclaimed = others.filter((l) => !legClaims.has(l.legId))
         if (!unclaimed.length) continue
-        plan.report.push({ kind: 'duplicate-leg', filed: isFiled(row.timestamp), id: row.id, legIds: unclaimed.map((l) => l.legId), detail: `Summ's imports hold the tx ${unclaimed.length + 1} times: the leg with the row's shape (${best.quantity} ${best.currency}${feeLegsOf(best).length ? ' and a fee leg' : ', no fee leg'}) is the row's; ${unclaimed.map((l) => `${l.quantity} ${l.currency} (${l.trade})`).join(', ')} may count it twice: resolve it in Summ` })
+        plan.report.push({ kind: 'duplicate-leg', filed: isFiled(row.timestamp), id: row.id, legIds: unclaimed.map((l) => l.legId), detail: `Summ's imports hold the tx ${unclaimed.length + 1} times: the leg with the row's shape (${best.quantity} ${best.currency}${feeLegsOf(best).length ? ' and a fee leg' : inlineFeeOf(best) ? ' and a fee on the leg' : ', no fee leg'}) is the row's; ${unclaimed.map((l) => `${l.quantity} ${l.currency} (${l.trade})`).join(', ')} may count it twice: resolve it in Summ` })
     }
     // A protocol row's fee left out counts only where Summ's import holds its request: reported when no leg of the
     // imports has the row's txid in the fee's currency
@@ -706,6 +707,8 @@ export function makePlan(input: PlanInput): PlanResult {
             } else plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: `the row has a fee of ${row.feeAmount} ${row.feeCurrency}; Summ has ${feeLegs.length} fee legs${feeLegs.length === 1 ? ` in ${feeLegs[0].currency}` : ''}` })
         } else if (feeLegs.some((l) => l.quantity !== 0)) {
             plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: 'the row has no fee; Summ has a fee leg' })
+        } else if (inline) {
+            plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [leg.legId], detail: 'the row has no fee; Summ has a fee on the leg' })
         }
         const resolved = changes.map((c) => resolve(row.id, leg.actionId, c)).filter((c): c is Change => c !== null)
         // A row that is not a plain send or receive leaves Summ's made-up other side of the transfer counted

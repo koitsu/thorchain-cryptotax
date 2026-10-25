@@ -599,7 +599,20 @@ test('a fee Summ keeps on the leg itself, with no fee leg, is the row\'s fee: co
     const net = ownLeg({ quantity: 0.01, feeQuantity: 0.0001, feeCurrency: 'BTC' })
     const twice = plan({ rows: [r], legs: [net, gross] }).plan
     assert.deepEqual(twice.categorise.map((c) => c.actionId), ['l1'])
-    assert.deepEqual(twice.report.map((e) => [e.kind, e.legIds]), [['duplicate-leg', [gross.legId]]])
+    assert.deepEqual(twice.report.map((e) => [e.kind, e.legIds, /a fee on the leg/.test(e.detail)]), [['duplicate-leg', [gross.legId], true]])
+    // a leg with a fee leg ranks before one with the fee on the leg
+    const withFeeLeg = ownLeg({ quantity: 0.01, actionId: 'l3' })
+    const feeLeg = ownLeg({ side: 'fees', trade: 'fee', quantity: 0.0001, actionId: 'l3' })
+    const both = plan({ rows: [r], legs: [net, withFeeLeg, feeLeg] }).plan
+    assert.deepEqual(both.categorise.map((c) => c.actionId), ['l3'])
+    // a token sent with its fee in another currency on the leg: compared, nothing reported
+    const token = btcRow({ type: 'bridge-trade-out', baseCurrency: 'BUSD', baseAmount: '100', feeCurrency: 'BNB', feeAmount: '0.000075' })
+    const busd = plan({ rows: [token], legs: [ownLeg({ currency: 'BUSD', quantity: 100, feeQuantity: 0.000075, feeCurrency: 'BNB' })] }).plan
+    assert.deepEqual([busd.categorise.length, busd.report], [1, []])
+    // the row has no fee: a fee on the leg is reported, as a fee leg is
+    const noFee = btcRow({ type: 'bridge-trade-out', feeCurrency: '', feeAmount: '' })
+    const extra = plan({ rows: [noFee], legs: [ownLeg({ quantity: 0.01, feeQuantity: 0.0001, feeCurrency: 'BTC' })] }).plan
+    assert.deepEqual(extra.report.map((e) => e.detail), ['the row has no fee; Summ has a fee on the leg'])
 })
 
 test('a manual entry naming a row\'s txid is reported', () => {
