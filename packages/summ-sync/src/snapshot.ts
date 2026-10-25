@@ -32,6 +32,9 @@ export interface Leg {
     source: string
     importType: string
     comments: string[]
+    /** A fee Summ keeps on the leg itself (`feeQuantity`); some imports hold it there with no fee leg. */
+    feeQuantity?: number
+    feeCurrency?: string
 }
 
 export interface Snapshot {
@@ -73,6 +76,12 @@ export function legsOf(detail: ActionDetail): Leg[] {
             source: text(leg.source),
             importType: text(leg.importType),
             comments: ((leg.comments as { comment?: string }[] | undefined) ?? []).map((c) => text(c.comment)),
+            ...(Number(leg.feeQuantity) > 0
+                ? {
+                      feeQuantity: Number(leg.feeQuantity),
+                      feeCurrency: text((leg.feeCurrencyIdentifier as { symbol?: string } | undefined)?.symbol) || text(leg.feeCurrency),
+                  }
+                : {}),
         })),
     )
 }

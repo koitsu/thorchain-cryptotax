@@ -285,9 +285,13 @@ estimate (THORNode gives an EVM inbound's gas as its max fee per gas times
 the gas used, above what the wallet paid). A leg holding the row's amount
 plus its fee, in the currency sent, with no fee leg is Summ's shape of the
 same tx (Bitcoin-style imports keep the gas inside the amount sent): not
-reported. A fee within the amount's tolerance (a tiny fee on a large
-amount) cannot be told from no fee, so a leg without a fee leg is
-reported then.
+reported. A leg with no fee leg may still hold its fee on the leg itself
+(`feeQuantity`, seen on Binance Chain imports whose fee leg Summ moved to an
+action of its own); that fee is compared as a fee leg would be, and of a tx
+Summ holds twice, such a leg ranks after one with a fee leg and before one
+of the amount plus the fee. A fee within the amount's tolerance (a tiny
+fee on a large amount) cannot be told from no fee, so a leg without a fee
+leg is reported then.
 
 **Foreign pairs.** Summ's own matcher pairs an uploaded trade with any leg
 of about its value and retypes that leg (change history: `transactionMatching`),

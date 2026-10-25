@@ -587,14 +587,20 @@ export function makePlan(input: PlanInput): PlanResult {
     const ownLegs = input.legs.filter((l) => !managedSources.has(l.source) && l.importType !== 'manual' && l.importType !== SOFT_TRANSFER)
     const softLegs = input.legs.filter((l) => l.importType === SOFT_TRANSFER && !IGNORED.has(l.trade))
     const feeLegsOf = (leg: Leg) => (legsByAction.get(leg.actionId) ?? []).filter((l) => l.side === 'fees' && l.id === leg.id)
+    /** The fee Summ keeps on the leg itself when the action has no fee leg for it (Binance Chain imports whose fee leg
+     * Summ moved to an action of its own). */
+    const inlineFeeOf = (leg: Leg) => (leg.feeQuantity !== undefined && feeLegsOf(leg).length === 0 ? { quantity: leg.feeQuantity, currency: leg.feeCurrency ?? '' } : undefined)
     /** How a leg of Summ's import holds a row with a fee in the currency sent: the amount and a fee leg of the row's
-     * fee, or (Bitcoin-style imports) the amount plus the fee and no fee leg. */
+     * fee, then the amount with the row's fee on the leg itself, then (Bitcoin-style imports) the amount plus the fee
+     * and no fee leg. */
     const shapeRank = (row: Row, leg: Leg): number => {
         if (!hasFee(row) || !sameCurrency(row.feeCurrency, row.baseCurrency)) return 0
         const fees = feeLegsOf(leg)
         const amount = Number(row.baseAmount)
         const fee = Number(row.feeAmount)
-        if (sameAmount(leg.quantity, amount) && fees.length === 1 && sameAmount(fees[0].quantity, fee)) return 2
+        if (sameAmount(leg.quantity, amount) && fees.length === 1 && sameAmount(fees[0].quantity, fee)) return 3
+        const inline = inlineFeeOf(leg)
+        if (sameAmount(leg.quantity, amount) && inline && sameCurrency(inline.currency, row.feeCurrency) && sameAmount(inline.quantity, fee)) return 2
         // A fee within the amount's tolerance cannot be told from no fee
         if (sameAmount(leg.quantity, amount + fee) && !sameAmount(amount, amount + fee) && fees.length === 0) return 1
         return 0
@@ -666,7 +672,7 @@ export function makePlan(input: PlanInput): PlanResult {
     for (const { row, best, others } of duplicates) {
         const unclaimed = others.filter((l) => !legClaims.has(l.legId))
         if (!unclaimed.length) continue
-        plan.report.push({ kind: 'duplicate-leg', filed: isFiled(row.timestamp), id: row.id, legIds: unclaimed.map((l) => l.legId), detail: `Summ's imports hold the tx ${unclaimed.length + 1} times: the leg with the row's shape (${best.quantity} ${best.currency}${feeLegsOf(best).length ? ' and a fee leg' : ', no fee leg'}) is the row's; ${unclaimed.map((l) => `${l.quantity} ${l.currency} (${l.trade})`).join(', ')} may count it twice: resolve it in Summ` })
+        plan.report.push({ kind: 'duplicate-leg', filed: isFiled(row.timestamp), id: row.id, legIds: unclaimed.map((l) => l.legId), detail: `Summ's imports hold the tx ${unclaimed.length + 1} times: the leg with the row's shape (${best.quantity} ${best.currency}${feeLegsOf(best).length ? ' and a fee leg' : inlineFeeOf(best) ? ' and a fee on the leg' : ', no fee leg'}) is the row's; ${unclaimed.map((l) => `${l.quantity} ${l.currency} (${l.trade})`).join(', ')} may count it twice: resolve it in Summ` })
     }
     // A protocol row's fee left out counts only where Summ's import holds its request: reported when no leg of the
     // imports has the row's txid in the fee's currency
@@ -689,15 +695,20 @@ export function makePlan(input: PlanInput): PlanResult {
         }
         const changes: Change[] = [...compare(leg, 'base', 'trade', typeOf(row).trade)]
         const feeLegs = feeLegsOf(leg)
+        const inline = inlineFeeOf(leg)
         if (hasFee(row) && shapeRank(row, leg) !== 1) {
             // Summ's import read the fee from the chain; the row's may be a source's estimate (THORNode's gas of an EVM
             // inbound is its max fee), so a difference is reported, never edited. A leg of the amount plus the fee
             // with no fee leg (a Bitcoin-style import) holds the row's fee: nothing to report
             if (feeLegs.length === 1 && sameCurrency(feeLegs[0].currency, row.feeCurrency)) {
                 if (!sameAmount(feeLegs[0].quantity, Number(row.feeAmount))) plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [feeLegs[0].legId], detail: `Summ's import holds a fee of ${Number(feeLegs[0].quantity.toFixed(12))} ${feeLegs[0].currency}, the row ${row.feeAmount}; the fee is not edited` })
+            } else if (inline && sameCurrency(inline.currency, row.feeCurrency)) {
+                if (!sameAmount(inline.quantity, Number(row.feeAmount))) plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [leg.legId], detail: `Summ's import holds a fee of ${Number(inline.quantity.toFixed(12))} ${inline.currency} on the leg, the row ${row.feeAmount}; the fee is not edited` })
             } else plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: `the row has a fee of ${row.feeAmount} ${row.feeCurrency}; Summ has ${feeLegs.length} fee legs${feeLegs.length === 1 ? ` in ${feeLegs[0].currency}` : ''}` })
         } else if (feeLegs.some((l) => l.quantity !== 0)) {
             plan.report.push({ kind: 'fee', filed, id: row.id, legIds: feeLegs.map((l) => l.legId), detail: 'the row has no fee; Summ has a fee leg' })
+        } else if (inline) {
+            plan.report.push({ kind: 'fee', filed, id: row.id, legIds: [leg.legId], detail: 'the row has no fee; Summ has a fee on the leg' })
         }
         const resolved = changes.map((c) => resolve(row.id, leg.actionId, c)).filter((c): c is Change => c !== null)
         // A row that is not a plain send or receive leaves Summ's made-up other side of the transfer counted

@@ -4,7 +4,7 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { actionsWithTxids, pull } from '../src/pull.ts'
-import { readAction, readSnapshot, readSnapshotFile } from '../src/snapshot.ts'
+import { legsOf, readAction, readSnapshot, readSnapshotFile } from '../src/snapshot.ts'
 
 test('actionsWithTxids finds listed actions by tx hash, in any case and with or without 0x', () => {
     const txid = 'ab'.repeat(32)
@@ -99,3 +99,19 @@ test('an action Summ rebuilt during the pull, seen only by the source query, joi
         assert.equal(snapshot.late, 1)
         assert.deepEqual([...readSnapshot(file).history.keys()], ['a1', 'a3'])
     }))
+
+test('legsOf keeps a fee Summ holds on the leg itself, by its currency symbol or name', () => {
+    const leg = (over: Record<string, unknown>) => ({ _id: 'g', id: 'tx', trade: 'out', currency: 'BUSD-BD1', quantity: '100', ...over })
+    const legs = legsOf({
+        action: {
+            _id: 'a1',
+            outgoing: [
+                leg({ feeQuantity: '0.000075', feeCurrency: 'BNB' }),
+                leg({ feeQuantity: 0.000075, feeCurrency: 'x', feeCurrencyIdentifier: { symbol: 'BNB' } }),
+                leg({ feeQuantity: 0 }),
+                leg({}),
+            ],
+        },
+    } as never)
+    assert.deepEqual(legs.map((l) => [l.feeQuantity, l.feeCurrency]), [[0.000075, 'BNB'], [0.000075, 'BNB'], [undefined, undefined], [undefined, undefined]])
+})
