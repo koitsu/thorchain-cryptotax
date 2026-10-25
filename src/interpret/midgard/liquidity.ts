@@ -46,10 +46,13 @@ export function interpretAddLiquidity(bundle: RawBundle, protocol: Protocol): {a
         const txid = deposit.txID ?? '';
         const gas = inboundGas(txid, bundle, wallet, sentAsset, protocol);
         // Midgard's coin is the synth minted, after the swap's fee; what the wallet sent is THORNode's inbound coin
-        const sent = sentOnL1 ? bundle.thornodeTxs.find(tx => tx.tx?.id === txid)?.tx?.coins?.find(c => c.asset === sentAsset) : undefined;
+        const status = sentOnL1 ? bundle.thornodeTxs.find(tx => tx.tx?.id === txid) : undefined;
+        const sent = status?.tx?.coins?.find(c => c.asset.toUpperCase() === sentAsset.toUpperCase());
 
         if (sentOnL1 && !sent) {
-            issues.push({kind: 'warning', message: `savers deposit ${txid}: no THORNode inbound, so the amount is the synth minted, not the ${sentAsset} sent`});
+            const reason = protocol.id !== THORCHAIN.id ? `${protocol.id} inbounds are not looked up on a node`
+                : status ? `THORNode's inbound has no ${sentAsset} coin` : 'THORNode has no status for the tx';
+            issues.push({kind: 'warning', message: `savers deposit ${txid}: ${reason}, so the amount is the synth minted, not the ${sentAsset} sent`});
         }
 
         legs.push({

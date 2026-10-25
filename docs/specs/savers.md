@@ -43,7 +43,14 @@ wallet was exported as `BTC.BTC` (then the synth's name) and, briefly, with a
 0.02 RUNE fee; until late October 2026 its amount (and the price helper's) was
 the synth minted.
 
-Maya has the same fields with `MayaSavers` as the prefix.
+An affiliate named in the deposit's memo gets its share as an add of its own,
+in the affiliate's name (THORNode's add-liquidity handler). That add is not the
+wallet's, so the wallet has one row for the whole amount sent, and the share
+leaves inside the protocol, like any protocol fee.
+
+Maya has the same fields with `MayaSavers` as the prefix. Its inbounds are not
+looked up on a node, so a Maya savers deposit from an L1 wallet keeps Midgard's
+coin, with a warning.
 
 ## Open
 
