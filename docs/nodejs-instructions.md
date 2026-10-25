@@ -20,7 +20,9 @@ install scripts.
 
 ### 3. Configure your wallets
 
-Edit [wallets-config.toml](../wallets-config.toml)
+Copy [wallets-config.toml](../wallets-config.toml) to a folder outside the repo, e.g.
+`../my-tax/wallets-config.toml`, and edit the copy. That keeps your wallets out of the
+repo.
 
 Add your wallet addresses, they can be given names using the `name` property.
 Which is helpful to identify the wallets when looking at the generated CSV filenames.
@@ -33,11 +35,11 @@ e.g. "THOR", "BTC", "ETH"
 
 ### 4. Run the export
 
-`npm run export`
+`node src/full-export.ts ../my-tax/wallets-config.toml`
 
-This will get all the transactions for the wallets and create CSV files in the following path:
-
-- `./output/{current_datetime}/csv`
+This gets all the transactions for the wallets and writes the CSV files to
+`output/{current_datetime}/csv` next to your config (relative `outputPath` and
+`storePath` values are relative to the config file's folder).
 
 See [Using the CSVs in Summ](summ.md) for importing them into Summ (Crypto Tax Calculator).
 
@@ -50,16 +52,7 @@ environment variables before running:
 - `THORNODE_API_ARCHIVE_URL` (THORChain v1: tx statuses up to its last block, 2024-09-04)
 - `MIDGARD_API_URL`
 
-### Keeping your wallets out of the repo (optional)
-
-Instead of editing `wallets-config.toml`, you can keep your config in a folder outside
-the repo and pass its path:
-
-`node src/full-export.ts ../my-tax/wallets-config.toml`
-
-Relative `outputPath` and `storePath` values in a config
-are relative to the config file's folder, so the output and cache are written next to
-your config, not into the repo.
+### What a run writes
 
 Each run writes a folder under `outputPath` named by its start time, holding `csv/`,
 `snapshots.json`, `summary.md` (how it ran, counts, and every warning it printed;
