@@ -45,7 +45,7 @@ export class TaxConfig {
         let config;
 
         if (fileExtension === '.toml') {
-            config = loadToml(fileContent) as ITaxConfig;
+            config = loadToml(fileContent) as unknown as ITaxConfig;
         } else if (fileExtension === '.json') {
             config = JSON.parse(fileContent);
         } else {
