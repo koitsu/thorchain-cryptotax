@@ -54,7 +54,8 @@ describe('liquidity', () => {
 
     test('a Maya savers deposit from an L1 wallet keeps the synth minted, saying its inbounds are not looked up', () => {
         const deposit = saversDeposit('bc1q-user-wallet');
-        const result = runBundle({source: 'midgard', protocol: 'maya', wallet: '', data: deposit, thornodeTxs: [], cosmosTxs: []}, MAYA);
+        const thornodeTx = {tx: {id: 'tx-deposit', coins: [{asset: 'BTC.BTC', amount: '100200000'}], gas: []}} as any;
+        const result = runBundle({source: 'midgard', protocol: 'maya', wallet: '', data: deposit, thornodeTxs: [thornodeTx], cosmosTxs: []}, MAYA);
         const row = result.rows.find((row) => row.type === 'add-liquidity')!;
 
         assert.equal(row.baseCurrency, 'BTC');

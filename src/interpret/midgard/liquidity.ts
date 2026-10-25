@@ -46,7 +46,7 @@ export function interpretAddLiquidity(bundle: RawBundle, protocol: Protocol): {a
         const txid = deposit.txID ?? '';
         const gas = inboundGas(txid, bundle, wallet, sentAsset, protocol);
         // Midgard's coin is the synth minted, after the swap's fee; what the wallet sent is THORNode's inbound coin
-        const status = sentOnL1 ? bundle.thornodeTxs.find(tx => tx.tx?.id === txid) : undefined;
+        const status = sentOnL1 && protocol.id === THORCHAIN.id ? bundle.thornodeTxs.find(tx => tx.tx?.id === txid) : undefined;
         const sent = status?.tx?.coins?.find(c => c.asset.toUpperCase() === sentAsset.toUpperCase());
 
         if (sentOnL1 && !sent) {
