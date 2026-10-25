@@ -22,7 +22,8 @@ skeletax turns THORChain and Maya wallet history into CSV files for Summ
   update the spec with the code.
 - Build golden cases from public transactions (`npm run fixture`,
   [docs/specs/fixtures.md](docs/specs/fixtures.md)). Review rows with
-  `fixture show` before saving them with `--write`.
+  `npm run fixture -- show test/cases/<group/name>` before saving them with
+  `--write`.
 - Install with `npm ci --ignore-scripts`. Add a dependency only when the work
   needs it, and pin the exact version.
 - Before committing: `npm run typecheck` and `npm test`.
