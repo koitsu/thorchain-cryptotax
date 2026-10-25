@@ -23,4 +23,4 @@ node_modules/
 .DS_Store
 
 # Local agent guidance (not published)
-CLAUDE.md
+CLAUDE.local.md
