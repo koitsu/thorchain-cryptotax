@@ -46,7 +46,11 @@ the synth minted.
 An affiliate named in the deposit's memo gets its share as an add of its own,
 in the affiliate's name (THORNode's add-liquidity handler). That add is not the
 wallet's, so the wallet has one row for the whole amount sent, and the share
-leaves inside the protocol, like any protocol fee.
+leaves inside the protocol, like any protocol fee. Until February 2024
+(THORNode 1.128) the affiliate was looked up on THORChain, where a savers add
+takes no address, so a deposit naming a THORChain affiliate or THORName failed
+and was refunded (`fees.md`, Refunds); only an affiliate on the asset's own chain
+was split.
 
 Maya has the same fields with `MayaSavers` as the prefix. Its inbounds are not
 looked up on a node, so a Maya savers deposit from an L1 wallet keeps Midgard's

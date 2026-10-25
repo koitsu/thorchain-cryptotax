@@ -1,7 +1,7 @@
 import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import {runBundle} from '../src/pipeline/run.ts';
-import {THORCHAIN} from '../src/domain/Protocol.ts';
+import {MAYA, THORCHAIN} from '../src/domain/Protocol.ts';
 import {toMidgardNanoTimestamp} from '../src/sources/thorchain/MidgardUtils.ts';
 
 // Midgard reports a savers deposit's coin as the synth, whichever chain it was sent on
@@ -48,7 +48,24 @@ describe('liquidity', () => {
         const result = runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: saversDeposit('bc1q-user-wallet'), thornodeTxs: [], cosmosTxs: []}, THORCHAIN);
 
         assert.equal(result.rows.find((row) => row.type === 'add-liquidity')!.baseAmount, '1');
-        assert.ok(result.issues.some((issue) => issue.kind === 'warning' && issue.message.includes('synth minted')));
+        assert.ok(result.issues.some((issue) => issue.kind === 'warning' && issue.message.includes('THORNode has not observed the inbound')
+            && issue.message.includes('synth minted')));
+    });
+
+    test('a THORNode status without a tx (an inbound it never observed) is said to be unobserved', () => {
+        const status = {stages: {inbound_observed: {completed: false}}} as any;
+        const result = runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: saversDeposit('bc1q-user-wallet'), thornodeTxs: [status], cosmosTxs: []}, THORCHAIN);
+
+        assert.ok(result.issues.some((issue) => issue.message.includes('THORNode has not observed the inbound')));
+    });
+
+    test('a Maya savers deposit from an L1 wallet keeps the synth minted, saying its inbounds are not looked up', () => {
+        const deposit = saversDeposit('bc1q-user-wallet');
+        const result = runBundle({source: 'midgard', protocol: 'maya', wallet: '', data: deposit, thornodeTxs: [], cosmosTxs: []}, MAYA);
+        const row = result.rows.find((row) => row.type === 'add-liquidity')!;
+
+        assert.equal(row.baseCurrency, 'BTC');
+        assert.ok(result.issues.some((issue) => issue.message.includes('maya inbounds are not looked up on a node')));
     });
 
     test("a THORNode inbound without the sent asset's coin also falls back to the synth minted, saying so", () => {
