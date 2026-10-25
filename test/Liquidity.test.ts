@@ -36,6 +36,21 @@ describe('liquidity', () => {
         assert.equal(row.feeAmount, '0.000025');
     });
 
+    test('a savers deposit sent from an L1 wallet is the amount THORNode observed sent, not the synth minted', () => {
+        const thornodeTx = {tx: {id: 'tx-deposit', coins: [{asset: 'BTC.BTC', amount: '100200000'}], gas: [{asset: 'BTC.BTC', amount: '2500'}]}} as any;
+        const row = depositRow(saversDeposit('bc1q-user-wallet'), [thornodeTx]);
+
+        assert.equal(row.baseCurrency, 'BTC');
+        assert.equal(row.baseAmount, '1.002');
+    });
+
+    test('without a THORNode inbound, a savers deposit from an L1 wallet is the synth minted, with a warning', () => {
+        const result = runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: saversDeposit('bc1q-user-wallet'), thornodeTxs: [], cosmosTxs: []}, THORCHAIN);
+
+        assert.equal(result.rows.find((row) => row.type === 'add-liquidity')!.baseAmount, '1');
+        assert.ok(result.issues.some((issue) => issue.kind === 'warning' && issue.message.includes('synth minted')));
+    });
+
     test('a savers deposit of a synth from a THORChain wallet pays the native RUNE fee', () => {
         const row = depositRow(saversDeposit('thor1-user-wallet'));
 
