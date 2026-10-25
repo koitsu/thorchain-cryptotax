@@ -34,6 +34,7 @@ export function interpretAddLiquidity(bundle: RawBundle, protocol: Protocol): {a
     const position = toPositionAsset(action.pools[0]);
     const units = parseAmount(action.metadata.addLiquidity?.liquidityUnits ?? '', UNIT_DECIMALS);
     const legs: Leg[] = [];
+    const issues: Issue[] = [];
 
     for (const deposit of deposits) {
         const coin = deposit.coins[0];
@@ -44,9 +45,18 @@ export function interpretAddLiquidity(bundle: RawBundle, protocol: Protocol): {a
         const sentAsset = sentOnL1 ? coin.asset.replace('/', '.') : coin.asset;
         const txid = deposit.txID ?? '';
         const gas = inboundGas(txid, bundle, wallet, sentAsset, protocol);
+        // Midgard's coin is the synth minted, after the swap's fee; what the wallet sent is THORNode's inbound coin
+        const status = sentOnL1 && protocol.id === THORCHAIN.id ? bundle.thornodeTxs.find(tx => tx.tx?.id === txid) : undefined;
+        const sent = status?.tx?.coins?.find(c => c.asset.toUpperCase() === sentAsset.toUpperCase());
+
+        if (sentOnL1 && !sent) {
+            const reason = protocol.id !== THORCHAIN.id ? `${protocol.id} inbounds are not looked up on a node`
+                : status ? `THORNode's inbound has no ${sentAsset} coin` : 'THORNode has no inbound for the tx';
+            issues.push({kind: 'warning', message: `savers deposit ${txid}: ${reason}, so the amount is the synth minted, not the ${sentAsset} sent`});
+        }
 
         legs.push({
-            direction: 'out', wallet, asset: toAsset(sentAsset), amount: parseAmount(coin.amount, protocol.decimals(coin.asset)),
+            direction: 'out', wallet, asset: toAsset(sentAsset), amount: parseAmount(sent?.amount ?? coin.amount, protocol.decimals(coin.asset)),
             role: 'principal', basis: 'observed', txid,
         });
 
@@ -60,6 +70,7 @@ export function interpretAddLiquidity(bundle: RawBundle, protocol: Protocol): {a
     return {
         activities: [activity(bundle, protocol, position.position === 'savers' ? 'savers.add' : 'lp.add', legs)],
         issues: [
+            ...issues,
             ...(deposits[0].address ? [] : [{kind: 'warning' as const, message: 'missing deposit address'}]),
         ],
     };

@@ -2,7 +2,7 @@ wallet: bc1qz0w77jfx0c86jjweljk98c4mafctgazhjnaf7n
 timestamp: 2022-11-14T16:50:42.461Z
 type: spam
 baseCurrency: BTC
-baseAmount: "1.40002825"
+baseAmount: "1.40644"
 from: thorchain
 to: bc1qz0w77jfx0c86jjweljk98c4mafctgazhjnaf7n
 description: 3/3 - Dummy transaction to get market price to then manually apply to the receive LP token transaction ThorSavers.BTC.BTC (savers); D4C3AA19D45F04C000FDF50F93CD70B8282A9B59D94E1D0E9B19A700A5D30DD1
@@ -23,7 +23,7 @@ wallet: bc1qz0w77jfx0c86jjweljk98c4mafctgazhjnaf7n
 timestamp: 2022-11-14T16:50:22.461Z
 type: add-liquidity
 baseCurrency: BTC
-baseAmount: "1.40002825"
+baseAmount: "1.40644"
 feeCurrency: BTC
 feeAmount: "0.00007"
 from: bc1qz0w77jfx0c86jjweljk98c4mafctgazhjnaf7n

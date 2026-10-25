@@ -1,7 +1,7 @@
 import {describe, test} from "node:test";
 import assert from "node:assert/strict";
 import {runBundle} from '../src/pipeline/run.ts';
-import {THORCHAIN} from '../src/domain/Protocol.ts';
+import {MAYA, THORCHAIN} from '../src/domain/Protocol.ts';
 import {toMidgardNanoTimestamp} from '../src/sources/thorchain/MidgardUtils.ts';
 
 // Midgard reports a savers deposit's coin as the synth, whichever chain it was sent on
@@ -34,6 +34,50 @@ describe('liquidity', () => {
 
         assert.equal(row.feeCurrency, 'BTC');
         assert.equal(row.feeAmount, '0.000025');
+    });
+
+    test('a savers deposit sent from an L1 wallet is the amount THORNode observed sent, not the synth minted', () => {
+        const thornodeTx = {tx: {id: 'tx-deposit', coins: [{asset: 'BTC.BTC', amount: '100200000'}], gas: [{asset: 'BTC.BTC', amount: '2500'}]}} as any;
+        const row = depositRow(saversDeposit('bc1q-user-wallet'), [thornodeTx]);
+
+        assert.equal(row.baseCurrency, 'BTC');
+        assert.equal(row.baseAmount, '1.002');
+    });
+
+    test('without a THORNode inbound, a savers deposit from an L1 wallet is the synth minted, with a warning', () => {
+        const result = runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: saversDeposit('bc1q-user-wallet'), thornodeTxs: [], cosmosTxs: []}, THORCHAIN);
+
+        assert.equal(result.rows.find((row) => row.type === 'add-liquidity')!.baseAmount, '1');
+        assert.ok(result.issues.some((issue) => issue.kind === 'warning' && issue.message.includes('THORNode has no inbound for the tx')
+            && issue.message.includes('synth minted')));
+    });
+
+    test('a Maya savers deposit from an L1 wallet keeps the synth minted, saying its inbounds are not looked up', () => {
+        const deposit = saversDeposit('bc1q-user-wallet');
+        const thornodeTx = {tx: {id: 'tx-deposit', coins: [{asset: 'BTC.BTC', amount: '100200000'}], gas: []}} as any;
+        const result = runBundle({source: 'midgard', protocol: 'maya', wallet: '', data: deposit, thornodeTxs: [thornodeTx], cosmosTxs: []}, MAYA);
+        const row = result.rows.find((row) => row.type === 'add-liquidity')!;
+
+        assert.equal(row.baseCurrency, 'BTC');
+        assert.equal(row.baseAmount, '1');
+        assert.ok(result.issues.some((issue) => issue.message.includes('maya inbounds are not looked up on a node')));
+    });
+
+    test("a THORNode inbound without the sent asset's coin also falls back to the synth minted, saying so", () => {
+        const thornodeTx = {tx: {id: 'tx-deposit', coins: [], gas: [{asset: 'BTC.BTC', amount: '2500'}]}} as any;
+        const result = runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: saversDeposit('bc1q-user-wallet'), thornodeTxs: [thornodeTx], cosmosTxs: []}, THORCHAIN);
+
+        assert.equal(result.rows.find((row) => row.type === 'add-liquidity')!.baseAmount, '1');
+        assert.ok(result.issues.some((issue) => issue.message.includes("THORNode's inbound has no BTC.BTC coin")));
+    });
+
+    test('the sent coin is matched whatever the case of a token contract', () => {
+        const deposit = saversDeposit('0x-user-wallet');
+        deposit.pools = ['ETH/USDC-0XA0B8'];
+        deposit.in[0].coins = [{asset: 'ETH/USDC-0XA0B8', amount: '100000000'}];
+        const thornodeTx = {tx: {id: 'tx-deposit', coins: [{asset: 'ETH.USDC-0xa0b8', amount: '100200000'}], gas: [{asset: 'ETH.ETH', amount: '2500'}]}} as any;
+
+        assert.equal(depositRow(deposit, [thornodeTx]).baseAmount, '1.002');
     });
 
     test('a savers deposit of a synth from a THORChain wallet pays the native RUNE fee', () => {
