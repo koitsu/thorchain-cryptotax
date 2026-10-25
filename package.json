@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@types/fs-extra": "^11.0.4",
-    "@types/lodash": "^4.17.20",
     "@xchainjs/xchain-midgard": "^1.0.4",
     "@xchainjs/xchain-thornode": "^1.0.3",
     "@xchainjs/xchain-util": "^2.0.5",
@@ -22,8 +21,7 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "fs-extra": "^11.3.2",
-    "js-toml": "1.2.2",
-    "lodash": "^4.17.21"
+    "js-toml": "1.2.2"
   },
   "devDependencies": {
     "@types/node": "24.19.1",
