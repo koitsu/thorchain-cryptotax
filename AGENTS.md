@@ -26,4 +26,4 @@ skeletax turns THORChain and Maya wallet history into CSV files for Summ
   `--write`.
 - Install with `npm ci --ignore-scripts`. Add a dependency only when the work
   needs it, and pin the exact version.
-- Before committing: `npm run typecheck` and `npm test`.
+- Before committing: `npm run format`, `npm run typecheck` and `npm test`.

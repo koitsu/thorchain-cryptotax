@@ -11,7 +11,7 @@ workflow are in [specs/fixtures.md](specs/fixtures.md).
 For a new type: add a case, write or extend its spec in [specs/](specs/README.md)
 (which rows, types, fees and descriptions, and why), implement the mapper, then
 review the rows with `npm run fixture -- show test/cases/<group/name>` before
-saving them with `--write`. Run `npm run typecheck` and `npm test`.
+saving them with `--write`. Run `npm run format`, `npm run typecheck` and `npm test`.
 
 ## Reporting issues
 
