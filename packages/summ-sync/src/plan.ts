@@ -328,7 +328,7 @@ export function makePlan(input: PlanInput): PlanResult {
   // marked revert is the user deciding against their value: the run's value is planned, and nothing captured.
   function resolve(id: string, actionId: string, change: Change): Change | null {
     const override = overrides.find((o) => o.id === id && o.leg === change.leg && o.field === change.field);
-    if (override?.revert) return same(change.field, change.summ, change.desired) ? null : change;
+    if (override?.revert === true) return same(change.field, change.summ, change.desired) ? null : change;
     const desired = override ? override.summ : change.desired;
     if (override && !same(change.field, override.run, change.desired)) {
       plan.overridden.push({ kind: "run-changed", override, runNow: change.desired });
