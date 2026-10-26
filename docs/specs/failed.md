@@ -71,8 +71,8 @@ shows the message never ran (above).
 
 One `fee` row of the native fee, on the signer's wallet, to the protocol:
 
-| Type | Base | From | To | Description |
-| --- | --- | --- | --- | --- |
+| Type  | Base      | From       | To          | Description                                     |
+| ----- | --------- | ---------- | ----------- | ----------------------------------------------- |
 | `fee` | 0.02 RUNE | the signer | `thorchain` | `Fee: failed swap (insufficient funds); <txid>` |
 
 The coins the deposit asked for give no row. This is the shape of a failed

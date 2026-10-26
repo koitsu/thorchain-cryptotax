@@ -12,9 +12,9 @@ Sends come from Midgard (`send` actions on THORChain). Midgard's history of
 sends is incomplete before the chain upgrade of March 2022, and THORNode no
 longer serves those txs, so Viewblock fills the gap:
 
-| Sends | Source |
-| --- | --- |
-| From 2022-04-01 | Midgard |
+| Sends             | Source                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| From 2022-04-01   | Midgard                                                             |
 | Before 2022-04-01 | Midgard, plus each Viewblock send with a txid Midgard does not list |
 
 Viewblock is called only when a run exports a period that starts before
@@ -115,11 +115,11 @@ Kind `send`, from the side of the wallet whose listing gave it (as TCY
 distributions): a send between two configured wallets is mapped twice, once
 for each.
 
-| Wallet | Legs |
-| --- | --- |
-| Sender | out: principal, the coin sent (observed); out: gas, 0.02 RUNE (default) |
-| Receiver | in: principal, the coin received (observed) |
-| Both (a send to itself, e.g. an Arkeo delegation) | as the sender |
+| Wallet                                            | Legs                                                                    |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| Sender                                            | out: principal, the coin sent (observed); out: gas, 0.02 RUNE (default) |
+| Receiver                                          | in: principal, the coin received (observed)                             |
+| Both (a send to itself, e.g. an Arkeo delegation) | as the sender                                                           |
 
 `details.purpose` is `delegate-arkeo` for a memo starting `delegate:arkeo:`.
 `details.failedAction` names the action a send to itself with an action memo
@@ -144,15 +144,15 @@ Maya's Midgard reports 0.2 CACAO for every send, so it is not used either.
 
 ## Rows
 
-| Row | Type | Base | Fee | From, to | Description |
-| --- | --- | --- | --- | --- | --- |
-| Sender | `send` | the coin and amount | 0.02 RUNE | sender, receiver | `Send <amount> <coin>; <txid>` |
-| Receiver | `receive` | the coin and amount | — | sender, receiver | `Receive <amount> <coin>; <txid>` |
-| Receiver, sender in `incomeFrom` | `income` | the coin and amount | — | sender, receiver | `Income: receive <amount> <coin>; <txid>` |
-| Send to itself | `fee` | the gas, 0.02 RUNE | — | the wallet, itself | `Fee: send <amount> <coin> to itself; <txid>` |
-| Send to itself with an action memo (a failed attempt) | `fee` | the gas, 0.02 RUNE | — | the wallet, itself | `Fee: failed <action> sent to itself; <txid>`, e.g. `TCY claim` for `tcy:`, `TCY stake` for `tcy+:`, else `'<memo prefix>' action` |
-| Failed send from THORChain block 11,637,012 (sender only) | `fee` | the gas, 0.02 RUNE | — | sender, receiver | `Fee: failed send; <txid>` |
-| Arkeo delegation (a send to itself) | `fee` | the gas, 0.02 RUNE | — | the wallet, itself | `1/1 - DelegateArkeoWallet; <txid>` |
+| Row                                                       | Type      | Base                | Fee       | From, to           | Description                                                                                                                        |
+| --------------------------------------------------------- | --------- | ------------------- | --------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Sender                                                    | `send`    | the coin and amount | 0.02 RUNE | sender, receiver   | `Send <amount> <coin>; <txid>`                                                                                                     |
+| Receiver                                                  | `receive` | the coin and amount | —         | sender, receiver   | `Receive <amount> <coin>; <txid>`                                                                                                  |
+| Receiver, sender in `incomeFrom`                          | `income`  | the coin and amount | —         | sender, receiver   | `Income: receive <amount> <coin>; <txid>`                                                                                          |
+| Send to itself                                            | `fee`     | the gas, 0.02 RUNE  | —         | the wallet, itself | `Fee: send <amount> <coin> to itself; <txid>`                                                                                      |
+| Send to itself with an action memo (a failed attempt)     | `fee`     | the gas, 0.02 RUNE  | —         | the wallet, itself | `Fee: failed <action> sent to itself; <txid>`, e.g. `TCY claim` for `tcy:`, `TCY stake` for `tcy+:`, else `'<memo prefix>' action` |
+| Failed send from THORChain block 11,637,012 (sender only) | `fee`     | the gas, 0.02 RUNE  | —         | sender, receiver   | `Fee: failed send; <txid>`                                                                                                         |
+| Arkeo delegation (a send to itself)                       | `fee`     | the gas, 0.02 RUNE  | —         | the wallet, itself | `1/1 - DelegateArkeoWallet; <txid>`                                                                                                |
 
 A send to itself moves nothing out of the wallet: the coin sent comes straight
 back, so it is neither a disposal nor a transfer, and only the gas is a cost.

@@ -1,95 +1,130 @@
-import {describe, test} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import {runBundle} from '../src/pipeline/run.ts';
-import {THORCHAIN} from '../src/domain/Protocol.ts';
-import {toMidgardNanoTimestamp} from '../src/sources/thorchain/MidgardUtils.ts';
+import { runBundle } from "../src/pipeline/run.ts";
+import { THORCHAIN } from "../src/domain/Protocol.ts";
+import { toMidgardNanoTimestamp } from "../src/sources/thorchain/MidgardUtils.ts";
 
-const refund = (networkFees: {asset: string, amount: string}[]) => ({
-    date: toMidgardNanoTimestamp(new Date('2023-03-22T00:00:00Z')),
-    height: '1',
-    status: 'success',
-    type: 'refund',
+const refund = (networkFees: { asset: string; amount: string }[]) =>
+  ({
+    date: toMidgardNanoTimestamp(new Date("2023-03-22T00:00:00Z")),
+    height: "1",
+    status: "success",
+    type: "refund",
     pools: [],
-    in: [{address: 'thor1-user-wallet-11111', txID: 'tx-refund', coins: [{asset: 'THOR.RUNE', amount: '100000000'}]}],
-    out: [{address: 'thor1-user-wallet-11111', txID: '', coins: [{asset: 'THOR.RUNE', amount: '98000000'}]}],
-    metadata: {refund: {networkFees, reason: 'bad memo', memo: ''}},
-} as any);
+    in: [
+      { address: "thor1-user-wallet-11111", txID: "tx-refund", coins: [{ asset: "THOR.RUNE", amount: "100000000" }] },
+    ],
+    out: [{ address: "thor1-user-wallet-11111", txID: "", coins: [{ asset: "THOR.RUNE", amount: "98000000" }] }],
+    metadata: { refund: { networkFees, reason: "bad memo", memo: "" } },
+  }) as any;
 
 // A refund through the exporter's path: interpreted, then exported as rows
 const refundRows = (action: any, thornodeTxs: any[] = []) =>
-    runBundle({source: 'midgard', protocol: 'thorchain', wallet: '', data: action, thornodeTxs, cosmosTxs: []}, THORCHAIN).rows;
+  runBundle(
+    { source: "midgard", protocol: "thorchain", wallet: "", data: action, thornodeTxs, cosmosTxs: [] },
+    THORCHAIN,
+  ).rows;
 
-describe('refund', () => {
-    test('the send is one failed-out row with the native fee, whatever Midgard lists as network fees', () => {
-        const action = refund([{asset: 'ETH.ETH', amount: '4929'}, {asset: 'THOR.RUNE', amount: '2000000'}]);
-        action.out[0].coins[0].amount = '100000000';
-        const rows = refundRows(action);
+describe("refund", () => {
+  test("the send is one failed-out row with the native fee, whatever Midgard lists as network fees", () => {
+    const action = refund([
+      { asset: "ETH.ETH", amount: "4929" },
+      { asset: "THOR.RUNE", amount: "2000000" },
+    ]);
+    action.out[0].coins[0].amount = "100000000";
+    const rows = refundRows(action);
 
-        assert.equal(rows.length, 1);
-        assert.equal(rows[0].type, 'failed-out');
-        assert.equal(rows[0].baseAmount, '1');
-        assert.equal(rows[0].feeCurrency, 'RUNE');
-        assert.equal(rows[0].feeAmount, '0.02');
-        assert.equal(rows[0].to, 'thorchain');
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].type, "failed-out");
+    assert.equal(rows[0].baseAmount, "1");
+    assert.equal(rows[0].feeCurrency, "RUNE");
+    assert.equal(rows[0].feeAmount, "0.02");
+    assert.equal(rows[0].to, "thorchain");
+  });
+
+  // Midgard returns both the inbound and the outbound. The outbound is not a row; what was kept is.
+  test("when less comes back than was sent, the difference is a fee row", () => {
+    const [send, kept] = refundRows(refund([]));
+
+    assert.equal(send.type, "failed-out");
+    assert.equal(send.baseAmount, "1");
+    assert.equal(kept.type, "fee");
+    assert.equal(kept.baseCurrency, "RUNE");
+    assert.equal(kept.baseAmount, "0.02");
+    assert.equal(kept.feeAmount, undefined);
+  });
+
+  test("an L1 refund uses the inbound gas THORNode observed, and the amounts for what was kept", () => {
+    // Midgard's network fee (3735) differs from sent - returned (2000000): the amounts win
+    const action = refund([{ asset: "BTC.BTC", amount: "3735" }]);
+    action.in[0].coins[0].asset = "BTC.BTC";
+    action.out[0] = {
+      address: "thor1-user-wallet-11111",
+      txID: "tx-return",
+      coins: [{ asset: "BTC.BTC", amount: "98000000" }],
+    };
+    const thornodeTx = {
+      tx: {
+        id: "tx-refund",
+        coins: [{ asset: "BTC.BTC", amount: "100000000" }],
+        gas: [{ asset: "BTC.BTC", amount: "1660" }],
+      },
+    } as any;
+    const [send, kept] = refundRows(action, [thornodeTx]);
+
+    assert.equal(send.feeCurrency, "BTC");
+    assert.equal(send.feeAmount, "0.0000166");
+    assert.equal(kept.baseAmount, "0.02");
+    assert.ok(kept.description!.includes("0.98 BTC returned in tx-return"));
+  });
+
+  test("an L1 refund has a blank fee when THORNode has no record of the inbound", () => {
+    const action = refund([{ asset: "BTC.BTC", amount: "3735" }]);
+    action.in[0].coins[0].asset = "BTC.BTC";
+    action.out[0].coins[0].asset = "BTC.BTC";
+    const [send] = refundRows(action);
+
+    assert.equal(send.feeCurrency, "");
+    assert.equal(send.feeAmount, "");
+  });
+
+  test("the refund of a partially filled swap, whose outputs include the swap output, has no row", () => {
+    const action = refund([{ asset: "ETH.ETH", amount: "4929" }]);
+    action.out.push({
+      address: "0x-destination",
+      txID: "tx-swap-out",
+      coins: [{ asset: "ETH.ETH", amount: "5000000" }],
     });
 
-    // Midgard returns both the inbound and the outbound. The outbound is not a row; what was kept is.
-    test('when less comes back than was sent, the difference is a fee row', () => {
-        const [send, kept] = refundRows(refund([]));
+    assert.deepEqual(refundRows(action), []);
+  });
 
-        assert.equal(send.type, 'failed-out');
-        assert.equal(send.baseAmount, '1');
-        assert.equal(kept.type, 'fee');
-        assert.equal(kept.baseCurrency, 'RUNE');
-        assert.equal(kept.baseAmount, '0.02');
-        assert.equal(kept.feeAmount, undefined);
-    });
+  test("a refunded affiliate-fee swap, which the wallet did not send, has no row", () => {
+    const action = refund([]);
+    action.in[0].coins[0] = { asset: "ETH-USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48", amount: "99900026" };
+    const thornodeTx = {
+      tx: {
+        id: "tx-refund",
+        coins: [{ asset: "ETH.ETH", amount: "800000" }],
+        gas: [{ asset: "ETH.ETH", amount: "4138" }],
+      },
+    } as any;
 
-    test('an L1 refund uses the inbound gas THORNode observed, and the amounts for what was kept', () => {
-        // Midgard's network fee (3735) differs from sent - returned (2000000): the amounts win
-        const action = refund([{asset: 'BTC.BTC', amount: '3735'}]);
-        action.in[0].coins[0].asset = 'BTC.BTC';
-        action.out[0] = {address: 'thor1-user-wallet-11111', txID: 'tx-return', coins: [{asset: 'BTC.BTC', amount: '98000000'}]};
-        const thornodeTx = {tx: {id: 'tx-refund', coins: [{asset: 'BTC.BTC', amount: '100000000'}], gas: [{asset: 'BTC.BTC', amount: '1660'}]}} as any;
-        const [send, kept] = refundRows(action, [thornodeTx]);
+    assert.deepEqual(refundRows(action, [thornodeTx]), []);
+  });
 
-        assert.equal(send.feeCurrency, 'BTC');
-        assert.equal(send.feeAmount, '0.0000166');
-        assert.equal(kept.baseAmount, '0.02');
-        assert.ok(kept.description!.includes('0.98 BTC returned in tx-return'));
-    });
+  test("a refund of what the wallet sent keeps its row when THORNode lists the same asset in another case", () => {
+    const action = refund([]);
+    action.in[0].coins[0].asset = "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48";
+    action.out[0].coins[0].asset = "ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48";
+    const thornodeTx = {
+      tx: {
+        id: "tx-refund",
+        coins: [{ asset: "ETH.USDC-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", amount: "1" }],
+        gas: [{ asset: "ETH.ETH", amount: "4138" }],
+      },
+    } as any;
 
-    test('an L1 refund has a blank fee when THORNode has no record of the inbound', () => {
-        const action = refund([{asset: 'BTC.BTC', amount: '3735'}]);
-        action.in[0].coins[0].asset = 'BTC.BTC';
-        action.out[0].coins[0].asset = 'BTC.BTC';
-        const [send] = refundRows(action);
-
-        assert.equal(send.feeCurrency, '');
-        assert.equal(send.feeAmount, '');
-    });
-
-    test('the refund of a partially filled swap, whose outputs include the swap output, has no row', () => {
-        const action = refund([{asset: 'ETH.ETH', amount: '4929'}]);
-        action.out.push({address: '0x-destination', txID: 'tx-swap-out', coins: [{asset: 'ETH.ETH', amount: '5000000'}]});
-
-        assert.deepEqual(refundRows(action), []);
-    });
-
-    test('a refunded affiliate-fee swap, which the wallet did not send, has no row', () => {
-        const action = refund([]);
-        action.in[0].coins[0] = {asset: 'ETH-USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48', amount: '99900026'};
-        const thornodeTx = {tx: {id: 'tx-refund', coins: [{asset: 'ETH.ETH', amount: '800000'}], gas: [{asset: 'ETH.ETH', amount: '4138'}]}} as any;
-
-        assert.deepEqual(refundRows(action, [thornodeTx]), []);
-    });
-
-    test('a refund of what the wallet sent keeps its row when THORNode lists the same asset in another case', () => {
-        const action = refund([]);
-        action.in[0].coins[0].asset = 'ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48';
-        action.out[0].coins[0].asset = 'ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48';
-        const thornodeTx = {tx: {id: 'tx-refund', coins: [{asset: 'ETH.USDC-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', amount: '1'}], gas: [{asset: 'ETH.ETH', amount: '4138'}]}} as any;
-
-        assert.equal(refundRows(action, [thornodeTx])[0].type, 'failed-out');
-    });
+    assert.equal(refundRows(action, [thornodeTx])[0].type, "failed-out");
+  });
 });

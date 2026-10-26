@@ -30,10 +30,10 @@ is "inbound" in one and "out" in the other.
 - **Summ** (its categories and the CSV types) speaks from the **wallet's**
   side.
 
-| The transaction | THORChain calls it | Summ sees it as | CSV types | Who pays its gas |
-| --- | --- | --- | --- | --- |
-| The wallet sends funds to the protocol | **inbound** (Midgard `in`, THORNode `tx`) | an **outgoing** leg of the wallet | the `…Out` types: `BridgeTradeOut`, `BridgeOut`, `FailedOut`, a send | **The wallet.** This is the *inbound fee*, and the only thing in the fee column |
-| The protocol pays funds to a wallet | **outbound** (Midgard `out`, THORNode `out_txs`) | an **incoming** leg of the wallet | the `…In` types: `BridgeTradeIn`, `BridgeIn`, a receive | **The protocol's vault.** The wallet pays no gas here |
+| The transaction                        | THORChain calls it                               | Summ sees it as                   | CSV types                                                            | Who pays its gas                                                                |
+| -------------------------------------- | ------------------------------------------------ | --------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| The wallet sends funds to the protocol | **inbound** (Midgard `in`, THORNode `tx`)        | an **outgoing** leg of the wallet | the `…Out` types: `BridgeTradeOut`, `BridgeOut`, `FailedOut`, a send | **The wallet.** This is the _inbound fee_, and the only thing in the fee column |
+| The protocol pays funds to a wallet    | **outbound** (Midgard `out`, THORNode `out_txs`) | an **incoming** leg of the wallet | the `…In` types: `BridgeTradeIn`, `BridgeIn`, a receive              | **The protocol's vault.** The wallet pays no gas here                           |
 
 So in these specs:
 
@@ -46,7 +46,7 @@ So in these specs:
   amount received. It is never put in the fee column.
 
 One more trap: Summ's `FailedIn` and `FailedOut` follow Summ's direction, not
-THORChain's. A refunded THORChain *inbound* is a `FailedOut`, because the
+THORChain's. A refunded THORChain _inbound_ is a `FailedOut`, because the
 wallet sent it.
 
 ### Txids in descriptions
@@ -84,12 +84,12 @@ shared txid first and adds its own as `sent in`:
 An asymmetric or savers add has one deposit, whose txid is the first, so
 nothing is added.
 
-| Kind | Row on the L1 wallet | Outbound |
-| --- | --- | --- |
-| swap | `BridgeTradeIn` (the `2/2` row) | the output paid to the memo's destination |
-| lp.withdraw, savers.withdraw | `RemoveLiquidity` of the L1 asset | that asset's payout |
-| loan.open | `Loan` (the `2/2` row) | the loan paid out |
-| loan.repay | `CollateralWithdrawal` (the `2/2` row) | the collateral paid back |
+| Kind                         | Row on the L1 wallet                   | Outbound                                  |
+| ---------------------------- | -------------------------------------- | ----------------------------------------- |
+| swap                         | `BridgeTradeIn` (the `2/2` row)        | the output paid to the memo's destination |
+| lp.withdraw, savers.withdraw | `RemoveLiquidity` of the L1 asset      | that asset's payout                       |
+| loan.open                    | `Loan` (the `2/2` row)                 | the loan paid out                         |
+| loan.repay                   | `CollateralWithdrawal` (the `2/2` row) | the collateral paid back                  |
 
 - Only that row changes. The other rows of the action (on THORChain, Maya,
   or the L1 rows the wallet sent) keep their descriptions, so their
@@ -164,12 +164,12 @@ endpoint per chain. The defaults serve receipts from the chain's start;
 many public endpoints prune old ones (an ETH receipt from 2021 is missing
 on most). Each can be replaced by an environment variable:
 
-| Chain | Default | Variable |
-| --- | --- | --- |
-| ETH | `https://eth.drpc.org` | `ETH_RPC_URL` |
-| AVAX | `https://api.avax.network/ext/bc/C/rpc` | `AVAX_RPC_URL` |
-| BSC | `https://bsc-dataseed.bnbchain.org` | `BSC_RPC_URL` |
-| BASE | `https://mainnet.base.org` | `BASE_RPC_URL` |
+| Chain | Default                                 | Variable       |
+| ----- | --------------------------------------- | -------------- |
+| ETH   | `https://eth.drpc.org`                  | `ETH_RPC_URL`  |
+| AVAX  | `https://api.avax.network/ext/bc/C/rpc` | `AVAX_RPC_URL` |
+| BSC   | `https://bsc-dataseed.bnbchain.org`     | `BSC_RPC_URL`  |
+| BASE  | `https://mainnet.base.org`              | `BASE_RPC_URL` |
 
 The endpoint learns the inbound txids it is asked for, as Midgard and
 THORNode do.
@@ -197,36 +197,36 @@ transaction. Rows for what comes out have no fee.
 
 ## Per action
 
-| Action | Row with the fee | Fee |
-| --- | --- | --- |
-| Swap | `BridgeTradeOut` | inbound fee |
-| Switch | `BridgeOut` | inbound fee |
-| Loan open | `CollateralDeposit` | inbound fee; the `Loan` row has none |
-| Loan repayment | `LoanRepayment` | inbound fee; the `CollateralWithdrawal` row has none |
-| Refund | `FailedOut` | inbound fee; what the protocol kept is a separate `Fee` row (see Refunds) |
-| Add liquidity | each `AddLiquidity` row | inbound fee of that deposit. A savers deposit sent from an L1 wallet uses that chain's gas, although Midgard reports the coin as the synth (`BTC/BTC`); its amount is the L1 coin sent, the swap's fee into the synth being netted off (`savers.md`) |
-| Withdraw liquidity | `ReturnLpToken` | inbound fee of the withdrawal request (e.g. 0.02 RUNE, or Maya's native fee in CACAO); `RemoveLiquidity` rows have none |
-| RUNEPool deposit | `AddLiquidity` | 0.02 RUNE |
-| RUNEPool withdraw | `ReturnLpToken` | 0.02 RUNE |
-| TCY stake / unstake | the single row | 0.02 RUNE |
-| TCY claim | `Receive` | 0.02 RUNE when the claim was sent from the receiving THORChain wallet; otherwise none (it was paid on another chain) |
-| Rujira contract calls (staking, FIN, merge) | the `StakingDeposit` or `BridgeTradeOut` row | the Cosmos tx's gas in RUNE (`auth_info.fee`), blank when none; not the 0.02 RUNE native fee (`rujira.md`) |
-| Bond, unbond, Thorname | the single row | 0.02 RUNE; a Thorname update that pays nothing else is a `Fee` row of its own, 0.02 RUNE (Summ drops a row with no base amount) |
-| Send | the send | 0.02 RUNE, also when another coin is sent; never on the receive (`sends.md`) |
+| Action                                                           | Row with the fee                                                                          | Fee                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Swap                                                             | `BridgeTradeOut`                                                                          | inbound fee                                                                                                                                                                                                                                          |
+| Switch                                                           | `BridgeOut`                                                                               | inbound fee                                                                                                                                                                                                                                          |
+| Loan open                                                        | `CollateralDeposit`                                                                       | inbound fee; the `Loan` row has none                                                                                                                                                                                                                 |
+| Loan repayment                                                   | `LoanRepayment`                                                                           | inbound fee; the `CollateralWithdrawal` row has none                                                                                                                                                                                                 |
+| Refund                                                           | `FailedOut`                                                                               | inbound fee; what the protocol kept is a separate `Fee` row (see Refunds)                                                                                                                                                                            |
+| Add liquidity                                                    | each `AddLiquidity` row                                                                   | inbound fee of that deposit. A savers deposit sent from an L1 wallet uses that chain's gas, although Midgard reports the coin as the synth (`BTC/BTC`); its amount is the L1 coin sent, the swap's fee into the synth being netted off (`savers.md`) |
+| Withdraw liquidity                                               | `ReturnLpToken`                                                                           | inbound fee of the withdrawal request (e.g. 0.02 RUNE, or Maya's native fee in CACAO); `RemoveLiquidity` rows have none                                                                                                                              |
+| RUNEPool deposit                                                 | `AddLiquidity`                                                                            | 0.02 RUNE                                                                                                                                                                                                                                            |
+| RUNEPool withdraw                                                | `ReturnLpToken`                                                                           | 0.02 RUNE                                                                                                                                                                                                                                            |
+| TCY stake / unstake                                              | the single row                                                                            | 0.02 RUNE                                                                                                                                                                                                                                            |
+| TCY claim                                                        | `Receive`                                                                                 | 0.02 RUNE when the claim was sent from the receiving THORChain wallet; otherwise none (it was paid on another chain)                                                                                                                                 |
+| Rujira contract calls (staking, FIN, merge)                      | the `StakingDeposit` or `BridgeTradeOut` row                                              | the Cosmos tx's gas in RUNE (`auth_info.fee`), blank when none; not the 0.02 RUNE native fee (`rujira.md`)                                                                                                                                           |
+| Bond, unbond, Thorname                                           | the single row                                                                            | 0.02 RUNE; a Thorname update that pays nothing else is a `Fee` row of its own, 0.02 RUNE (Summ drops a row with no base amount)                                                                                                                      |
+| Send                                                             | the send                                                                                  | 0.02 RUNE, also when another coin is sent; never on the receive (`sends.md`)                                                                                                                                                                         |
 | Failed deposit (a native swap, add, THORName… THORNode rejected) | a `Fee` row of its own, 0.02 RUNE; nothing for the coins, which never moved (`failed.md`) |
-| Send to itself, Arkeo delegation | a `Fee` row of its own, 0.02 RUNE; no `send` row (`sends.md`) |
-| TCY distribution | — | none (nothing sent in) |
+| Send to itself, Arkeo delegation                                 | a `Fee` row of its own, 0.02 RUNE; no `send` row (`sends.md`)                             |
+| TCY distribution                                                 | —                                                                                         | none (nothing sent in)                                                                                                                                                                                                                               |
 
 ### Refunds
 
 **What the sources return.** A refund is two transactions, and both Midgard
 and THORNode return both:
 
-| | Midgard `refund` action | THORNode tx status |
-| --- | --- | --- |
-| Inbound: the wallet sends in | `in[0]` (amount, txid) | `tx` (amount, and `gas` the wallet paid on an L1) |
-| Outbound: the protocol returns it | `out[0]` (amount; on an L1, its own txid on the original chain) | `out_txs` (amount, and the gas the vault paid) |
-| What the protocol kept | `metadata.refund.networkFees` | — |
+|                                   | Midgard `refund` action                                         | THORNode tx status                                |
+| --------------------------------- | --------------------------------------------------------------- | ------------------------------------------------- |
+| Inbound: the wallet sends in      | `in[0]` (amount, txid)                                          | `tx` (amount, and `gas` the wallet paid on an L1) |
+| Outbound: the protocol returns it | `out[0]` (amount; on an L1, its own txid on the original chain) | `out_txs` (amount, and the gas the vault paid)    |
+| What the protocol kept            | `metadata.refund.networkFees`                                   | —                                                 |
 
 On an L1 the outbound is a real transaction on the original chain back to the
 wallet. On THORChain the outbound has no txid of its own.
@@ -238,10 +238,10 @@ outbound fee is deducted.
 
 **What is exported.** The outbound is not a row.
 
-| Row | Type | Amount | Fee |
-| --- | --- | --- | --- |
-| The send | `FailedOut`, on the sending wallet, to the protocol | amount sent | inbound fee (the one fee rule) |
-| What the protocol kept, only when the amount returned is less than the amount sent | `Fee`, same wallet and time | sent − returned, in the asset sent | none |
+| Row                                                                                | Type                                                | Amount                             | Fee                            |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------- | ------------------------------ |
+| The send                                                                           | `FailedOut`, on the sending wallet, to the protocol | amount sent                        | inbound fee (the one fee rule) |
+| What the protocol kept, only when the amount returned is less than the amount sent | `Fee`, same wallet and time                         | sent − returned, in the asset sent | none                           |
 
 - `FailedOut`, not `FailedIn`: the wallet sent this transaction.
 - The `Fee` row is separate, not added to the `FailedOut` fee: the gas and the
@@ -253,10 +253,10 @@ outbound fee is deducted.
   txid of the outbound, so the two transactions can be found in a wallet
   import.
 
-| Case | Sent | Inbound gas | Returned | Rows |
-| --- | --- | --- | --- | --- |
-| L1, `refund/btc-price-limit` | 0.0120779 BTC | 0.0000166 BTC | 0.01204055 BTC | `FailedOut` 0.0120779 BTC, fee 0.0000166 BTC; `Fee` 0.00003735 BTC |
-| THORChain, `refund/rune-price-limit` | 1840.58501519 RUNE | 0.02 RUNE (native fee; THORNode lists no gas) | 1840.58501519 RUNE | `FailedOut` 1840.58501519 RUNE, fee 0.02 RUNE |
+| Case                                 | Sent               | Inbound gas                                   | Returned           | Rows                                                               |
+| ------------------------------------ | ------------------ | --------------------------------------------- | ------------------ | ------------------------------------------------------------------ |
+| L1, `refund/btc-price-limit`         | 0.0120779 BTC      | 0.0000166 BTC                                 | 0.01204055 BTC     | `FailedOut` 0.0120779 BTC, fee 0.0000166 BTC; `Fee` 0.00003735 BTC |
+| THORChain, `refund/rune-price-limit` | 1840.58501519 RUNE | 0.02 RUNE (native fee; THORNode lists no gas) | 1840.58501519 RUNE | `FailedOut` 1840.58501519 RUNE, fee 0.02 RUNE                      |
 
 **Why this shape (checked in Summ, October 2026).**
 

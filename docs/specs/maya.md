@@ -26,15 +26,15 @@ only `maya1` wallets: swaps and liquidity adds are often started from a `thor1`,
 
 ## Protocol differences
 
-| | THORChain | Maya |
-| --- | --- | --- |
-| Native asset | `THOR.RUNE` | `MAYA.CACAO` |
-| Native asset decimals | 8 | **10** |
-| Other asset decimals | 8 | 8, except the MAYA token (`MAYA.MAYA` / `MAYA`), which is **4** |
-| Counterparty in `from` / `to` | `thorchain` | `mayaprotocol` |
-| Blockchain value for the native chain | `THORChain` | `Mayachain` (Summ's name; Summ has no Maya Protocol chain to attach rows to; see below) |
-| LP token | `ThorLP.<pool>` | `MayaLP.<pool>` |
-| Native address prefix | `thor1` | `maya1` |
+|                                               | THORChain                 | Maya                                                                                                                                                                               |
+| --------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Native asset                                  | `THOR.RUNE`               | `MAYA.CACAO`                                                                                                                                                                       |
+| Native asset decimals                         | 8                         | **10**                                                                                                                                                                             |
+| Other asset decimals                          | 8                         | 8, except the MAYA token (`MAYA.MAYA` / `MAYA`), which is **4**                                                                                                                    |
+| Counterparty in `from` / `to`                 | `thorchain`               | `mayaprotocol`                                                                                                                                                                     |
+| Blockchain value for the native chain         | `THORChain`               | `Mayachain` (Summ's name; Summ has no Maya Protocol chain to attach rows to; see below)                                                                                            |
+| LP token                                      | `ThorLP.<pool>`           | `MayaLP.<pool>`                                                                                                                                                                    |
+| Native address prefix                         | `thor1`                   | `maya1`                                                                                                                                                                            |
 | Default inbound gas when node data is missing | 0.02 RUNE (see `fees.md`) | Maya's native fee at the action's height for CACAO inputs (Fees, below); 0.02 RUNE for RUNE inputs (sent on THORChain); none for other inputs, as Maya node tx data is not fetched |
 
 Decimals were checked on 2026-10-01 against live pool depths: Midgard's
@@ -104,12 +104,12 @@ lists (they are in that wallet's own import in Summ).
 
 **Rows**, RUNE with its deposits found:
 
-| When | Row | Amount |
-| --- | --- | --- |
-| each deposit | `AddLiquidity` RUNE, with the deposit's 0.02 RUNE fee | the deposit |
-| the auction's end | CACAO the auction supplied (below) | the add's CACAO side |
-| the auction's end | RUNE the auction supplied (below) | the add's RUNE side − the deposits, when positive |
-| the auction's end | `ReceiveLpToken` `MayaLP.<pool>`, and the `Spam` price-helper row (the deposited asset's side, twice) | the add's liquidity units |
+| When              | Row                                                                                                   | Amount                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| each deposit      | `AddLiquidity` RUNE, with the deposit's 0.02 RUNE fee                                                 | the deposit                                       |
+| the auction's end | CACAO the auction supplied (below)                                                                    | the add's CACAO side                              |
+| the auction's end | RUNE the auction supplied (below)                                                                     | the add's RUNE side − the deposits, when positive |
+| the auction's end | `ReceiveLpToken` `MayaLP.<pool>`, and the `Spam` price-helper row (the deposited asset's side, twice) | the add's liquidity units                         |
 
 Another asset, or RUNE whose deposits were not found: the side is an
 `AddLiquidity` row at the auction's end, in that wallet's file, with no fee,
@@ -217,9 +217,9 @@ Activity `maya.distribution`: in: reward, the CACAO paid (observed); details: th
 height, and the MAYA held when the balance step gives it. A payout of 0 (no
 MAYA held at `h−1`) is not an activity.
 
-| Row | Type | Base | Fee | From, to | Description |
-| --- | --- | --- | --- | --- | --- |
-| Payout | `income` | CACAO, the amount paid | — | `mayaprotocol`, the wallet | `1/1 - Received <amount> CACAO reward for holding MAYA; height <h>` |
+| Row    | Type     | Base                   | Fee | From, to                   | Description                                                         |
+| ------ | -------- | ---------------------- | --- | -------------------------- | ------------------------------------------------------------------- |
+| Payout | `income` | CACAO, the amount paid | —   | `mayaprotocol`, the wallet | `1/1 - Received <amount> CACAO reward for holding MAYA; height <h>` |
 
 It is income when paid: the value is Summ's CACAO price at that time (the
 source gives none). It is `income`, not `staking`: MAYA is held, not staked.
@@ -246,12 +246,12 @@ Maya's native transaction fee, paid in CACAO by a send or an action sent
 from a Maya wallet, has changed over time. Mimir `NATIVETRANSACTIONFEE`
 overrides the constant (0.2 CACAO), and its value at a height is the fee:
 
-| Maya height (about) | Fee |
-| --- | --- |
-| up to at least 1,500,000 (2023) | 0.0002 CACAO |
-| around 3,600,000 (late 2023) | 1 CACAO |
-| around 4,400,000 to 5,000,000 (2023-2024) | 0.5 CACAO |
-| from around 9,900,000 (2025) | 0.2 CACAO |
+| Maya height (about)                       | Fee          |
+| ----------------------------------------- | ------------ |
+| up to at least 1,500,000 (2023)           | 0.0002 CACAO |
+| around 3,600,000 (late 2023)              | 1 CACAO      |
+| around 4,400,000 to 5,000,000 (2023-2024) | 0.5 CACAO    |
+| from around 9,900,000 (2025)              | 0.2 CACAO    |
 
 The 0.2 CACAO now was checked on a 2026 send's events (0.178 to the reserve,
 0.02 to `maya_fund` and 0.002 to a third account). Maya's Midgard reports

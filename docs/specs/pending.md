@@ -9,11 +9,11 @@ a refund that could not be paid out. A run must not drop these silently.
 
 An action's age counts from its own date, not from when it was fetched.
 
-| Age | When | Why |
-| --- | --- | --- |
-| recent | younger than `pendingGraceDays` (config, default 3) | it may still finish |
-| waiting | between the two | unusual: check it |
-| stuck | `pendingStuckDays` (config, default 30) or older | it will not finish |
+| Age     | When                                                | Why                 |
+| ------- | --------------------------------------------------- | ------------------- |
+| recent  | younger than `pendingGraceDays` (config, default 3) | it may still finish |
+| waiting | between the two                                     | unusual: check it   |
+| stuck   | `pendingStuckDays` (config, default 30) or older    | it will not finish  |
 
 The grace period covers the slowest normal case: a streaming swap runs at most
 14,400 blocks (about a day), and an outbound then waits at most 17,280 blocks
@@ -25,15 +25,15 @@ The same cut-off stops a run fetching a stuck THORNode or Cosmos tx again
 
 ## What a run does
 
-| Action | Exported |
-| --- | --- |
-| pending loan repayment | yes (`loans.md`) |
-| pending loan open with an output | yes: it was paid out (`loans.md`) |
-| covered: a successful action in the wallet's list has the same inbound txid | no: that action accounts for it |
-| stuck refund, not covered | yes: `FailedOut` and `Lost` (below) |
-| stuck swap that paid nothing out, not covered | yes: as a stuck refund (below) |
-| failed send that paid the fee (THORChain, from block 11,637,012) | yes: a `fee` row for its gas (`sends.md`) |
-| any other action that is not `success` | no |
+| Action                                                                      | Exported                                  |
+| --------------------------------------------------------------------------- | ----------------------------------------- |
+| pending loan repayment                                                      | yes (`loans.md`)                          |
+| pending loan open with an output                                            | yes: it was paid out (`loans.md`)         |
+| covered: a successful action in the wallet's list has the same inbound txid | no: that action accounts for it           |
+| stuck refund, not covered                                                   | yes: `FailedOut` and `Lost` (below)       |
+| stuck swap that paid nothing out, not covered                               | yes: as a stuck refund (below)            |
+| failed send that paid the fee (THORChain, from block 11,637,012)            | yes: a `fee` row for its gas (`sends.md`) |
+| any other action that is not `success`                                      | no                                        |
 
 **Covered.** Midgard lists a savers deposit as a successful `addLiquidity`
 plus a `swap` (memo `+:BTC/BTC`, `txType` `add`) to the synth that stays

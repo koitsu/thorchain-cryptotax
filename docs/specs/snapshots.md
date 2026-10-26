@@ -54,16 +54,16 @@ lists/midgard/<wallet>.0.json                      the record keys one fetch of 
 - A new copy takes the next free number with an exclusive create, so two runs
   sharing a store never overwrite each other.
 
-| Source | Record | Key |
-| --- | --- | --- |
-| `midgard`, `maya-midgard` | an action | `<type>.<first txid>`; a contract action adds its event (one wasm call gives several); `<type>.date-<date>` with no txid; an action one tx gave to several members adds their addresses (`<type>.<txid>.<addresses>` for Maya's `donate:` adds, `<type>.genesisTx.<pool>.<addresses>` for old Midgard's placeholders) |
-| `thornode` | a tx status | txid |
-| `thornode-cosmos` | a Cosmos tx (contract calls) | txid |
-| `midgard-rune-price` | RUNE's USD price over a Midgard 5-minute bucket (liquid bonds of bRUNE, `rujira.md`) | the bucket's start (Unix seconds) |
-| `viewblock` | a tx | its hash |
-| `viewblock-tx` | the gas THORNode observed for an inbound, from Viewblock's single-tx endpoint (`fees.md`) | txid |
-| `evm-receipt` | an EVM inbound's receipt, its fee fields (`fees.md`) | `<chain>.<0x hash>` |
-| `tcy` | a distribution | `<wallet>.<date>` (one a day; several wallets are paid on the same day) |
+| Source                    | Record                                                                                    | Key                                                                                                                                                                                                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `midgard`, `maya-midgard` | an action                                                                                 | `<type>.<first txid>`; a contract action adds its event (one wasm call gives several); `<type>.date-<date>` with no txid; an action one tx gave to several members adds their addresses (`<type>.<txid>.<addresses>` for Maya's `donate:` adds, `<type>.genesisTx.<pool>.<addresses>` for old Midgard's placeholders) |
+| `thornode`                | a tx status                                                                               | txid                                                                                                                                                                                                                                                                                                                  |
+| `thornode-cosmos`         | a Cosmos tx (contract calls)                                                              | txid                                                                                                                                                                                                                                                                                                                  |
+| `midgard-rune-price`      | RUNE's USD price over a Midgard 5-minute bucket (liquid bonds of bRUNE, `rujira.md`)      | the bucket's start (Unix seconds)                                                                                                                                                                                                                                                                                     |
+| `viewblock`               | a tx                                                                                      | its hash                                                                                                                                                                                                                                                                                                              |
+| `viewblock-tx`            | the gas THORNode observed for an inbound, from Viewblock's single-tx endpoint (`fees.md`) | txid                                                                                                                                                                                                                                                                                                                  |
+| `evm-receipt`             | an EVM inbound's receipt, its fee fields (`fees.md`)                                      | `<chain>.<0x hash>`                                                                                                                                                                                                                                                                                                   |
+| `tcy`                     | a distribution                                                                            | `<wallet>.<date>` (one a day; several wallets are paid on the same day)                                                                                                                                                                                                                                               |
 
 An action or tx is shared: a swap between two wallets is stored once, and
 both wallets' lists point at it. A TCY distribution belongs to one wallet, so
@@ -105,25 +105,25 @@ it as a new version (which a run would then use in place of the first).
 Copies are compared oldest first. Each later copy becomes the one used, unless
 it has less in it:
 
-| Case | Stored | Used | Manifest `choice` |
-| --- | --- | --- | --- |
-| One copy | – | it | `only` |
-| Pending, then finalised | new copy | the finalised copy | `finalised` |
-| Pruned (THORNode lost the tx or its gas; a Cosmos tx lost its events) | new copy, as evidence | **the earlier, fuller copy** | `kept-over-pruned` |
-| Changed otherwise (a revision) | new copy | the new copy, and the run lists it | `revised` |
-| In an earlier fetch of the wallet, but not the latest | – | the earlier copy, and the run lists it | `missing: true` |
+| Case                                                                  | Stored                | Used                                   | Manifest `choice`  |
+| --------------------------------------------------------------------- | --------------------- | -------------------------------------- | ------------------ |
+| One copy                                                              | –                     | it                                     | `only`             |
+| Pending, then finalised                                               | new copy              | the finalised copy                     | `finalised`        |
+| Pruned (THORNode lost the tx or its gas; a Cosmos tx lost its events) | new copy, as evidence | **the earlier, fuller copy**           | `kept-over-pruned` |
+| Changed otherwise (a revision)                                        | new copy              | the new copy, and the run lists it     | `revised`          |
+| In an earlier fetch of the wallet, but not the latest                 | –                     | the earlier copy, and the run lists it | `missing: true`    |
 
 Revisions use the new copy (decided 2026-10-03): those seen so far are
 corrections. A filed year is not affected, because it replays its own manifest.
 
 ## Run modes
 
-| Run | Fetches | Uses |
-| --- | --- | --- |
-| default | every wallet list again (new activity, changed or missing records), every record still pending, and anything not stored yet | the chosen copy of each record, with this run's fetches included |
-| `--refetch-all` | also every finalised record again, THORNode and Cosmos txs included | the same |
-| `--offline` | nothing; anything not stored is an error | the chosen copy |
-| `--replay <run>` | nothing | exactly the copies in that run's `snapshots.json`, checked against their hashes; a source that run read nothing from (one added since, e.g. `maya-distribution`) gives nothing |
+| Run              | Fetches                                                                                                                     | Uses                                                                                                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| default          | every wallet list again (new activity, changed or missing records), every record still pending, and anything not stored yet | the chosen copy of each record, with this run's fetches included                                                                                                               |
+| `--refetch-all`  | also every finalised record again, THORNode and Cosmos txs included                                                         | the same                                                                                                                                                                       |
+| `--offline`      | nothing; anything not stored is an error                                                                                    | the chosen copy                                                                                                                                                                |
+| `--replay <run>` | nothing                                                                                                                     | exactly the copies in that run's `snapshots.json`, checked against their hashes; a source that run read nothing from (one added since, e.g. `maya-distribution`) gives nothing |
 
 A finalised record (a THORNode tx, a Cosmos tx) can only come back revised or
 pruned, and the store keeps the earlier copy either way, so a default run

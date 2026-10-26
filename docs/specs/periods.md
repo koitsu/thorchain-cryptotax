@@ -57,7 +57,7 @@ Each row's `ID` column says what the row is, never its amounts or wording:
   currency but not its ID; a row that only one treatment has simply appears
   or goes.
 - **Hash**: the first 12 hex digits of SHA-256 over `v1|<record>|<wallet>|
-  <role>|<asset>`: the action's store record key (source, type, txid, and
+<role>|<asset>`: the action's store record key (source, type, txid, and
   the contract event or members where they tell actions apart,
   `snapshots.md`), the row's wallet, the role, and the leg's asset as the
   source names it (`BTC.BTC`, whatever the CSV calls it). Twelve hex digits
