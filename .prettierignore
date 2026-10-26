@@ -1,0 +1,3 @@
+# Saved API responses and reference files: keep them byte-for-byte as fetched
+docs/reference/
+test/cases/**/input.json
