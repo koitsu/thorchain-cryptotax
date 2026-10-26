@@ -98,7 +98,7 @@ export interface HeldEntry {
 }
 
 export interface OverriddenEntry {
-  kind: "captured" | "run-changed" | "gone";
+  kind: "captured" | "undecided" | "run-changed" | "gone";
   override: Override;
   /** For run-changed: the run's value now. */
   runNow?: Value;
@@ -325,15 +325,21 @@ export function makePlan(input: PlanInput): PlanResult {
 
   // Drift and overrides: a change the plan would make is kept as the user's when an override says so, or
   // when the action's history shows the user changed that field and apply-log has no such edit. An override
-  // marked revert is the user deciding against their value: the run's value is planned, and nothing captured.
+  // records the user's decision on the value they set (retainUserEdit): yes keeps it; undecided keeps it and
+  // lists it on every plan; no plans the run's value. A value other than the one decided on is a new edit.
   function resolve(id: string, actionId: string, change: Change): Change | null {
-    const override = overrides.find((o) => o.id === id && o.leg === change.leg && o.field === change.field);
-    if (override?.revert === true) return same(change.field, change.summ, change.desired) ? null : change;
+    const found = overrides.find((o) => o.id === id && o.leg === change.leg && o.field === change.field);
+    const decidedAgainst = found?.retainUserEdit === "no";
+    const override = decidedAgainst ? undefined : found;
+    if (decidedAgainst && same(change.field, change.summ, found.summ)) return change;
     const desired = override ? override.summ : change.desired;
     if (override && !same(change.field, override.run, change.desired)) {
       plan.overridden.push({ kind: "run-changed", override, runNow: change.desired });
     }
-    if (same(change.field, change.summ, desired)) return null;
+    if (same(change.field, change.summ, desired)) {
+      if (override?.retainUserEdit === "undecided") plan.overridden.push({ kind: "undecided", override });
+      return null;
+    }
     const label = HISTORY_LABELS[change.field];
     const userEdited = (input.history.get(actionId) ?? []).some((h) => h.split(" · user · ")[1]?.includes(`${label}:`));
     const ours = input.applyLog.some(
@@ -348,8 +354,9 @@ export function makePlan(input: PlanInput): PlanResult {
         summ: change.summ,
         seenAt: now,
         reason: "",
+        retainUserEdit: "undecided",
       };
-      overrides = [...overrides.filter((o) => o !== override), captured];
+      overrides = [...overrides.filter((o) => o !== found), captured];
       plan.overridden.push({ kind: "captured", override: captured });
       return null;
     }
