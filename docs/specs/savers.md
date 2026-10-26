@@ -32,10 +32,16 @@ Savers is a liquidity position, not staking:
 - the yield is not paid out apart from the capital: it is only realised by
   redeeming the units, as part of what is withdrawn.
 
-Staking, by contrast, locks the asset and pays rewards apart from it: TCY
-staking (a `StakingDeposit`, with distributions paid as `Staking` rows) and a
-Rujira account bond (`rujira.md`). A Rujira liquid bond, whose yield
-compounds into pool shares, is likewise a disposal (`rujira.md`).
+Staking, by contrast, pays rewards apart from the asset staked: TCY staking
+(a `StakingDeposit`, with distributions paid as `Staking` rows) and a Rujira
+account bond (`rujira.md`). A Rujira liquid bond, whose shares each redeem for
+more as revenue is added to the pool, is a disposal like savers (`rujira.md`).
+
+Summ's staking-deposit test (`rujira.md`: nothing back is a staking deposit, a
+different token back is a trade) does not settle savers on its own: savers
+units are recorded against the address, not minted as a token. The export
+represents them as the `ThorSavers.*` position token so that Summ has an asset
+to carry the deposit's cost to the withdrawal.
 
 The rows record the mechanism: at deposit the asset is disposed of for the
 position token, and at withdrawal the token is disposed of for what comes
