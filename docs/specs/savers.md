@@ -20,11 +20,41 @@ L1 asset, held it as the synth inside the pool, and paid yield in that asset.
 
 Savers are exported like a liquidity position (`liquidity.md`): an
 `AddLiquidity` or `RemoveLiquidity` row for the asset, a `ReceiveLpToken` or
-`ReturnLpToken` row for the position, and the `Spam` price-helper row. A
-savers deposit goes into the pool, and the protocol provides the pool's other
-side, so it is treated as a liquidity position rather than staking (an open
-choice, below). The position token's amount is the `liquidityUnits` Midgard
-reports, which for savers is close to the synth minted.
+`ReturnLpToken` row for the position, and the `Spam` price-helper row. The
+position token's amount is the `liquidityUnits` Midgard reports, which for
+savers is close to the synth minted.
+
+Savers is a liquidity position, not staking:
+
+- the asset ends up in the pool, whose other side the protocol provides;
+- what the depositor holds is a right to a share of the pool (savers units
+  allocated to their address), not the asset itself;
+- the yield is not paid out apart from the capital: it is only realised by
+  redeeming the units, as part of what is withdrawn.
+
+Staking, by contrast, pays rewards apart from the asset staked: TCY staking
+(a `StakingDeposit`, with distributions paid as `Staking` rows) and a Rujira
+account bond (`rujira.md`). A Rujira liquid bond, whose shares each redeem for
+more as revenue is added to the pool, is a disposal like savers (`rujira.md`).
+
+Summ's staking-deposit test (`rujira.md`: nothing back is a staking deposit, a
+different token back is a trade or a non-taxable swap) would, taken alone,
+make savers a staking deposit like an account bond, since savers units are
+recorded against the address and no token is minted. The difference is in
+the bullets above and `rujira.md`: an account bond records the wallet's own
+asset, returns the same amount and pays revenue separately, while savers units
+are a claim on a share of the pool whose yield arrives only through
+redemption. The export represents that claim as the `ThorSavers.*` position
+token, which carries the deposit's cost to the withdrawal.
+
+The rows record the mechanism: at deposit the asset is disposed of for the
+position token, and at withdrawal the token is disposed of for what comes
+back. Summ's guide treats adding and removing liquidity as a taxable exchange
+for the position token
+([Liquidity pools](https://summ.com/guides/liquidity-pools)). Whether it is
+taxable is the tax tool's setting, not the rows': where adding liquidity is
+not a disposal, Summ's tax toggle for liquidity adds and removals makes them
+non-taxable without changing the rows.
 
 | Field                                                   | Value                                                                                                                                                                                | Why                                                                                                                                                                                                |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -58,7 +88,6 @@ coin, with a warning.
 
 ## Open
 
-- Treatment: liquidity position (today) or staking deposit and withdrawal.
 - The ThorFi shutdown: savers positions still open in January 2025 were
   converted to TCY. How the conversion is exported is not specified.
 
