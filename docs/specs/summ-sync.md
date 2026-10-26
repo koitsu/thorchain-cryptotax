@@ -407,20 +407,20 @@ dir: row `ID`, field, the run's value, the user's value, when it was seen,
 and a `reason` for the user to fill in, and `retainUserEdit`: the user's
 decision on that value.
 
-| `retainUserEdit` | Plan                                                                                    |
-| ---------------- | --------------------------------------------------------------------------------------- |
-| `undecided`      | keeps the user's value and lists the entry under overridden on every plan until decided |
-| `yes`            | keeps the user's value                                                                  |
-| `no`             | sets the run's value (listed under edits); after the apply the edit is the sync's own   |
+| `retainUserEdit` | Plan                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `undecided`      | keeps the user's value and lists the entry under overridden on every plan where Summ differs from the run, until decided |
+| `yes`            | keeps the user's value                                                                                                   |
+| `no`             | sets the run's value (an edit, or a categorisation for an import's leg); after the apply the edit is the sync's own      |
 
 A capture is `undecided`, and so is an entry without the field (written
 before it existed); any other value is an error. The decision holds for the
 value it was made on (the entry's user value): when the user sets another
 value in Summ, whatever the decision, it is captured again as `undecided`,
-with the entry's `reason` kept. So a `no` never sets back a later edit, and
-a `yes` never keeps one unseen. Deleting an entry means "ask again": the
-history still shows the user's edit and apply-log has none of the user's
-value, so the next plan captures it as `undecided`.
+with the entry's `reason` kept. So a `no` never sets back a different later
+value, and a `yes` never keeps one unseen. Deleting an entry means "ask
+again": the history still shows the user's edit and apply-log has none of
+the user's value, so the next plan captures it as `undecided`.
 
 The same idea elsewhere: Terraform shows drift on every plan until it is
 resolved and keeps a field with `lifecycle { ignore_changes }` (`yes`); git
@@ -431,8 +431,9 @@ change to a field someone else set as a conflict instead of overwriting it
 
 Each plan also lists, under overridden, the overrides it captured for the
 first time, and every kept override whose run value has changed since it
-was captured (the source data or the mapper moved under it; the override
-still wins until the user decides). An override whose row or leg no longer
+was captured: the source data or the mapper moved under it, and the override
+still wins until the user decides (an `undecided` one is then listed twice,
+as undecided and as run changed). An override whose row or leg no longer
 exists is reported and left for the user to delete.
 
 ## Apply
