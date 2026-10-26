@@ -26,24 +26,24 @@ savers is close to the synth minted.
 
 Savers is a liquidity position, not staking:
 
-- the deposit leaves the wallet for a vault address the depositor does not
-  control, and the asset ends up in the pool, whose other side the protocol
-  provides;
+- the asset ends up in the pool, whose other side the protocol provides;
 - what the depositor holds is a right to a share of the pool (savers units
   allocated to their address), not the asset itself;
 - the yield is not paid out apart from the capital: it is only realised by
   redeeming the units, as part of what is withdrawn.
 
-Staking, by contrast, locks the asset and pays rewards that are claimed apart
-from it (TCY staking, a Rujira account bond: `activity.md`, `rujira.md`). A
-Rujira liquid bond, whose yield compounds into pool shares, is a disposal for
-the same reason as savers.
+Staking, by contrast, locks the asset and pays rewards apart from it: TCY
+staking (a `StakingDeposit`, with distributions paid as `Staking` rows) and a
+Rujira account bond (`rujira.md`). A Rujira liquid bond, whose yield
+compounds into pool shares, is likewise a disposal (`rujira.md`).
 
-Summ's own guide treats adding and removing liquidity as a disposal, with the
-position token carrying the cost
-([Liquidity pools](https://summ.com/guides/liquidity-pools)). Whether that is
+The rows record the mechanism: at deposit the asset is disposed of for the
+position token, and at withdrawal the token is disposed of for what comes
+back. Summ's guide treats adding and removing liquidity as a taxable exchange
+for the position token
+([Liquidity pools](https://summ.com/guides/liquidity-pools)). Whether it is
 taxable is the tax tool's setting, not the rows': where adding liquidity is
-not a disposal, Summ's tax setting for liquidity adds and removals makes them
+not a disposal, Summ's tax toggle for liquidity adds and removals makes them
 non-taxable without changing the rows.
 
 | Field                                                   | Value                                                                                                                                                                                | Why                                                                                                                                                                                                |
