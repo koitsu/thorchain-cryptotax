@@ -9,7 +9,9 @@
     "export": "node src/full-export.ts wallets-config.toml",
     "fixture": "node src/cli/fixture.ts",
     "store": "node src/cli/store.ts",
-    "diff": "node src/cli/diff.ts"
+    "diff": "node src/cli/diff.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@xchainjs/xchain-midgard": "1.0.4",
@@ -25,6 +27,7 @@
   "devDependencies": {
     "@types/fs-extra": "11.0.4",
     "@types/node": "24.19.1",
+    "prettier": "3.9.10",
     "typescript": "6.0.3",
     "yaml": "2.9.1"
   },

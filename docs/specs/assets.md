@@ -3,15 +3,15 @@
 Midgard writes assets as `CHAIN<separator>ASSET`. The separator tells where
 the asset lives:
 
-| Midgard | Kind | Lives on | Exported currency | Blockchain column |
-| --- | --- | --- | --- | --- |
-| `BTC.BTC` | L1 asset | its own chain (Bitcoin) | `BTC` | `BTC` |
-| `THOR.RUNE`, `THOR.RUJI` | native THORChain token | THORChain | `RUNE`, `RUJI` | `THORChain` |
-| `BTC/BTC` | synth | THORChain | `ThorSynth.BTC.BTC` | `THORChain` |
-| `BTC~BTC` | trade asset | THORChain | `BTC` (the L1 asset's name) | `THORChain` |
-| `BTC-BTC`, `ETH-USDC-0X…` | secured asset | THORChain | `BTC`, `USDC` (the L1 asset's name) | `THORChain` |
-| `X/RUJI` | Cosmos denom on THORChain (`x/ruji`), not a synth | THORChain | `RUJI` | `THORChain` |
-| `X/SRUJI`, `X/YBRUNE` | Rujira liquid staking receipt token (`x/staking-x/ruji`, `x/staking-x/brune`; `rujira.md`) | THORChain | `SRUJI`, `YBRUNE` | `THORChain` |
+| Midgard                   | Kind                                                                                       | Lives on                | Exported currency                   | Blockchain column |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ----------------------- | ----------------------------------- | ----------------- |
+| `BTC.BTC`                 | L1 asset                                                                                   | its own chain (Bitcoin) | `BTC`                               | `BTC`             |
+| `THOR.RUNE`, `THOR.RUJI`  | native THORChain token                                                                     | THORChain               | `RUNE`, `RUJI`                      | `THORChain`       |
+| `BTC/BTC`                 | synth                                                                                      | THORChain               | `ThorSynth.BTC.BTC`                 | `THORChain`       |
+| `BTC~BTC`                 | trade asset                                                                                | THORChain               | `BTC` (the L1 asset's name)         | `THORChain`       |
+| `BTC-BTC`, `ETH-USDC-0X…` | secured asset                                                                              | THORChain               | `BTC`, `USDC` (the L1 asset's name) | `THORChain`       |
+| `X/RUJI`                  | Cosmos denom on THORChain (`x/ruji`), not a synth                                          | THORChain               | `RUJI`                              | `THORChain`       |
+| `X/SRUJI`, `X/YBRUNE`     | Rujira liquid staking receipt token (`x/staking-x/ruji`, `x/staking-x/brune`; `rujira.md`) | THORChain               | `SRUJI`, `YBRUNE`                   | `THORChain`       |
 
 On Maya Protocol the synth prefix is `Maya` (`MayaSynth.BTC.BTC`) and the
 blockchain is Maya Protocol's (`maya.md`).

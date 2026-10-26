@@ -25,12 +25,12 @@ therefore "an output means it was paid", not "RUNE is special"; the evidence:
 Checked on 2026-10-01 against 3,000 public loan opens from Midgard (via
 Liquify), January to September 2024, while lending was operating normally:
 
-| Status | Borrowed | Outbound txid | Count |
-| --- | --- | --- | --- |
-| success | non-RUNE asset | yes | 2,657 |
-| **pending** | **RUNE** | **no** | **325** |
-| success | RUNE | yes (15), no (1) | 16 |
-| pending | nothing recorded | no | 2 |
+| Status      | Borrowed         | Outbound txid    | Count   |
+| ----------- | ---------------- | ---------------- | ------- |
+| success     | non-RUNE asset   | yes              | 2,657   |
+| **pending** | **RUNE**         | **no**           | **325** |
+| success     | RUNE             | yes (15), no (1) | 16      |
+| pending     | nothing recorded | no               | 2       |
 
 - `pending` tracks **RUNE payouts**, not failed loans. RUNE is paid out natively
   on THORChain, and Midgard records that payout without a txid, so it never
@@ -55,9 +55,9 @@ be attributed to one loan when the borrower has several.
 
 ## Rows
 
-| Action | Rows |
-| --- | --- |
-| Loan open | `CollateralDeposit` (collateral sent in, with the inbound fee) and `Loan` (amount borrowed, no fee) |
+| Action         | Rows                                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Loan open      | `CollateralDeposit` (collateral sent in, with the inbound fee) and `Loan` (amount borrowed, no fee)               |
 | Loan repayment | `LoanRepayment` (amount sent in, with the inbound fee) and, when the loan closes, `CollateralWithdrawal` (no fee) |
 
 Fees follow `fees.md`.

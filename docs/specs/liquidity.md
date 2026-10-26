@@ -6,10 +6,10 @@ until it is withdrawn.
 
 ## Rows
 
-| Action | Rows |
-| --- | --- |
-| Add | one `AddLiquidity` row per asset sent in (with its inbound fee, `fees.md`), a `ReceiveLpToken` row for the position 10 s later, and a `Spam` price-helper row 20 s later |
-| Withdraw | a `ReturnLpToken` row for the position, the `Spam` price-helper row, and one `RemoveLiquidity` row per asset paid out, the native asset first |
+| Action   | Rows                                                                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Add      | one `AddLiquidity` row per asset sent in (with its inbound fee, `fees.md`), a `ReceiveLpToken` row for the position 10 s later, and a `Spam` price-helper row 20 s later |
+| Withdraw | a `ReturnLpToken` row for the position, the `Spam` price-helper row, and one `RemoveLiquidity` row per asset paid out, the native asset first                            |
 
 - The LP token is `ThorLP.<chain>.<asset>` of the pool, e.g. `ThorLP.BTC.BTC`
   (`MayaLP.…` on Maya), with the asset named as in `assets.md`.

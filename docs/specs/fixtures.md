@@ -17,15 +17,15 @@ test/cases/<group>/<name>/
 
 `input.json`:
 
-| Field | Meaning |
-| --- | --- |
-| `description` | What the case covers |
-| `source` | `midgard`, `viewblock` or `tcy` |
-| `wallet` | The wallet being exported (used by the viewblock and tcy mappers) |
-| `data` | The Midgard action, Viewblock tx or TCY distribution item, as returned by the API |
-| `protocol` | Optional, `maya` for a Maya case (default `thorchain`) |
-| `thornodeTxs` | Optional related THORNode `tx/status` responses (swaps and switches) |
-| `cosmosTxs` | Optional Cosmos txs of a contract action |
+| Field         | Meaning                                                                           |
+| ------------- | --------------------------------------------------------------------------------- |
+| `description` | What the case covers                                                              |
+| `source`      | `midgard`, `viewblock` or `tcy`                                                   |
+| `wallet`      | The wallet being exported (used by the viewblock and tcy mappers)                 |
+| `data`        | The Midgard action, Viewblock tx or TCY distribution item, as returned by the API |
+| `protocol`    | Optional, `maya` for a Maya case (default `thorchain`)                            |
+| `thornodeTxs` | Optional related THORNode `tx/status` responses (swaps and switches)              |
+| `cosmosTxs`   | Optional Cosmos txs of a contract action                                          |
 
 `test/GoldenCases.test.ts` runs every case through `runBundle`, the same path the
 exporter uses, and compares the result with `expected.yaml`. It also compares the activities
@@ -44,7 +44,7 @@ not.
    (swap `txType` or contract `contractType`), status, input and output assets,
    and contract funds denoms.
 2. Only if no such transaction exists, anonymise one with `npm run fixture --
-   anonymise`. It replaces every address, txid, signature and other base64
+anonymise`. It replaces every address, txid, signature and other base64
    blob, and every name in a memo (THORNames, affiliates, aggregator codes),
    with a placeholder; sets every date, time and block height to one fixed
    value (2020-12-31 13:00 UTC, height 10000000, as in the hand-made cases)
@@ -104,6 +104,7 @@ npm run fixture -- show test/cases/<group/name>       # print rows; add --write 
 ```
 
 Notes:
+
 - Midgard contract actions carry their amounts in `metadata.contract.funds`, not in `coins`.
 - `similar` pages back by block `height` from the original transaction, because
   `timestamp` queries time out on the Liquify gateway.
