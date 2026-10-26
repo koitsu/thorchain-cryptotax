@@ -58,7 +58,8 @@ Filed years go in a separate apply with `--approve-filed`.
   nothing in the state dir. `plan.json` lists the legs it adopted (old
   `<file>:<n>` IDs) and the values you changed in Summ that it captured;
   `apply` adds them to `adopted.csv` and `overrides.json`, where overrides
-  win over the run until you delete them.
+  win over the run. To set a field back to the run's value, add
+  `"revert": true` to its entry.
 - `apply` carries out a plan made from the latest snapshot: deletes (only
   with `--approve-deletes`), then edits and categorisation, each checked
   against Summ's current value first (categorisation waits while the plan

@@ -324,9 +324,11 @@ export function makePlan(input: PlanInput): PlanResult {
   const unmappedChains = new Set<string>();
 
   // Drift and overrides: a change the plan would make is kept as the user's when an override says so, or
-  // when the action's history shows the user changed that field and apply-log has no such edit.
+  // when the action's history shows the user changed that field and apply-log has no such edit. An override
+  // marked revert is the user deciding against their value: the run's value is planned, and nothing captured.
   function resolve(id: string, actionId: string, change: Change): Change | null {
     const override = overrides.find((o) => o.id === id && o.leg === change.leg && o.field === change.field);
+    if (override?.revert) return same(change.field, change.summ, change.desired) ? null : change;
     const desired = override ? override.summ : change.desired;
     if (override && !same(change.field, override.run, change.desired)) {
       plan.overridden.push({ kind: "run-changed", override, runNow: change.desired });

@@ -25,6 +25,8 @@ export interface Override {
   seenAt: string;
   /** For the user to fill in. */
   reason: string;
+  /** Set by the user to decide against their value: the plan sets the run's value instead. */
+  revert?: boolean;
 }
 
 export type LegRole = "base" | "quote" | "fee";

@@ -406,8 +406,13 @@ records each one it has not seen before in `overrides.json` in the state
 dir: row `ID`, field, the run's value, the user's value, when it was seen,
 and a `reason` for the user to fill in. An override always takes precedence
 over the run, so the plan shows no change for it. To have the plan revert a
-field, the user deletes its entry; the next plan then sets it back (and
-captures nothing, since the apply's edit is the sync's own).
+field, the user adds `"revert": true` to its entry: plans then set the run's
+value (listed under edits, not overridden), capture nothing for that field
+and report no run change, and after the apply the edit is the sync's own
+(`apply-log.jsonl`). The entry stays: the run wins for that field from then
+on, so a later edit in Summ is set back too. Deleting an entry does not
+revert: the history still shows the user's edit and apply-log has none of the
+user's value, so the next plan captures it again.
 
 Each plan lists, under overridden, the overrides it captured for the first
 time (so an unintended edit in Summ is seen once) and every override whose

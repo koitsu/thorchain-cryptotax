@@ -583,7 +583,7 @@ test("a field the user changed in Summ is captured as an override and kept", () 
   assert.deepEqual(moved.plan.edit, []);
 });
 
-test("deleting an override reverts the field; an edit apply-log records is the sync's own", () => {
+test("an edit apply-log records is the sync's own, not drift", () => {
   const r = row();
   const legs = legsOf(r, { trade: "outgoingGift" });
   const history = new Map([["action1", ["2 Jan 2024 · user · Category: Send → Outgoing Gift"]]]);
@@ -598,6 +598,47 @@ test("deleting an override reverts the field; an edit apply-log records is the s
     [["trade", "withdrawal"]],
   );
   assert.deepEqual(p.overridden, []);
+});
+
+test("an override marked revert plans the run's value back, and is not captured again", () => {
+  const r = row();
+  const legs = legsOf(r, { trade: "outgoingGift" });
+  const history = new Map([["action1", ["2 Jan 2024 · user · Category: Send → Outgoing Gift"]]]);
+  const first = plan({ rows: [r], legs, history });
+  const overrides = first.overrides.map((o) => ({ ...o, revert: true }));
+
+  const reverted = plan({ rows: [r], legs, history, overrides });
+  assert.deepEqual(
+    reverted.plan.edit[0].changes.map((c) => [c.field, c.summ, c.desired]),
+    [["trade", "outgoingGift", "withdrawal"]],
+  );
+  assert.deepEqual(reverted.plan.overridden, []);
+  assert.deepEqual(reverted.overrides, overrides);
+
+  // After the apply: Summ holds the run's value, so nothing is planned or captured, though the history still
+  // shows the user's edit
+  const after = plan({
+    rows: [r],
+    legs: legsOf(r),
+    history,
+    overrides,
+    applyLog: [{ legId: legs[0].legId, field: "trade", value: "withdrawal" }],
+  });
+  assert.ok(empty(after.plan));
+  assert.deepEqual(after.overrides, overrides);
+
+  // A later run value is planned too: the run wins for that field
+  const moved = plan({
+    rows: [{ ...r, type: "receive" }],
+    legs: legsOf(r, { side: "incoming", trade: "withdrawal" }),
+    history,
+    overrides,
+  });
+  assert.deepEqual(
+    moved.plan.edit[0].changes.map((c) => [c.field, c.desired]),
+    [["trade", "deposit"]],
+  );
+  assert.deepEqual(moved.plan.overridden, []);
 });
 
 test("an override whose row left the run is listed as gone", () => {
