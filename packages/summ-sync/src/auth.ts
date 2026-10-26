@@ -105,7 +105,10 @@ export async function login(stateDir: string, scope = READ_SCOPE): Promise<void>
     const timer = setTimeout(() => reject(new Error("Timed out waiting for authorisation (5 min)")), 300_000);
     server.on("request", (req, res) => {
       const url = new URL(req.url ?? "/", redirectUri);
-      if (url.pathname !== "/callback") return res.writeHead(404).end();
+      if (url.pathname !== "/callback") {
+        res.writeHead(404).end();
+        return;
+      }
       const code = url.searchParams.get("state") === state ? url.searchParams.get("code") : null;
       res.writeHead(code ? 200 : 400, { "content-type": "text/plain" });
       res.end(code ? "Authorised. You can close this tab." : `Failed: ${url.searchParams.get("error") ?? "bad state"}`);

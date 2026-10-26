@@ -7,6 +7,11 @@
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
     "noEmit": true,
     "skipLibCheck": true,
     "types": ["node"]

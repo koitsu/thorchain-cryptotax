@@ -135,7 +135,6 @@ async function run(summ: FakeSumm, plan: PlanFile, opts: Partial<ApplyOptions> =
   const result = await applyPlan(
     summ,
     plan,
-    "p",
     { ...OPTS, ...opts },
     (l) => log.push(l),
     () => {},
@@ -440,7 +439,6 @@ test("a failing call stops the apply", async () => {
     applyPlan(
       failing,
       plan,
-      "p",
       OPTS,
       () => {},
       () => {},
