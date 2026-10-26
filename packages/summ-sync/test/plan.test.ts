@@ -8,7 +8,7 @@ import { ADOPT_WINDOW, makePlan, type PlanInput } from "../src/plan.ts";
 import type { Row, RunFile } from "../src/run.ts";
 import type { Leg } from "../src/snapshot.ts";
 import type { Override } from "../src/state.ts";
-import { mergeTables } from "../src/state.ts";
+import { mergeTables, readOverrides } from "../src/state.ts";
 import { renderPlan, uploadFiles, writePlan } from "../src/write-plan.ts";
 import { categorisedTxids } from "../src/pull.ts";
 import { summType } from "../src/summ-types.ts";
@@ -542,6 +542,7 @@ test("a leg adopted to an extra row, and its override, follow the run row that s
     summ: "outgoingGift",
     seenAt: "",
     reason: "mine",
+    retainUserEdit: "yes",
   };
   const { plan: p } = plan({
     rows: [r, extra],
@@ -567,8 +568,8 @@ test("a field the user changed in Summ is captured as an override and kept", () 
     [["captured", "trade", "withdrawal", "outgoingGift"]],
   );
 
-  // Kept on the next plan, and listed again only when the run's value moves under it
-  const overrides = first.overrides;
+  // Once kept (retainUserEdit: yes), listed again only when the run's value moves under it
+  const overrides = first.overrides.map((o) => ({ ...o, retainUserEdit: "yes" as const }));
   assert.ok(empty(plan({ rows: [r], legs, history, overrides }).plan));
   const moved = plan({
     rows: [{ ...r, type: "receive" }],
@@ -583,7 +584,7 @@ test("a field the user changed in Summ is captured as an override and kept", () 
   assert.deepEqual(moved.plan.edit, []);
 });
 
-test("deleting an override reverts the field; an edit apply-log records is the sync's own", () => {
+test("an edit apply-log records is the sync's own, not drift", () => {
   const r = row();
   const legs = legsOf(r, { trade: "outgoingGift" });
   const history = new Map([["action1", ["2 Jan 2024 · user · Category: Send → Outgoing Gift"]]]);
@@ -600,6 +601,73 @@ test("deleting an override reverts the field; an edit apply-log records is the s
   assert.deepEqual(p.overridden, []);
 });
 
+test("retainUserEdit: undecided keeps the user's value and lists it on every plan; yes keeps it quietly", () => {
+  const r = row();
+  const legs = legsOf(r, { trade: "outgoingGift" });
+  const history = new Map([["action1", ["2 Jan 2024 · user · Category: Send → Outgoing Gift"]]]);
+  const first = plan({ rows: [r], legs, history });
+  assert.deepEqual(
+    first.overrides.map((o) => o.retainUserEdit),
+    ["undecided"],
+  );
+  const again = plan({ rows: [r], legs, history, overrides: first.overrides });
+  assert.deepEqual(again.plan.edit, []);
+  assert.deepEqual(
+    again.plan.overridden.map((o) => o.kind),
+    ["undecided"],
+  );
+  const kept = first.overrides.map((o) => ({ ...o, retainUserEdit: "yes" as const }));
+  assert.ok(empty(plan({ rows: [r], legs, history, overrides: kept }).plan));
+});
+
+test("retainUserEdit: no plans the run's value back; a later value of the user's is a new edit", () => {
+  const r = row();
+  const legs = legsOf(r, { trade: "outgoingGift" });
+  const history = new Map([["action1", ["2 Jan 2024 · user · Category: Send → Outgoing Gift"]]]);
+  const overrides = plan({ rows: [r], legs, history }).overrides.map((o) => ({ ...o, retainUserEdit: "no" as const }));
+
+  const reverted = plan({ rows: [r], legs, history, overrides });
+  assert.deepEqual(
+    reverted.plan.edit[0].changes.map((c) => [c.field, c.summ, c.desired]),
+    [["trade", "outgoingGift", "withdrawal"]],
+  );
+  assert.deepEqual(reverted.plan.overridden, []);
+  assert.deepEqual(reverted.overrides, overrides);
+
+  // After the apply: Summ holds the run's value, so nothing is planned or captured, though the history still
+  // shows the user's edit
+  const after = plan({
+    rows: [r],
+    legs: legsOf(r),
+    history,
+    overrides,
+    applyLog: [{ legId: legs[0].legId, field: "trade", value: "withdrawal" }],
+  });
+  assert.ok(empty(after.plan));
+
+  // The user sets yet another value: not the one decided on, so it is captured as undecided, not set back
+  const third = plan({ rows: [r], legs: legsOf(r, { trade: "lost" }), history, overrides });
+  assert.deepEqual(third.plan.edit, []);
+  assert.deepEqual(
+    third.plan.overridden.map((o) => [o.kind, o.override.summ, o.override.retainUserEdit]),
+    [["captured", "lost", "undecided"]],
+  );
+});
+
+test("retainUserEdit: yes, then a new value of the user's, is captured as undecided", () => {
+  const r = row();
+  const history = new Map([["action1", ["2 Jan 2024 · user · Category: Send → Outgoing Gift"]]]);
+  const overrides = plan({ rows: [r], legs: legsOf(r, { trade: "outgoingGift" }), history }).overrides.map((o) => ({
+    ...o,
+    retainUserEdit: "yes" as const,
+  }));
+  const moved = plan({ rows: [r], legs: legsOf(r, { trade: "lost" }), history, overrides });
+  assert.deepEqual(
+    moved.overrides.map((o) => [o.summ, o.retainUserEdit]),
+    [["lost", "undecided"]],
+  );
+});
+
 test("an override whose row left the run is listed as gone", () => {
   const override: Override = {
     id: "gone-id",
@@ -609,6 +677,7 @@ test("an override whose row left the run is listed as gone", () => {
     summ: "b",
     seenAt: "",
     reason: "",
+    retainUserEdit: "undecided",
   };
   const { plan: p } = plan({ overrides: [override] });
   assert.deepEqual(
@@ -1512,6 +1581,7 @@ test("plan writes nothing to the state dir; mergeTables adds its adoptions and c
     summ: "outgoingGift",
     seenAt: "",
     reason: "mine",
+    retainUserEdit: "yes",
   };
   writeFileSync(join(state, "overrides.json"), JSON.stringify([own]));
   assert.deepEqual(mergeTables(state, saved.adopted, [{ ...own, reason: "" }]), ["adopted.csv"]);
@@ -1519,12 +1589,27 @@ test("plan writes nothing to the state dir; mergeTables adds its adoptions and c
   assert.equal(JSON.parse(readFileSync(join(state, "overrides.json"), "utf8"))[0].reason, "mine");
   assert.deepEqual(mergeTables(state, saved.adopted, []), []);
 
-  // A value the user set again since replaces the override, still with their reason
-  assert.deepEqual(mergeTables(state, [], [{ ...own, summ: "lost", reason: "" }]), ["overrides.json"]);
+  // A value the user set again since replaces the override, still with their reason, and undecided: the
+  // decision was on the old value
+  assert.deepEqual(mergeTables(state, [], [{ ...own, summ: "lost", reason: "", retainUserEdit: "undecided" }]), [
+    "overrides.json",
+  ]);
   assert.deepEqual(
-    JSON.parse(readFileSync(join(state, "overrides.json"), "utf8")).map((o: Override) => [o.summ, o.reason]),
-    [["lost", "mine"]],
+    readOverrides(state).map((o) => [o.summ, o.reason, o.retainUserEdit]),
+    [["lost", "mine", "undecided"]],
   );
+});
+
+test("overrides.json: an entry without retainUserEdit is undecided; any other value is an error", () => {
+  const state = mkdtempSync(join(tmpdir(), "summ-sync-overrides-"));
+  const old = { id: "a.csv:1", leg: "base", field: "trade", run: "withdrawal", summ: "lost", seenAt: "", reason: "" };
+  writeFileSync(join(state, "overrides.json"), JSON.stringify([old]));
+  assert.deepEqual(
+    readOverrides(state).map((o) => o.retainUserEdit),
+    ["undecided"],
+  );
+  writeFileSync(join(state, "overrides.json"), JSON.stringify([{ ...old, retainUserEdit: "false" }]));
+  assert.throws(() => readOverrides(state), /retainUserEdit of a\.csv:1 trade must be "yes", "no" or "undecided"/);
 });
 
 test("CSV types map to the trade Summ holds for them", () => {

@@ -25,7 +25,11 @@ export interface Override {
   seenAt: string;
   /** For the user to fill in. */
   reason: string;
+  /** The user's decision on their value: yes keeps it, no plans the run's value; undecided keeps it and asks again. */
+  retainUserEdit: RetainUserEdit;
 }
+
+export type RetainUserEdit = "yes" | "no" | "undecided";
 
 export type LegRole = "base" | "quote" | "fee";
 
@@ -55,7 +59,16 @@ export function writeAdopted(stateDir: string, adopted: Map<string, string>): vo
 
 export function readOverrides(stateDir: string): Override[] {
   const file = join(stateDir, "overrides.json");
-  return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : [];
+  if (!existsSync(file)) return [];
+  const overrides: Override[] = JSON.parse(readFileSync(file, "utf8"));
+  // An entry from before retainUserEdit existed is undecided
+  return overrides.map((o) => {
+    const retainUserEdit = o.retainUserEdit ?? "undecided";
+    if (!["yes", "no", "undecided"].includes(retainUserEdit)) {
+      throw new Error(`${file}: retainUserEdit of ${o.id} ${o.field} must be "yes", "no" or "undecided"`);
+    }
+    return { ...o, retainUserEdit };
+  });
 }
 
 export function writeOverrides(stateDir: string, overrides: Override[]): void {
@@ -89,7 +102,8 @@ export function mergeTables(
     writeAdopted(stateDir, adopted);
     changed.push("adopted.csv");
   }
-  // A capture replaces the override of its field when the user has set another value since, keeping its reason
+  // A capture replaces the override of its field when the user has set another value since, keeping its reason:
+  // the decision was on the old value, so the new one is undecided
   let overrides = readOverrides(stateDir);
   let overridesChanged = false;
   for (const c of captured) {

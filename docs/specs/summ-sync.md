@@ -371,7 +371,7 @@ legs share their actions (a delete by action would remove those too).
 | superseded | extra rows a run row exports itself (Extra folders above)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | nothing: their legs adopt to the run row                                                                                                                           |
 | report     | categorised rows with no or several matching legs, or whose fee differs from Summ's (not edited); legs of a tx Summ holds twice beside the one a row matched (`duplicate-leg`); extra rows that share a txid, side and currency with run rows without being the same row (`extra-overlap`); legacy legs that fit several rows, or that look like an unmatched row (`legacy-lookalike`); managed rows whose ID Summ holds under a source not in `managedSources` (not uploaded again); managed rows Summ paired with a leg no row of their event names (`foreign-pair`); manual entries repeating a row's txid | nothing: for the user to resolve                                                                                                                                   |
 | held       | rows the plan leaves alone (Held below), with what it left out                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | nothing                                                                                                                                                            |
-| overridden | differences an override keeps, and overrides captured in this plan                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | nothing                                                                                                                                                            |
+| overridden | differences an override keeps (undecided ones on every plan), and overrides captured in this plan                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | nothing                                                                                                                                                            |
 
 **Held.** Nothing is planned for two kinds of row, which are listed instead
 with the entries left out:
@@ -404,17 +404,37 @@ change of that field's label: an edit of another leg in the same action
 (e.g. the other side of a transfer) can make it drift too. `plan`
 records each one it has not seen before in `overrides.json` in the state
 dir: row `ID`, field, the run's value, the user's value, when it was seen,
-and a `reason` for the user to fill in. An override always takes precedence
-over the run, so the plan shows no change for it. To have the plan revert a
-field, the user deletes its entry; the next plan then sets it back (and
-captures nothing, since the apply's edit is the sync's own).
+and a `reason` for the user to fill in, and `retainUserEdit`: the user's
+decision on that value.
 
-Each plan lists, under overridden, the overrides it captured for the first
-time (so an unintended edit in Summ is seen once) and every override whose
-run value has changed since it was captured (the source data or the
-mapper moved under it; the override still wins until the user decides).
-An override whose row or leg no longer exists is reported and left for the
-user to delete.
+| `retainUserEdit` | Plan                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `undecided`      | keeps the user's value and lists the entry under overridden on every plan where Summ differs from the run, until decided |
+| `yes`            | keeps the user's value                                                                                                   |
+| `no`             | sets the run's value (an edit, or a categorisation for an import's leg); after the apply the edit is the sync's own      |
+
+A capture is `undecided`, and so is an entry without the field (written
+before it existed); any other value is an error. The decision holds for the
+value it was made on (the entry's user value): when the user sets another
+value in Summ, whatever the decision, it is captured again as `undecided`,
+with the entry's `reason` kept. So a `no` never sets back a different later
+value, and a `yes` never keeps one unseen. Deleting an entry means "ask
+again": the history still shows the user's edit and apply-log has none of
+the user's value, so the next plan captures it as `undecided`.
+
+The same idea elsewhere: Terraform shows drift on every plan until it is
+resolved and keeps a field with `lifecycle { ignore_changes }` (`yes`); git
+`rerere` reuses a recorded conflict resolution only for the same conflict
+(the decision holds for one value); Kubernetes server-side apply reports a
+change to a field someone else set as a conflict instead of overwriting it
+(`undecided`).
+
+Each plan also lists, under overridden, the overrides it captured for the
+first time, and every kept override whose run value has changed since it
+was captured: the source data or the mapper moved under it, and the override
+still wins until the user decides (an `undecided` one is then listed twice,
+as undecided and as run changed). An override whose row or leg no longer
+exists is reported and left for the user to delete.
 
 ## Apply
 

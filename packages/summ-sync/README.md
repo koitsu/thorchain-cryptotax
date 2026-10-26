@@ -58,7 +58,8 @@ Filed years go in a separate apply with `--approve-filed`.
   nothing in the state dir. `plan.json` lists the legs it adopted (old
   `<file>:<n>` IDs) and the values you changed in Summ that it captured;
   `apply` adds them to `adopted.csv` and `overrides.json`, where overrides
-  win over the run until you delete them.
+  win over the run while `retainUserEdit` is `undecided` (listed on every
+  plan) or `yes`; set it to `no` to have the plan set the run's value back.
 - `apply` carries out a plan made from the latest snapshot: deletes (only
   with `--approve-deletes`), then edits and categorisation, each checked
   against Summ's current value first (categorisation waits while the plan

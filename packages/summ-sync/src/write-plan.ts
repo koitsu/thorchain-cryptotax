@@ -106,7 +106,7 @@ export function renderPlan(plan: Plan, snapshot: string, run: string): string {
       ...es.map((e) => `| ${e.kind} | ${show(e.id)} | ${(e.legIds ?? []).join(" ") || "–"} | ${cell(e.detail)} |`),
     ]),
     ...section(
-      "Overridden (kept as you set them in Summ)",
+      "Overridden (your values in Summ: kept unless retainUserEdit is no; undecided ones are listed until you decide)",
       plan.overridden.map((o) => ({ ...o, filed: false })),
       (es) => [
         "| Kind | Row | Leg | Field | Run | Yours | Run now |",
