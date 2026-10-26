@@ -21,23 +21,27 @@ distributions in `activity.md`.
   THORNode's lending endpoints (`/borrower/`) are no longer served.
 - **The claim list.** THORNode embeds a fixed list of claims
   (`common/tcyclaimlist/tcy_claimers_mainnet.json`): `{asset, address,
-tcy_claim}`, with the amount in TCY (8 decimals). It is per L1 address and
-  asset, not per position: one address with a savers position and a loan in
-  the same asset has one entry for both.
+tcy_claim}`, with the amount in TCY (8 decimals). Some address and asset
+  pairs appear in it more than once; THORNode adds them up when it loads
+  the list, so its state holds one entry per address and asset, not per
+  position: one address with a savers position and a loan in the same asset
+  has one entry for both. (The file's repeated rows may be such a split;
+  not checked.)
 - **A claim** is a deposit with the memo `tcy:<thor address>`, sent from the
-  L1 address that holds the claim (a dust send on its chain) or from a
-  THORChain address. THORNode pays every claim-list entry of that L1
-  address at once, one `tcy_claim` event per asset (with the asset and
-  amount), and deletes the entries. The TCY goes straight from the claiming
+  address that holds the claim: an L1 address (a dust send on its chain),
+  or a THORChain address for a claim it holds (e.g. a synth holder's).
+  THORNode pays every entry of that address at once, one `tcy_claim` event
+  per asset (with the asset and amount), and deletes the entries. The TCY goes straight from the claiming
   module to the staking module, staked for the THORChain address in the
   memo: the claimed TCY never sits in the wallet unstaked.
-- **Midgard** lists a claim as a `tcy_claim` action: in, the claiming
-  address; out, the THORChain address and the TCY. Its database keeps each
-  event's asset (`tcy_claim_events.asset`), but the action shows only the
-  memo. The asset a claim was for comes from THORNode:
-  `/thorchain/tcy_claimer/<L1 address>` at the height before the claim
-  lists its entries (asset and amount); from the claim's height on, the
-  address has none.
+- **Midgard** lists one `tcy_claim` action per event, so a claim tx that
+  paid several entries is several actions with the same txid: in, the
+  claiming address; out, the THORChain address and that entry's TCY. Its
+  database keeps each event's asset (`tcy_claim_events.asset`), but the
+  action shows only the memo. The asset comes from THORNode:
+  `/thorchain/tcy_claimer/<address>` at the height before the claim lists
+  the entries (asset and amount), and an action's TCY equals one of them;
+  from the claim's height on, the address has none.
 
 ## Rows
 
@@ -45,7 +49,7 @@ tcy_claim}`, with the amount in TCY (8 decimals). It is per L1 address and
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
 | Freeze of a position (January 2025)         | none: nothing moved, and the position is still held                                                                                                                                                       | –                                           |
 | TCY claim for a savers position             | a disposal of the position for the TCY: `ReturnLpToken` of the position's units (`ThorSavers.<chain>.<asset>`, the L1 wallet that holds it) and the TCY received at market, at the claim tx (`savers.md`) | planned                                     |
-| TCY claim for a loan's collateral           | a disposal of the collateral never returned for the TCY (`loans.md`)                                                                                                                                      | planned                                     |
+| TCY claim for a loan's collateral           | a disposal of the collateral never returned for the TCY, and the loan's debt closed (`loans.md`)                                                                                                          | planned                                     |
 | TCY claim for anything else (e.g. a synth)  | `Receive` of the TCY                                                                                                                                                                                      | exported                                    |
 | The TCY staked at the claim                 | `StakingDeposit` of the TCY, in the THORChain wallet, so a later unstake (`StakingWithdrawal`) returns TCY that was deposited                                                                             | planned (today a claim is a `Receive` only) |
 | Distributions to staked TCY, stake, unstake | `activity.md`                                                                                                                                                                                             | exported                                    |
@@ -56,14 +60,20 @@ is given up for it; the TCY's market value at the claim is the proceeds, and
 the cost of the position carries to that disposal. The claim tx is the
 observed event; the freeze moved nothing.
 
-**Which kind of claim.** For each entry the claim paid (THORNode's
-`tcy_claimer` at the height before the claim), the exporter checks the
-claiming L1 address at that height: a savers record of the entry's asset
-with units means a savers claim (its units are the position returned). A
-loan opened from that address with that asset as collateral (`loans.md`)
-means a loan claim. Both at once share one entry: the claim is exported as a
-`Receive` with a warning, since the source does not say how much was for
-each.
+**Loans.** A loan's claim is not specified in full yet: whether a borrower's
+TCY was the collateral's value or the collateral less the debt (which sets
+the proceeds), and how the loan's debt row closes, are decided when loan
+claims are exported. Until then a loan's claim is a `Receive` and its debt
+stays open in the export.
+
+**Which kind of claim.** For each action, the exporter finds the entry it
+paid (THORNode's `tcy_claimer` at the height before the claim, by amount)
+and checks the claiming address at that height: a savers record of the
+entry's asset with units means a savers claim (its units are the position
+returned). A loan opened from that address with that asset as collateral
+(`loans.md`) means a loan claim. Both at once share one entry: the claim is
+exported as a `Receive` with a warning, since the source does not say how
+much was for each.
 
 **A later payout.** A frozen position is still on chain, so a ragnarok could
 one day pay it out after the claim. The position was given up at the claim,
