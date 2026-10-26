@@ -36,12 +36,14 @@ Staking, by contrast, pays rewards apart from the asset staked: TCY staking
 (a `StakingDeposit`, with distributions paid as `Staking` rows) and a Rujira
 account bond (`rujira.md`). A Rujira liquid bond, whose shares each redeem for
 more as revenue is added to the pool, is a disposal like savers (`rujira.md`).
-
 Summ's staking-deposit test (`rujira.md`: nothing back is a staking deposit, a
-different token back is a trade) does not settle savers on its own: savers
-units are recorded against the address, not minted as a token. The export
-represents them as the `ThorSavers.*` position token so that Summ has an asset
-to carry the deposit's cost to the withdrawal.
+different token back is a trade or a non-taxable swap) would, taken alone,
+make savers a staking deposit like an account bond, since savers units are
+recorded against the address and no token is minted. The difference is what
+is recorded: an account bond records the wallet's own asset, while savers
+units are a claim on a share of the pool. The export represents that claim as
+the `ThorSavers.*` position token, which carries the deposit's cost to the
+withdrawal.
 
 The rows record the mechanism: at deposit the asset is disposed of for the
 position token, and at withdrawal the token is disposed of for what comes
