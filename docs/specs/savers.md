@@ -20,11 +20,31 @@ L1 asset, held it as the synth inside the pool, and paid yield in that asset.
 
 Savers are exported like a liquidity position (`liquidity.md`): an
 `AddLiquidity` or `RemoveLiquidity` row for the asset, a `ReceiveLpToken` or
-`ReturnLpToken` row for the position, and the `Spam` price-helper row. A
-savers deposit goes into the pool, and the protocol provides the pool's other
-side, so it is treated as a liquidity position rather than staking (an open
-choice, below). The position token's amount is the `liquidityUnits` Midgard
-reports, which for savers is close to the synth minted.
+`ReturnLpToken` row for the position, and the `Spam` price-helper row. The
+position token's amount is the `liquidityUnits` Midgard reports, which for
+savers is close to the synth minted.
+
+Savers is a liquidity position, not staking:
+
+- the deposit leaves the wallet for a vault address the depositor does not
+  control, and the asset ends up in the pool, whose other side the protocol
+  provides;
+- what the depositor holds is a right to a share of the pool (savers units
+  allocated to their address), not the asset itself;
+- the yield is not paid out apart from the capital: it is only realised by
+  redeeming the units, as part of what is withdrawn.
+
+Staking, by contrast, locks the asset and pays rewards that are claimed apart
+from it (TCY staking, a Rujira account bond: `activity.md`, `rujira.md`). A
+Rujira liquid bond, whose yield compounds into pool shares, is a disposal for
+the same reason as savers.
+
+Summ's own guide treats adding and removing liquidity as a disposal, with the
+position token carrying the cost
+([Liquidity pools](https://summ.com/guides/liquidity-pools)). Whether that is
+taxable is the tax tool's setting, not the rows': where adding liquidity is
+not a disposal, Summ's tax setting for liquidity adds and removals makes them
+non-taxable without changing the rows.
 
 | Field                                                   | Value                                                                                                                                                                                | Why                                                                                                                                                                                                |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -58,7 +78,6 @@ coin, with a warning.
 
 ## Open
 
-- Treatment: liquidity position (today) or staking deposit and withdrawal.
 - The ThorFi shutdown: savers positions still open in January 2025 were
   converted to TCY. How the conversion is exported is not specified.
 

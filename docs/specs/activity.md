@@ -19,7 +19,7 @@ rows, applying the tax treatment chosen in the config.
 Kept apart this way, each kind of change touches one module:
 
 - a new action type is a new interpreter;
-- a change of treatment (savers as staking, secured assets as bridges) is a
+- a change of treatment (e.g. secured assets as bridges) is a
   change in the exporter;
 - a second output format is a second exporter.
 
@@ -77,8 +77,7 @@ An asset keeps the source's notation (`BTC.BTC`, `BTC/BTC`, `BTC~BTC`,
 Naming an asset for a tax tool (`ThorSynth.BTC.BTC`, `ThorLP.BTC.BTC`,
 `ThorSavers.BTC.BTC`, the `[assets]` prefixes) is the exporter's job
 (`assets.md`, `savers.md`). Because a position is an asset, whether a deposit
-into one is a disposal or a move into staking is the exporter's decision
-(backlog: savers as staking).
+into one is a disposal or a move into staking is the exporter's decision.
 
 ### Amounts
 
