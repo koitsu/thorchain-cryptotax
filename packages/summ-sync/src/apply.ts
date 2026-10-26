@@ -122,7 +122,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function applyPlan(
   client: ToolCaller,
   plan: PlanFile,
-  planName: string,
   opts: ApplyOptions,
   log: (line: Omit<LogLine, "time" | "plan">) => void,
   say: (text: string) => void = console.log,
@@ -374,7 +373,7 @@ export async function runApply(
   await client.connect();
   let result: ApplyResult;
   try {
-    result = await applyPlan(client, plan, planName, opts, log, console.log, 3000, stateDir);
+    result = await applyPlan(client, plan, opts, log, console.log, 3000, stateDir);
   } catch (e) {
     // Stop at the first failure; a failed write may still have changed Summ, so it counts as a write
     if (!opts.dryRun) log({ call: "error", error: e instanceof Error ? e.message : String(e) });

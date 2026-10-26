@@ -451,7 +451,7 @@ export function makePlan(input: PlanInput): PlanResult {
     const claimants = new Map<string, string[]>();
     for (const [summId, rows] of found)
       for (const row of rows) claimants.set(row.id, [...(claimants.get(row.id) ?? []), summId]);
-    for (const [rowId, ids] of claimants) {
+    for (const ids of claimants.values()) {
       const kept = ids.filter((id) => !ignoredGroup.get(id));
       // Only when the kept leg takes the row: it fits no other row at this rank
       if (ids.length < 2 || kept.length !== 1 || (found.get(kept[0]) as Row[]).length !== 1) continue;
