@@ -61,3 +61,11 @@ be attributed to one loan when the borrower has several.
 | Loan repayment | `LoanRepayment` (amount sent in, with the inbound fee) and, when the loan closes, `CollateralWithdrawal` (no fee) |
 
 Fees follow `fees.md`.
+
+## Loans open at the ThorFi collapse
+
+Lending was suspended in January 2025. A loan still open then was never
+repaid or closed on chain. Its owner could claim TCY equal to the
+collateral's value less the debt, one TCY per dollar; the claim ends the loan
+in substance (`thorfi-collapse.md`). Not exported yet: the claim is a
+`Receive` and the debt stays open.

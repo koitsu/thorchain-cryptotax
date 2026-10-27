@@ -1,7 +1,8 @@
 # Savers
 
-THORChain Savers (2022 until the ThorFi shutdown in January 2025) took a single
-L1 asset, held it as the synth inside the pool, and paid yield in that asset.
+THORChain Savers (2022 until the ThorFi collapse in January 2025,
+`thorfi-collapse.md`) took a single L1 asset, held it as the synth inside
+the pool, and paid yield in that asset.
 
 ## What Midgard reports
 
@@ -88,8 +89,9 @@ coin, with a warning.
 
 ## Open
 
-- The ThorFi shutdown: savers positions still open in January 2025 were
-  converted to TCY. How the conversion is exported is not specified.
+- The ThorFi collapse: savers positions still open in January 2025 were
+  frozen, and their owners claimed TCY for them. The claim is the disposal
+  of the position (`thorfi-collapse.md`); not exported yet.
 
 ## Golden cases
 

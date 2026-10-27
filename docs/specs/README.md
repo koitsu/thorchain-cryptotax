@@ -3,6 +3,7 @@
 - [Fees](./fees.md)
 - [Liquidity](./liquidity.md)
 - [Savers](./savers.md)
+- [ThorFi collapse and TCY claims](./thorfi-collapse.md)
 - [Asset names](./assets.md)
 - [Test fixtures (golden cases)](./fixtures.md)
 - [Maya Protocol](./maya.md)
