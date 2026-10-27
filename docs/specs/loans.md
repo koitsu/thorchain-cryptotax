@@ -65,7 +65,8 @@ Fees follow `fees.md`.
 ## Loans open at the ThorFi collapse
 
 Lending was suspended in January 2025. A loan still open then was never
-repaid or closed: its collateral was converted to a claim on TCY, one TCY per
-dollar owed. The claim is the disposal of the collateral for the TCY,
-and closes the loan's debt (`thorfi-collapse.md`); not exported yet: the
-claim is a `Receive` and the debt stays open.
+repaid or closed: its collateral, less the loan's debt, was converted to a
+claim on TCY, one TCY per dollar. The claim is the disposal of the
+collateral: part settles the debt, the rest is exchanged for the TCY
+(`thorfi-collapse.md`). Not exported yet: the claim is a `Receive` and the
+debt stays open.
