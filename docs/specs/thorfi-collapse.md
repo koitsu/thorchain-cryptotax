@@ -17,7 +17,7 @@ distributions in `activity.md`.
   units, deposit and redeem value, with no withdrawal). Users cannot
   withdraw it: the `BurnSynths` Mimir is set, and a savers withdraw fails
   while it is ("burning synths is disabled, unable to withdraw to savers",
-  THORNode's withdraw handler). Only a ragnarok of the pool pays savers out.
+  THORNode's withdraw handler).
   THORNode's lending endpoints (`/borrower/`) are no longer served.
 - **The claim list.** THORNode embeds a fixed list of claims
   (`common/tcyclaimlist/tcy_claimers_mainnet.json`): `{asset, address,
@@ -78,10 +78,6 @@ returned). A loan opened from that address with that asset as collateral
 (`loans.md`) means a loan claim. Both at once share one entry: the claim is
 exported as a `Receive` with a warning, since the source does not say how
 much was for each.
-
-**A later payout.** A frozen position is still on chain, so a ragnarok could
-one day pay it out after the claim. The position was given up at the claim,
-so such a withdrawal would need its own treatment; none has happened.
 
 ## Golden cases
 
