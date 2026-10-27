@@ -65,13 +65,13 @@ observed event; the freeze moved nothing.
 **Loans.** A borrower could claim TCY equal to the collateral's value less
 the loan's debt. Nothing on chain settled the debt or released the
 collateral: the claim handler touches no loan, the migration that loaded the
-claim list changed none, and loan records stayed on THORNode until lending
-was removed from its code (November 2025). In substance the loan ended at
-the claim: the collateral is never returned, the debt is never repaid, and
-the TCY is the net of the two. How to record that (e.g. a disposal of the
-collateral whose proceeds include the debt no longer owed) is decided when
-loan claims are exported; until then a loan's claim is a `Receive` and its
-debt stays open in the export.
+claim list changed none, and no later change closed them (THORNode reported
+them as open until its lending code was removed, November 2025). In
+substance the loan ended at the claim: the collateral is never returned, the
+debt is never repaid, and the TCY is the net of the two. How to record that
+(e.g. a disposal of the collateral whose proceeds include the debt no longer
+owed) is decided when loan claims are exported; until then a loan's claim is
+a `Receive` and its debt stays open in the export.
 
 **Which kind of claim.** For each action, the exporter finds the entry it
 paid (THORNode's `tcy_claimer` at the height before the claim, by amount)
