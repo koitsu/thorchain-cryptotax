@@ -147,6 +147,35 @@ the first action, so a run sees new activity and changes to old actions in
 one pass. A record shared by several wallets is fetched once per
 run.
 
+Midgard matches the `address` of `/v2/actions` exactly. EVM senders are
+lowercase (THORNode observes them that way), and Midgard lowercases the other
+EVM addresses of an event on a chain it treats as case-insensitive (ETH on
+THORChain; ETH and ARB on Maya). Otherwise, e.g. an outbound on AVAX, BSC or
+BASE for a swap from BTC, the address keeps the case of the memo that asked
+for it. So an EVM wallet (`0x` and 40 hex digits) configured in mixed case is
+queried in both spellings, `address=<lowercase>,<as configured>` (Midgard
+returns an action that matches either). Queried as configured only, a
+checksummed wallet got back just the actions spelled that way, and missed, for
+example, its savers deposits and withdrawals on ETH. Other address formats
+(base58 BTC, DOGE and LTC addresses) are case-sensitive and are queried as
+given. A wallet configured in lowercase is queried in lowercase only, so it
+misses such an outbound when the memo used the checksummed spelling: configure
+EVM wallets in their checksummed (EIP-55) spelling, as wallets show them. The
+store keys a wallet's list by its address as configured, and a period file's
+name includes the last five characters of that address as configured. So to
+change a wallet's spelling, change it in every config that uses the store and
+move its old lists (`lists/midgard/<address>.*.json`, and
+`lists/maya-midgard/…` if Maya is exported) out of the store: two list keys
+that differ only in case stop the run after the respelling. Replay an earlier
+run with the config it used. The wallet then starts a list with no earlier
+copies (its records are kept), and its file names can change. The first run
+that queries both spellings stores a new copy of a mixed-case wallet's list,
+and its rows change: the actions it missed are exported.
+
+The rows of one EVM wallet can therefore carry either spelling. They are
+grouped into the wallet's period files by the lowercase address, so both go
+to one file (`src/export/summ/files.ts`).
+
 Each fetch is retried after a transient error (HTTP 5xx or 429, a connection
 reset, a timeout, a DNS failure), waiting 5 s, 20 s and then 60 s
 (`src/sources/Retry.ts`). Requests to Midgard, THORNode and the TCY API go
